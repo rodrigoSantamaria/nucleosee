@@ -84,9 +84,12 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             // Show the image of "loading...".
             if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
 
+            var _forceReload = "";
+            if(forceReload) _forceReload = "True";
+
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&forceReload="+forceReload,
+                    url: _serverPath+"/testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&forceReload="+_forceReload,
                     type: "GET",
                     datatype: "json"
                 });
