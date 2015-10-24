@@ -1,5 +1,4 @@
 
-
 // Dimensions of screen
 screenWidth=screen.width;
 startX=50;

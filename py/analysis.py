@@ -67,7 +67,7 @@ import os
 
 
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
-UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py/genomes' #maybe an absolute path??
+UPLOAD_FOLDER = '/Users/jonatan/WebStormProjects/seqview/py/genomes' #maybe an absolute path??
 #UPLOAD_FOLDER = '.' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig'])
 
@@ -106,7 +106,15 @@ def testUpload():
         return jsonify(response=os.path.join(app.config['UPLOAD_FOLDER'], filename))
     else:
         return jsonify(response='not found')
-    
+
+
+@app.route('/testUpload2', methods=['GET'])
+def testUpload2():
+    filename=""+request.args.get("filename")
+    if filename in os.listdir(os.path.join(app.config['UPLOAD_FOLDER'])):
+        return jsonify(response=os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    else:
+        return jsonify(response='not found')
       
 @app.route("/test")
 def test():
