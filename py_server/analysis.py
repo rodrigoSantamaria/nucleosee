@@ -67,7 +67,7 @@ import os
 
 
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
-UPLOAD_FOLDER = '/Users/jonatan/WebStormProjects/seqview/py/genomes' #maybe an absolute path??
+UPLOAD_FOLDER = '/Users/jonatan/WebStormProjects/seqview/py_server/genomes' #maybe an absolute path??
 #UPLOAD_FOLDER = '.' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig'])
 
@@ -176,7 +176,7 @@ retorna    objeto JSON con los siguientes campos:
                dseq        datos discretizados por la función discretize()
 """
 @app.route("/preprocess")
-def preprocess(path="/Users/rodri/WebstormProjects/untitled/py/genomes/dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000):
+def preprocess(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000):
     import numpy as np
 
     #0) read

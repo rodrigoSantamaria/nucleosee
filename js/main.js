@@ -16,33 +16,17 @@ startY=50;
 
 
 
-// Check if there's support for file reading
-if (window.File && window.FileReader && window.FileList && window.Blob)
-    {
-    console.log("Start all (with File APIs)...");
-    this.handleEvent=function(evt)
-    {
-        switch(event.type)
-            {
-            case 'change':
+function main(file)
+{
 
-                if ( $("#dna").length)   { $("#dna").remove(); var $div = $('<div />').appendTo('body');  $div.attr('id', 'dna');}
-                if ( $("#dna2").length)  { $("#dna2").remove(); var $div = $('<div />').appendTo('body'); $div.attr('id', 'dna2');}
+    if ( $("#dna").length)   { $("#dna").remove(); var $div = $('<div />').appendTo('body');  $div.attr('id', 'dna');}
+    if ( $("#dna2").length)  { $("#dna2").remove(); var $div = $('<div />').appendTo('body'); $div.attr('id', 'dna2');}
 
-                var files = evt.target.files; // FileList object
-                file=files[0]  //By now, just one file
-                desc=uploadFileAndProcessing(true, file);
 
-                drawing(true, desc);
-            }
-    }
-    // Register the custom listener
-    document.getElementById('files').addEventListener('change', this, false); //TODO: changing to a post method to upload files to server
-    }
-else
-    {
-    alert('The File APIs are not fully supported by your browser.');
-    }
+    desc=uploadFileAndProcessing(true, file);
+
+    drawing(true, desc);
+}
 
 
 // UPLOAD FILE AND PROCESSING
