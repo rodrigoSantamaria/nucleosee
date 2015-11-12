@@ -203,10 +203,10 @@ function ticks(fullLength, x0, y0, height, width, startTick, numTicks, color, op
     //final tick (provides the full length, rounded
     var x=(x0+width)
     tickLabel=startTick+fullLength;
-    if(tickLabel/1000000 >= 1)
-        tickLabel=Math.round(tickLabel/1000000)+"M"
-    else if(tickLabel/1000>=1)
-        tickLabel=Math.round(tickLabel/1000)+"K"
+        if(tickLabel/1000000 >= 1)
+            tickLabel=Math.round(tickLabel/1000000)+"M"
+        else if(tickLabel/1000>=1)
+            tickLabel=Math.round(tickLabel/1000)+"K"
     this.labels[numTicks]=paper.text(x,y,tickLabel);
 
     this.labels[numTicks].attr({'stroke':color, 'opacity':opacity})

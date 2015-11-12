@@ -1,59 +1,50 @@
 
-// Dimensions of screen
-screenWidth=screen.width;
-startX=50;
-startY=50;
 
 
 
-//************************************************************************
 //************************************************************************
 //************************************************************************
 // ---------------------------- Main code --------------------------------
 //************************************************************************
 //************************************************************************
-//************************************************************************
 
 
 
-function main(file)
+function main(user, password, file, hashMD5)
 {
+    destroyAll(false);
 
-    if ( $("#dna").length)   { $("#dna").remove(); var $div = $('<div />').appendTo('body');  $div.attr('id', 'dna');}
-    if ( $("#dna2").length)  { $("#dna2").remove(); var $div = $('<div />').appendTo('body'); $div.attr('id', 'dna2');}
-
-
-    desc=uploadFileAndProcessing(true, file);
+    var desc=uploadFileAndProcessing(true, user, password, file, hashMD5);
 
     drawing(true, desc);
 }
 
 
-// UPLOAD FILE AND PROCESSING
-////////////////////////////////
-function uploadFileAndProcessing(DEBUG, file)
+// ANALYSIS: UPLOAD FILE AND PROCESSING
+/////////////////////////////////////////
+function uploadFileAndProcessing(DEBUG, user, password, file, hashMD5)
 {
     // READ FILE
     //------------
     if(DEBUG) console.log("\n----- UPLOAD FILE -----");
     if(DEBUG) console.log("Name of file: "+file.name);
 
-    startTime=new Date()
-    var serverFilePath=sendFile(DEBUG, file);    // passing it to the server side (best solution for >1MB files)
-    if(DEBUG) console.log("Path in remote: "+serverFilePath);
+    var startTime=new Date();
+    sendFile(DEBUG, user, password, file.name, hashMD5);    // passing it to the server side (best solution for >1MB files)
     if(DEBUG) console.log("Time spent sending: "+ (new Date()-startTime)+"ms");
 
 
     // PREPROCESSING: NORMALIZE, STATISTICAL DESCRIPTORS, DISCRETIZE
-    //--------------------------------------------------------------
+    //----------------------------------------------------------------
     if(DEBUG) console.log("\n----- PROCESSING -----");
 
+    var track=0;
     var ws=150;         // window size: discrete to real ratio
     var nb=5;           // num bins
-    var maxSize=100000  // maximum number of normalized data to store
+    var maxSize=100000;  // maximum number of normalized data to store
 
-    startTime=new Date()
-    var desc=preprocess(DEBUG, serverFilePath, ws, nb, maxSize);    // normalize+stats+discretize+suffix array build (next)
+    startTime=new Date();
+    var desc=preprocess(DEBUG, user, password, file.name, track, ws, nb, maxSize);
     if(DEBUG) console.log("Time spent preprocessing: "+ (new Date()-startTime)+"ms");
 
     return desc;
@@ -71,20 +62,73 @@ function drawing(DEBUG, desc)
     var seq=desc.seq;    // just a sampling of about 100K of the original full length sequence
     var min=desc.min;
     var max=desc.max;
+    var mean=desc.mean;
+    var stdev=desc.stdev;
     var disc=desc.dseq; // whole seq compression
     var fullLength=desc.fullLength;
+    if(DEBUG) console.log("Length of seq:"+seq.length+" (full length="+fullLength+")");
 
-    if(DEBUG) console.log("Length of na:"+seq.length+" (full length="+fullLength+")");
+
+    // Dimensions of screen
+    var graphHeight=200;
+    var graphWidth=screen.width;
+    var startX=50;
+    var startY=50;
+
+    // DATA LINE (preprocessed data)
+    //--------------------------------
+    var startTime=new Date();
+    var rDataLine = dataLine(DEBUG, seq, 0, seq.length, mean, stdev, graphHeight, graphWidth, startX, startY);
+    if(DEBUG) console.log("Time spent dataline: "+ (new Date()-startTime)+"ms");
 
 
-    console.log(desc);
 
-    graphHeight=100;
-    graphWidth=screenWidth;
 
-    //DATA LINE (preprocessed data)
-    dataLine(seq, 0, seq.length, desc.mean, desc.stdev, graphHeight, graphWidth, startX, startY);
 
+
+
+
+    var dataPoints=[];
+    dataPoints.push({pos: (rDataLine.data)[900].pos, value: (rDataLine.data)[900].value});
+    dataPoints.push({pos: (rDataLine.data)[600].pos, value: (rDataLine.data)[600].value});
+    dataPoints.push({pos: (rDataLine.data)[400].pos, value: (rDataLine.data)[400].value});
+    dataPoints.push({pos: (rDataLine.data)[300].pos, value: (rDataLine.data)[300].value});
+
+    drawPoints(true, rDataLine.svg,dataPoints,rDataLine.x,rDataLine.y,rDataLine.window,
+                seq, mean, stdev, graphHeight, graphWidth, startX, startY);
 
 }
 
+
+// DESTROY ALL
+////////////////////////////////
+function destroyAll(clear)
+{
+    // Reset input files
+    $("#files").val('');
+
+    // Empty all SVG images
+    if($('#dna').html() != "")
+        $("#dna").empty();
+
+    if($('#dna2').html() != "")
+        $("#dna2").empty();
+
+    if(clear)
+    {
+        // Clear console
+        console.log(new Array(15).join("\n"));
+        console.log("Reset all (with File APIs)...");
+    }
+}
+
+
+function seachPoints()
+{
+
+    var pattern = $('#patternSearch').val();
+    var d       = $('#dSearch').val();
+
+    search(true,pattern,d);
+
+}

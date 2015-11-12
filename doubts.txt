@@ -6,8 +6,8 @@
 =        DUDAS              =
 =============================
 
-cross-domain funciona????
 
+- md5 tarda mucho
 
 
 
@@ -17,6 +17,6 @@ cross-domain funciona????
 =   COSAS QUE HACER         =
 =============================
 
-colocar js (a lo último)
+intentar quitar todos los estilos del d3_style (poner por defecto unos en javascript)
 
-descargar js
+snake, fridaymario

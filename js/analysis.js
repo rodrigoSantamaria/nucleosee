@@ -1,60 +1,64 @@
 
-/** TODO: all this should go to python on the server side -> undergoing work via analysis.py methods
- * Created by rodri on 27/01/14.
- */
-var serverPath="http://127.0.0.1:5000/" //it will be changed to the IP where the service will be hosted
-var filePath=""
+
+
+var serverPath="http://127.0.0.1:5000/";
+
+
+// To try calls:
+// curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET http://localhost:5000/testUpload?filename=Mei3h_center_wl-peque2.wig
+
 
 /**
  * Uploads the file f to the server. Posterior calls to REST will be by the path of the file
- * @param f
- * @returns {string} path to the file in the server
+ * @param DEBUG
+ * @param file
+ * @param hashMD5
  */
-//NOTE: Remember REST Flask calls require enable CORS in the browser!!! <----
-function sendFile(DEBUG, f)
-    {
-    var fd = new FormData();
-    fd.append( 'file', f );
-    //TODO: before posting, which is costly if the file is large, we can check if it's already uploaded?
-        //  At least for tests, this could prove useful
+// NOTE: Remember REST Flask calls require enable CORS in the browser!!!
+function sendFile(DEBUG, user, password, filename, hashMD5)
+{
     var ret="";
-    // curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET http://localhost:5000/testUpload?filename=Mei3h_center_wl-peque2.wig
-    $.ajax({
-        url: serverPath+"testUpload?filename="+ f.name,
+    $.ajax(
+    {
+        url: serverPath+"testUpload?user="+user+"&password="+password+"&filename="+filename+"&md5="+hashMD5,
         type: "GET",
         datatype:"json",
-        success: function(response)
+        async: false,
+        success: function(result)
         {
-            if(DEBUG) console.log("sendFile(): uploaded? "+response.response);
-            ret=response.response;
-        },
-        async: false
+            if(DEBUG) console.log("sendFile(): uploaded? "+result.response);
+            ret=result.response;
+        }
     });
-    if(ret=="not found") { //only in this case we upload it
-        $.ajax({
-            url: serverPath + "upload",
+    // only in this case we upload it
+    if(ret=="outdated version" || ret=="not found")
+    {
+        // The FormData object lets you compile a set of key/value pairs to send using XMLHttpRequest (AJAX)
+        var fd = new FormData();
+        fd.append('file',file);
+
+        $.ajax(
+        {
+            url: serverPath + "upload?user=jpiriz&password=ninguna",
             type: "POST",
             data: fd,
-            processData: false,
-            contentType: false,
-            success: function (response)
+            processData: false, // tell jQuery not to process the data
+            contentType: false, // tell jQuery not to set contentType
+            async: false,
+            success: function (result)
             {
-                if(DEBUG) console.log("sendFile(): uploaded to " + response.path);
-                filePath = response.path;
-                ret = response.path;
-            },
-            async: false
+                if(DEBUG) console.log("sendFile(): uploaded to "+result.path);
+            }
         });
-        return ret;
-        }
-    else
-        return ret;
     }
+}
 
 
 /**
  * Calls the REST service available to a summary and characterization of data
+ * @param DEBUG
  * @param path  local to the server where the data are present (usually a .wig file)
+ * @param track
  * @param ws    window size for summarization (usually 100 or more)
  * @param nb    number of bins for summarization (typically 5 or 7)
  * @param maxSize maximum size of the seq array that we want
@@ -69,28 +73,56 @@ function sendFile(DEBUG, f)
  *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
  *                      on.
  */
-function preprocess(DEBUG, path,ws,nb,maxSize)
-    {//TODO: save after preprocessing in the server and re-preprocess if not
-    var na=[];
-    $.ajax({
-        url: serverPath+"preprocess?path="+path+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize,
-        type: "get",
-        datatype:"json",
-        success: function(response)
+function preprocess(DEBUG,user,password,filename,track,ws,nb,maxSize)
+{
+    var result=[];
+    $.ajax(
+        {
+            url: serverPath+"preprocess?user="+user+"&password="+password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize,
+            type: "GET",
+            datatype:"json",
+            async: false,    // default: true
+            success: function(response)
             {
-            if(DEBUG) console.log("preprocress(): discretization done...");
-            na.seq=response.result; //this is only a sample, as it is too large to show as a whole and to send via REST
-            na.max=response.maximum;
-            na.min=response.minimum;
-            na.mean=response.mean;
-            na.stdev=response.sdev;
-            na.dseq=response.dseq;
-            na.fullLength=response.fullLength;
+                if(DEBUG) console.log("preprocress(): discretization done...");
+                result.seq=response.seq; // this is only a sample, as it is too large to show as a whole and to send via REST
+                result.max=response.maximum;
+                result.min=response.minimum;
+                result.mean=response.mean;
+                result.stdev=response.stdev;
+                result.dseq=response.dseq;
+                result.fullLength=response.fullLength;
             },
-        async: false
+            error: function(textStatus, errorThrown)
+            {
+                if(DEBUG) console.log("preprocress(): discretization failed...");
+            }
         });
-    return na;
-    }
+    return result;
+}
 
 
 
+function search(DEBUG,pattern,d)
+{
+    var result=[];
+    $.ajax(
+        {
+            url: serverPath+"search?user=jpiriz&password=ninguna&pattern="+pattern+"&d="+d,
+            type: "GET",
+            datatype:"json",
+            async: false,    // default: true
+            success: function(response)
+            {
+                if(DEBUG) console.log("search(): search done...");
+
+                console.log(response);
+
+            },
+            error: function(textStatus, errorThrown)
+            {
+                if(DEBUG) console.log("search(): search failed...");
+            }
+        });
+    return result;
+}
