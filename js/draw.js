@@ -63,7 +63,7 @@ function dataLine(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .y(function(d) { return y(d.value); });
 
 
-    // The image SVG
+    // The image SVG: image
     var svg = d3.select("#dna")
         .append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -72,12 +72,13 @@ function dataLine(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
-
+    // The image SVG: axis x
     svg.append("g")
         .attr("class", "x axis")
         .call(xAxis)
         .attr("transform", "translate(0," + height + ")");
 
+    // The image SVG: axis y
     svg.append("g")
         .attr("class", "y axis")
         .call(yAxis)
@@ -87,11 +88,11 @@ function dataLine(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
 
+    // The image SVG: line
     svg.append("path")
         .datum(data)
         .attr("class", "line")
         .attr("d", line);
-
 
 
     // We refund the information necessary to put points
@@ -107,7 +108,6 @@ function dataLine(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
 
 function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
 {
-    //console.log("dataLine2()(despues): mean: "+mean+" - start: "+start+" - end: "+end+" - stdev: "+stdev+" - height: "+height+" - width: "+width+" - x0: "+x0+" - y0: "+y0);
 
     // First, we delete the image, if this exist
     if ( $("#dna2").length)  { $("#dna2").empty(); }
@@ -177,12 +177,13 @@ function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-
+    // The image SVG: axis x
     svg.append("g")
         .attr("class", "x axis")
         .call(xAxis)
         .attr("transform", "translate(0," + height + ")");
 
+    // The image SVG: axis y
     svg.append("g")
         .attr("class", "y axis")
         .call(yAxis)
@@ -192,6 +193,7 @@ function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
 
+    // The image SVG: line
     svg.append("path")
         .datum(data)
         .attr("class", "line")
