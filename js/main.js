@@ -30,7 +30,7 @@ function uploadFileAndProcessing(DEBUG, user, password, file, hashMD5)
     if(DEBUG) console.log("Name of file: "+file.name);
 
     var startTime=new Date();
-    sendFile(DEBUG, user, password, file.name, hashMD5);    // passing it to the server side (best solution for >1MB files)
+    sendFile(DEBUG, user, password, file, hashMD5);    // passing it to the server side (best solution for >1MB files)
     if(DEBUG) console.log("Time spent sending: "+ (new Date()-startTime)+"ms");
 
 
