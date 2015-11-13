@@ -6,6 +6,17 @@ Created on Wed Jun  4 10:41:47 2014
 
 @author: rodri
 """
+# --------------------- LIBRARIES -----------------
+from flask import Flask, jsonify, request
+from flask import redirect, url_for #for uploading files
+from werkzeug.utils import secure_filename
+import os
+import time
+
+#BWT searches
+import sys 
+sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
+import suffixSearch as ss
 
 
 # --------------------- INTERNAL METHODS -----------------
@@ -52,27 +63,22 @@ def discretize(seq, windowSize,numBins=5):
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
     alphabet=alphabetTotal[:numBins]   
     dseq=[]
-    sm=np.mean(seq)
-    ssd=np.std(seq)
+    #sm=np.mean(seq)
+    #ssd=np.std(seq)
+    maximo=max(seq)
+    minimo=min(seq)
     for i in range(0, len(seq),windowSize):
         im=np.mean(seq[i:i+windowSize])
-        #print max(0,min(len(alphabet)/2+int(np.round((im-sm)/ssd)),numBins))
-        dseq.append(alphabet[max(0,min(len(alphabet)/2+int(np.round((im-sm)/ssd)),numBins-1))])
+        dseq.append(alphabet[(int)(np.round((numBins-1)*(im-minimo)/(maximo-minimo)))])
+        #dseq.append(alphabet[max(0,min(len(alphabet)/2+int(np.round((im-sm)/ssd)),numBins-1))])
     return dseq
     
 # --------------------------------------------
-#%%
-from flask import Flask, jsonify, request
-from flask import redirect, url_for #for uploading files
-from werkzeug.utils import secure_filename
-import os
-import time
-
 
 
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
-UPLOAD_FOLDER = '/Users/jonatan/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
+UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
 #UPLOAD_FOLDER = '.' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig'])
 
@@ -86,15 +92,20 @@ def allowed_file(filename):
            
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
+    global user
     if request.method == 'POST':
         file = request.files['file']
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             print filename
-            if filename in os.listdir(os.path.join(app.config['UPLOAD_FOLDER'])):
+            root=os.path.join(app.config['UPLOAD_FOLDER'])
+            if (user in os.listdir(root))==False:                 #create directory for this user
+                os.mkdir(os.path.join(root,user))
+            if filename in os.listdir(os.path.join(root,user)):
                 print '{} already uploaded'.format(filename)    #TODO: by now we avoid resubmissions (for tests)
             else:
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                print 'uploading...'
+                file.save(os.path.join(root, user, filename))
             #return redirect(url_for('uploaded_file', filename=filename))
             return jsonify(path=os.path.join(app.config['UPLOAD_FOLDER'], filename))
 #%%
@@ -107,12 +118,13 @@ def uploaded_file(filename):
 @app.route('/testUpload', methods=['GET'])
 def testUpload():
     filename=""+request.args.get("filename") 
-    if filename in os.listdir(os.path.join(app.config['UPLOAD_FOLDER'])):
+    cpath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    if os.path.exists(cpath) and filename in os.listdir(cpath):
         import hashlib
         codeEx=""+request.args.get("md5")
-        codeIn=hashlib.md5(open(os.path.join(app.config['UPLOAD_FOLDER']+"/"+filename), 'rb').read()).hexdigest()
+        codeIn=hashlib.md5(open(os.path.join(cpath,filename), 'rb').read()).hexdigest()
         if(codeEx==codeIn):
-            return jsonify(response=os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            return jsonify(response="file exists")
         else:
             return jsonify(response='outdated version')
     else:
@@ -127,14 +139,14 @@ def testUpload():
 
 #%%------------- SESSION MANAGEMENT
 #data must be a dic with dseq and bwt
-def saveSession(path="/Users/rodri/WebstormProjects/untitled/py/genomes/dwtMini2.pkl", data=""):
+def saveSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/dwtMini2.pkl", data=""):
     import cPickle as pickle
     f=open(path, "wb")
     pickle.dump(data, f)
     return 0
     
 #data must be a dic with dseq and bwt TODO: check times here
-def loadSession(path="/Users/rodri/WebstormProjects/untitled/py/genomes/dwtMini2.pkl"):
+def loadSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/dwtMini2.pkl"):
     import cPickle as pickle
     f=open(path, "r")
     session=pickle.load(f)
@@ -147,17 +159,18 @@ windowSize tamaño de la ventana para hacer la discretización (def 100)
 numBins    númer de valores discretos para la discretizacion (def 5)
 retorna    objeto JSON con los siguientes campos:
                result   valores normalizados (sin discretizar) sampleados hasta maxSize
-               fullLength  longitud total de los datos iniciales/normalizados
+               fullLength  longitud total de los datos iniciales/normaliados
                maximum,minimum,mean,sdev   medidas estadísticas de los datos normalizados
                dseq        datos discretizados por la función discretize()
 """
 @app.route("/preprocess")
-def preprocess(path="/Users/rodri/WebstormProjects/untitled/py/genomes/dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0):
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0):
     import numpy as np
     global data
+    global session
     #0) read
     print 'reading...'
-    path=str(request.args.get("path"))
+    path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
     track=int(request.args.get("track"))
     seq=readWig(path)
     seq=seq[track] #(TODO: by now, only first chromosome)
@@ -178,15 +191,13 @@ def preprocess(path="/Users/rodri/WebstormProjects/untitled/py/genomes/dwtMini2.
     print 'bwt...'
     t=ss.bwt(''.join(dseq)+"$")
     print 'done!'
-    res=[seq[x] for x in range(0,len(seq),max(1,len(seq)/maxSize))]
+    res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
     data={"seq":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum, "mean":m, "stdev":sd, "dseq":dseq, "bwt":t}
+    session[user]=data
     return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq)
 
 
 #%% -------------- SEARCHES -----------
-import sys
-sys.path.append("/Users/rodri/WebstormProjects/seqview/py")
-import suffixSearch as ss
 
 """
 Busca un determinado texto con una búsqueda en el array de sufijos creado
@@ -232,37 +243,35 @@ def add_cors(resp):
     return resp
     
 #%% session info
-"""
 @app.before_request
 def load_passport():
     global data
     global session
+    global user
     user=str(request.args.get("user"))
-    password=str(request.args.get("password"))
+    #password=str(request.args.get("password"))
     #TODO: check password and so on.
     if user in session.keys():
         data=session[user]
-"""
+        print len(data)
+        print data.keys()
+
 #@app.after_request
 #def serialize_passport(response):
 #    if hasattr(g, "passport"):
 #        session["passport_id"] = g.passport.id
 #    return response
     
-    
-#@app.route("/testThing")
-#def testThing():
-#    global data
-#    data=data+"trucutru"
-#    return jsonify(result=data)
 
 #-------------------- LAUNCH -----------------
 if __name__ == '__main__':
     global session
     global data
+    global user
+    user=""
     session={}
     session["jpiriz"]={}    
-    session["rodr"]={}    
+    session["rodri"]={}    
     data={}
     app.run(debug=True) 
     
