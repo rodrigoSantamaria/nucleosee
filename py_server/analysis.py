@@ -15,7 +15,7 @@ import time
 
 #BWT searches
 import sys 
-sys.path.append("/Users/jonatan/WebstormProjects/seqview/py_server")
+sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
 import suffixSearch as ss
 
 
@@ -78,7 +78,7 @@ def discretize(seq, windowSize,numBins=5):
 
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
-UPLOAD_FOLDER = '/Users/jonatan/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
+UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
 #UPLOAD_FOLDER = '.' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig'])
 
@@ -104,6 +104,7 @@ def upload_file():
             if filename in os.listdir(os.path.join(root,user)):
                 print '{} already uploaded'.format(filename)    #TODO: by now we avoid resubmissions (for tests)
             else:
+                print 'uploading...'
                 file.save(os.path.join(root, user, filename))
             #return redirect(url_for('uploaded_file', filename=filename))
             return jsonify(path=os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -138,14 +139,14 @@ def testUpload():
 
 #%%------------- SESSION MANAGEMENT
 #data must be a dic with dseq and bwt
-def saveSession(path="/Users/rodri/WebstormProjects/untitled/py/genomes/dwtMini2.pkl", data=""):
+def saveSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/dwtMini2.pkl", data=""):
     import cPickle as pickle
     f=open(path, "wb")
     pickle.dump(data, f)
     return 0
     
 #data must be a dic with dseq and bwt TODO: check times here
-def loadSession(path="/Users/rodri/WebstormProjects/untitled/py/genomes/dwtMini2.pkl"):
+def loadSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/dwtMini2.pkl"):
     import cPickle as pickle
     f=open(path, "r")
     session=pickle.load(f)
