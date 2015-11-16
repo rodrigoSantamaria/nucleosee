@@ -6,7 +6,7 @@ Created on Wed Jun  4 10:41:47 2014
 
 @author: rodri
 """
-"""PRUEBA GIT"""
+"""PRUEBA GIT2"""
 # --------------------- LIBRARIES -----------------
 from flask import Flask, jsonify, request
 from flask import redirect, url_for #for uploading files
