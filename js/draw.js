@@ -64,7 +64,7 @@ function dataLine(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
 
 
     // The image SVG: image
-    var svg = d3.select("#dna")
+    var svg = d3.select("#lineSeq")
         .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
@@ -110,7 +110,7 @@ function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
 {
 
     // First, we delete the image, if this exist
-    if ( $("#dna2").length)  { $("#dna2").empty(); }
+    if ( $("#lineSeq2").length)  { $("#lineSeq2").empty(); }
 
     // Sizes...
     var margin = {top: y0, right: x0, bottom: y0, left: x0};
@@ -170,7 +170,7 @@ function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
 
 
     // The image SVG
-    var svg = d3.select("#dna2")
+    var svg = d3.select("#lineSeq2")
         .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)

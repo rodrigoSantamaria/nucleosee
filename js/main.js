@@ -108,11 +108,11 @@ function destroyAll(clear)
     $("#files").val('');
 
     // Empty all SVG images
-    if($('#dna').html() != "")
-        $("#dna").empty();
+    if($('#lineSeq').html() != "")
+        $("#lineSeq").empty();
 
-    if($('#dna2').html() != "")
-        $("#dna2").empty();
+    if($('#lineSeq2').html() != "")
+        $("#lineSeq2").empty();
 
     if(clear)
     {
