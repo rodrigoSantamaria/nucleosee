@@ -15,12 +15,12 @@ var serverPath="http://127.0.0.1:5000/";
  * @param hashMD5
  */
 // NOTE: Remember REST Flask calls require enable CORS in the browser!!!
-function sendFile(DEBUG, user, password, filename, hashMD5)
+function sendFile(DEBUG, user, password, file, hashMD5)
 {
     var ret="";
     $.ajax(
     {
-        url: serverPath+"testUpload?user="+user+"&password="+password+"&filename="+filename+"&md5="+hashMD5,
+        url: serverPath+"testUpload?user="+user+"&password="+password+"&filename="+file.name+"&md5="+hashMD5,
         type: "GET",
         datatype:"json",
         async: false,
