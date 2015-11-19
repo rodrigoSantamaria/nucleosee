@@ -1,6 +1,5 @@
 
-var user="jpiriz";
-var password="ninguna";
+
 
 
 // Check if there's support for file reading
@@ -8,7 +7,6 @@ if (window.File && window.FileReader && window.FileList && window.Blob)
 {
     console.log("Start all (with File APIs)...");
 
-    var DEBUG = true;
 
     this.handleEvent=function(evt)
     {
@@ -26,7 +24,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob)
                 {
                     if(DEBUG) console.log("calculateMD5(): "+hash);
                     if(DEBUG) console.log("Time spent checking (MD5): "+ (new Date()-startTime)+"ms");
-                    main(user, password, file, hash);
+                    main(file, hash);
                 });
 
         }

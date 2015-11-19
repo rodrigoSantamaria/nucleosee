@@ -1,12 +1,42 @@
-/**
- * Created by jonatan on 15/10/15.
- */
 
 
 
-
-function dataLine(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
+var globalSeq =
 {
+    seq : null,
+    mean : null,
+    stdev : null,
+    ws : null
+};
+
+var globalDL1 =
+{
+    graphHeight : 200,
+    graphWidth : screen.width,
+    startX : 50,
+    startY : 50,
+    svg : null,
+    data : null,
+    window : null,
+    x : null,
+    y : null
+};
+
+
+
+
+function dataLine1(seq, start, end, mean, stdev, ws)
+{
+    globalSeq.seq=seq;
+    globalSeq.mean=mean;
+    globalSeq.stdev=stdev;
+    globalSeq.ws=ws;
+    var width=globalDL1.graphWidth;
+    var height=globalDL1.graphHeight;
+    var x0=globalDL1.startX;
+    var y0=globalDL1.startY;
+
+
     // Sizes...
     var margin = {top: y0, right: x0, bottom: y0, left: x0};
     width = width - margin.left - margin.right;
@@ -63,8 +93,8 @@ function dataLine(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .y(function(d) { return y(d.value); });
 
 
-    // The image SVG
-    var svg = d3.select("#dna")
+    // The image SVG: image
+    var svg = d3.select("#lineSeq")
         .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
@@ -72,12 +102,13 @@ function dataLine(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
-
+    // The image SVG: axis x
     svg.append("g")
         .attr("class", "x axis")
         .call(xAxis)
         .attr("transform", "translate(0," + height + ")");
 
+    // The image SVG: axis y
     svg.append("g")
         .attr("class", "y axis")
         .call(yAxis)
@@ -87,30 +118,26 @@ function dataLine(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
 
+    // The image SVG: line
     svg.append("path")
         .datum(data)
         .attr("class", "line")
         .attr("d", line);
 
 
-
-    // We refund the information necessary to put points
-    var result=[];
-    result.svg=svg;
-    result.data=data;
-    result.x=x;
-    result.y=y;
-    result.window=window;
-    return result;
+    globalDL1.svg = svg;
+    globalDL1.data = data;
+    globalDL1.x = x;
+    globalDL1.y = y;
+    globalDL1.window = window;
 }
 
 
 function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
 {
-    //console.log("dataLine2()(despues): mean: "+mean+" - start: "+start+" - end: "+end+" - stdev: "+stdev+" - height: "+height+" - width: "+width+" - x0: "+x0+" - y0: "+y0);
 
     // First, we delete the image, if this exist
-    if ( $("#dna2").length)  { $("#dna2").empty(); }
+    if ( $("#lineSeq2").length)  { $("#lineSeq2").empty(); }
 
     // Sizes...
     var margin = {top: y0, right: x0, bottom: y0, left: x0};
@@ -170,19 +197,20 @@ function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
 
 
     // The image SVG
-    var svg = d3.select("#dna2")
+    var svg = d3.select("#lineSeq2")
         .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-
+    // The image SVG: axis x
     svg.append("g")
         .attr("class", "x axis")
         .call(xAxis)
         .attr("transform", "translate(0," + height + ")");
 
+    // The image SVG: axis y
     svg.append("g")
         .attr("class", "y axis")
         .call(yAxis)
@@ -192,6 +220,7 @@ function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
 
+    // The image SVG: line
     svg.append("path")
         .datum(data)
         .attr("class", "line")
@@ -200,8 +229,17 @@ function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
 
 
 
-function drawPoints(DEBUG, DL1_svg, data, DL1_x, DL1_y, DL1_window,
-                     seq, mean, stdev, height, width, x0, y0){
+function drawPoints(points)
+{
+    console.log(points);
+
+    var dataPoints=[];
+    for(var i=0; i<points.length;i++)
+    {
+        var point = Math.ceil(points[i] * globalSeq.ws/globalDL1.window);
+        dataPoints.push({pos: (globalDL1.data)[point].pos, value: (globalDL1.data)[point].value});
+    }
+
 
 
     // Mouseover tip
@@ -210,20 +248,22 @@ function drawPoints(DEBUG, DL1_svg, data, DL1_x, DL1_y, DL1_window,
         .offset([120, 40])
         .html(function(d)
         {
-            var algo = (width/2)-x0;
-            dataLine2(true, seq, (d.pos*DL1_window)-algo, (d.pos*DL1_window)+algo, mean, stdev, height, width, x0, y0);
-            return "<strong>" + d.pos*DL1_window + " position</strong><br>" + Math.round(d.value*100)/100 + " value" + "<br>";
+            var algo = (screen.width/2)-50;
+            dataLine2(true, globalSeq.seq, (d.pos*globalDL1.window)-algo, (d.pos*globalDL1.window)+algo, globalSeq.mean, globalSeq.stdev, 200, screen.width, 50, 50);
+            return "<strong>" + d.pos*globalDL1.window + " position</strong><br>" + Math.round(d.value*100)/100 + " value" + "<br>";
         });
 
-    DL1_svg.call(tip);
 
+    globalDL1.svg.call(tip);
 
-    DL1_svg.selectAll(".data")
-        .data(data)
+    globalDL1.svg.selectAll("circle.datapoint").remove();
+
+    globalDL1.svg.selectAll(".data")
+        .data(dataPoints)
         .enter().append("circle")
         .attr('class', 'datapoint')
-        .attr('cx', function(d) { return DL1_x(d.pos); })
-        .attr('cy', function(d) { return DL1_y(d.value); })
+        .attr('cx', function(d) { return globalDL1.x(d.pos); })
+        .attr('cy', function(d) { return globalDL1.y(d.value); })
         .attr('r', 6)
         .attr('fill', 'white')
         .attr('stroke', 'steelblue')
@@ -231,7 +271,6 @@ function drawPoints(DEBUG, DL1_svg, data, DL1_x, DL1_y, DL1_window,
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
 }
-
 
 
 
@@ -251,9 +290,6 @@ function getTicks(sizeSeq, window)
 
     var factorLabel=Math.pow(10, numZeroes);
 
-
-
-    //for(var i=0;i<numTicks;i++)------------------------------------------------------------------
     for(var i=0; factorLabel <= (sizeSeq-i*factorLabel) ;i++)
     {
         ticks.push((factorLabel+i*factorLabel)/window);

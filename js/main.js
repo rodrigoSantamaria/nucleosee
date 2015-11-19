@@ -1,6 +1,12 @@
 
 
 
+var user="jpiriz";
+var password="ninguna";
+
+var DEBUG = true;
+
+
 
 //************************************************************************
 //************************************************************************
@@ -10,19 +16,25 @@
 
 
 
-function main(user, password, file, hashMD5)
+function main(file, hashMD5)
 {
+    var track=0;
+    var ws=150;         // window size: discrete to real ratio
+    var nb=5;           // num bins
+    var maxSize=100000;  // maximum number of normalized data to store
+
+
     destroyAll(false);
 
-    var desc=uploadFileAndProcessing(true, user, password, file, hashMD5);
+    var desc=uploadFileAndProcessing(file, hashMD5, track, ws, nb, maxSize);
 
-    drawing(true, desc);
+    drawing(desc, ws);
 }
 
 
 // ANALYSIS: UPLOAD FILE AND PROCESSING
 /////////////////////////////////////////
-function uploadFileAndProcessing(DEBUG, user, password, file, hashMD5)
+function uploadFileAndProcessing(file, hashMD5, track, ws, nb, maxSize)
 {
     // READ FILE
     //------------
@@ -30,7 +42,11 @@ function uploadFileAndProcessing(DEBUG, user, password, file, hashMD5)
     if(DEBUG) console.log("Name of file: "+file.name);
 
     var startTime=new Date();
+<<<<<<< HEAD
     sendFile(DEBUG, user, password, file, hashMD5);    // passing it to the server side (best solution for >1MB files)
+=======
+    sendFile(file, hashMD5);    // passing it to the server side (best solution for >1MB files)
+>>>>>>> jlpiriz/master
     if(DEBUG) console.log("Time spent sending: "+ (new Date()-startTime)+"ms");
 
 
@@ -38,66 +54,47 @@ function uploadFileAndProcessing(DEBUG, user, password, file, hashMD5)
     //----------------------------------------------------------------
     if(DEBUG) console.log("\n----- PROCESSING -----");
 
-    var track=0;
-    var ws=150;         // window size: discrete to real ratio
-    var nb=5;           // num bins
-    var maxSize=100000;  // maximum number of normalized data to store
-
     startTime=new Date();
-    var desc=preprocess(DEBUG, user, password, file.name, track, ws, nb, maxSize);
+    var desc=preprocess(file.name, track, ws, nb, maxSize);
     if(DEBUG) console.log("Time spent preprocessing: "+ (new Date()-startTime)+"ms");
 
     return desc;
 }
 
 
-
-
 // DRAWING
 ////////////////////////////////
-function drawing(DEBUG, desc)
+function drawing(desc, ws)
 {
     if(DEBUG) console.log("\n----- DRAWING -----");
 
     var seq=desc.seq;    // just a sampling of about 100K of the original full length sequence
-    var min=desc.min;
-    var max=desc.max;
-    var mean=desc.mean;
-    var stdev=desc.stdev;
-    var disc=desc.dseq; // whole seq compression
     var fullLength=desc.fullLength;
     if(DEBUG) console.log("Length of seq:"+seq.length+" (full length="+fullLength+")");
 
 
-    // Dimensions of screen
-    var graphHeight=200;
-    var graphWidth=screen.width;
-    var startX=50;
-    var startY=50;
 
     // DATA LINE (preprocessed data)
     //--------------------------------
     var startTime=new Date();
-    var rDataLine = dataLine(DEBUG, seq, 0, seq.length, mean, stdev, graphHeight, graphWidth, startX, startY);
-    if(DEBUG) console.log("Time spent dataline: "+ (new Date()-startTime)+"ms");
-
-
-
-
-
-
-
-
-    var dataPoints=[];
-    dataPoints.push({pos: (rDataLine.data)[900].pos, value: (rDataLine.data)[900].value});
-    dataPoints.push({pos: (rDataLine.data)[600].pos, value: (rDataLine.data)[600].value});
-    dataPoints.push({pos: (rDataLine.data)[400].pos, value: (rDataLine.data)[400].value});
-    dataPoints.push({pos: (rDataLine.data)[300].pos, value: (rDataLine.data)[300].value});
-
-    drawPoints(true, rDataLine.svg,dataPoints,rDataLine.x,rDataLine.y,rDataLine.window,
-                seq, mean, stdev, graphHeight, graphWidth, startX, startY);
-
+    dataLine1(seq, 0, seq.length, desc.mean, desc.stdev, ws);
+    if(DEBUG) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
 }
+
+
+function searchPoints()
+{
+    var pattern = $('#patternSearch').val();
+    var d       = $('#dSearch').val();
+
+    var startTime=new Date();
+    var result = search(pattern,d);
+    drawPoints(result.points);
+    if(DEBUG) console.log("Time spent dataLine2: "+ (new Date()-startTime)+"ms");
+}
+
+
+
 
 
 // DESTROY ALL
@@ -108,27 +105,18 @@ function destroyAll(clear)
     $("#files").val('');
 
     // Empty all SVG images
-    if($('#dna').html() != "")
-        $("#dna").empty();
+    if($('#lineSeq').html() != "")
+        $("#lineSeq").empty();
 
-    if($('#dna2').html() != "")
-        $("#dna2").empty();
+    if($('#lineSeq2').html() != "")
+        $("#lineSeq2").empty();
 
-    if(clear)
+    // Clear console
+    if(clear && DEBUG)
     {
-        // Clear console
         console.log(new Array(15).join("\n"));
         console.log("Reset all (with File APIs)...");
     }
 }
 
 
-function seachPoints()
-{
-
-    var pattern = $('#patternSearch').val();
-    var d       = $('#dSearch').val();
-
-    search(true,pattern,d);
-
-}
