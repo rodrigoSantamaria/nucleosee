@@ -79,7 +79,7 @@ def discretize(seq, windowSize,numBins=5):
 
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
-UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
+UPLOAD_FOLDER = '/Users/jonatan/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
 #UPLOAD_FOLDER = '.' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig'])
 
@@ -220,12 +220,12 @@ def search(pattern="", d=0):
     t=data["bwt"]
     print t["firstOccurrence"]
     if(False in [x in t["firstOccurrence"] for x in set(pattern)]):
-        return "There are characters in pattern that do not correspond to the sequence characters: {}".format(t["firstOccurrence"].keys())
+        return jsonify(response="error", msg="There are characters in pattern that do not correspond to the sequence characters: {}".format(t["firstOccurrence"].keys()))
     else:
         t0=time.clock()
         match=ss.bwMatchingV8("".join(data["dseq"]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d)
         print "Search takes {}".format((time.clock()-t0))
-        return (str)(match)#return "hola {} {}".format(pattern, d)
+        return jsonify(response=(str)(match)) #return "hola {} {}".format(pattern, d)
 
 
 

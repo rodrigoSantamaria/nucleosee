@@ -5,19 +5,18 @@ var serverPath="http://127.0.0.1:5000/";
 
 
 // To try calls:
-// curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET http://localhost:5000/testUpload?filename=Mei3h_center_wl-peque2.wig
+// curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET http://localhost:5000/testUpload?user=jpiri27&password=ninguna&filename=Mei3h_center_wl-peque2.wig&md5=51d4ad140a8346ceae6bca385058871b
 
 
 /**
  * Uploads the file f to the server. Posterior calls to REST will be by the path of the file
- * @param DEBUG
  * @param file
  * @param hashMD5
  */
 // NOTE: Remember REST Flask calls require enable CORS in the browser!!!
-function sendFile(DEBUG, user, password, file, hashMD5)
+function sendFile(file, hashMD5)
 {
-    var ret="";
+    var response="";
     $.ajax(
     {
         url: serverPath+"testUpload?user="+user+"&password="+password+"&filename="+file.name+"&md5="+hashMD5,
@@ -27,11 +26,11 @@ function sendFile(DEBUG, user, password, file, hashMD5)
         success: function(result)
         {
             if(DEBUG) console.log("sendFile(): uploaded? "+result.response);
-            ret=result.response;
+            response=result.response;
         }
     });
     // only in this case we upload it
-    if(ret=="outdated version" || ret=="not found")
+    if(response=="outdated version" || response=="not found")
     {
         // The FormData object lets you compile a set of key/value pairs to send using XMLHttpRequest (AJAX)
         var fd = new FormData();
@@ -56,8 +55,7 @@ function sendFile(DEBUG, user, password, file, hashMD5)
 
 /**
  * Calls the REST service available to a summary and characterization of data
- * @param DEBUG
- * @param path  local to the server where the data are present (usually a .wig file)
+ * @param filename  usually a .wig file
  * @param track
  * @param ws    window size for summarization (usually 100 or more)
  * @param nb    number of bins for summarization (typically 5 or 7)
@@ -73,56 +71,64 @@ function sendFile(DEBUG, user, password, file, hashMD5)
  *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
  *                      on.
  */
-function preprocess(DEBUG,user,password,filename,track,ws,nb,maxSize)
+function preprocess(filename,track,ws,nb,maxSize)
 {
-    var result=[];
+    var response=[];
     $.ajax(
         {
             url: serverPath+"preprocess?user="+user+"&password="+password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize,
             type: "GET",
             datatype:"json",
             async: false,    // default: true
-            success: function(response)
+            success: function(result)
             {
                 if(DEBUG) console.log("preprocress(): discretization done...");
-                result.seq=response.seq; // this is only a sample, as it is too large to show as a whole and to send via REST
-                result.max=response.maximum;
-                result.min=response.minimum;
-                result.mean=response.mean;
-                result.stdev=response.stdev;
-                result.dseq=response.dseq;
-                result.fullLength=response.fullLength;
+                response.seq=result.seq; // this is only a sample, as it is too large to show as a whole and to send via REST
+                response.max=result.maximum;
+                response.min=result.minimum;
+                response.mean=result.mean;
+                response.stdev=result.stdev;
+                response.dseq=result.dseq;
+                response.fullLength=result.fullLength;
             },
             error: function(textStatus, errorThrown)
             {
                 if(DEBUG) console.log("preprocress(): discretization failed...");
             }
         });
-    return result;
+    return response;
 }
 
 
 
-function search(DEBUG,pattern,d)
+function search(pattern,d)
 {
-    var result=[];
+    var response=[];
     $.ajax(
         {
-            url: serverPath+"search?user=jpiriz&password=ninguna&pattern="+pattern+"&d="+d,
+            url: serverPath+"search?user="+user+"&password="+password+"&pattern="+pattern+"&d="+d,
             type: "GET",
             datatype:"json",
             async: false,    // default: true
-            success: function(response)
+            success: function(result)
             {
-                if(DEBUG) console.log("search(): search done...");
+                if(result.response != "error")
+                {
+                    if(DEBUG) console.log("search(): search done...");
 
-                console.log(response);
+                    // Convert to array...
+                    response.points = JSON.parse(result.response);
+                }
+                else
+                {
+                    console.log("search(): "+result.msg);
+                }
 
             },
             error: function(textStatus, errorThrown)
             {
-                if(DEBUG) console.log("search(): search failed...");
+                console.log("search(): search failed...");
             }
         });
-    return result;
+    return response;
 }
