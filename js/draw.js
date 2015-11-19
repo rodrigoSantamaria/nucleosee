@@ -252,7 +252,7 @@ function drawPoints(points)
             return "<strong>" + d.pos*globalDL1.window + " position</strong><br>" + Math.round(d.value*100)/100 + " value" + "<br>";
         });
 
-
+    // Calls tip
     globalDL1.svg.call(tip);
 
     globalDL1.svg.selectAll("circle.datapoint").remove();
