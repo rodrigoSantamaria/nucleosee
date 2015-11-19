@@ -45,7 +45,11 @@ function uploadFileAndProcessing(file, hashMD5, track, ws, nb, maxSize)
     if(DEBUG) console.log("Name of file: "+file.name);
 
     var startTime=new Date();
+<<<<<<< HEAD
+    sendFile(DEBUG, user, password, file, hashMD5);    // passing it to the server side (best solution for >1MB files)
+=======
     sendFile(file, hashMD5);    // passing it to the server side (best solution for >1MB files)
+>>>>>>> jlpiriz/master
     if(DEBUG) console.log("Time spent sending: "+ (new Date()-startTime)+"ms");
 
 
