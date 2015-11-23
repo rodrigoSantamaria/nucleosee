@@ -16,7 +16,7 @@ import time
 
 #BWT searches
 import sys 
-sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
+#sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
 import suffixSearch as ss
 import annotations as ann
 from helpers import convertString
@@ -30,7 +30,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     t0=time.clock()
     f=open(path)
     seq=f.readlines()
-    print '{} s in reading'.format(time.clock()-t0) #5 secs
+    print '{} s in reading'.format(time.clock()-t0) #2 secs
     t0=time.clock()
     chsize=[]
     cont=0
@@ -42,7 +42,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         else:
             cont=cont+1
     chsize.append(cont-1)
-    print '{} s in computing sizes'.format(time.clock()-t0) #39 seqs, go to numpy.array
+    print '{} s in computing sizes'.format(time.clock()-t0) #6 seqs, go to numpy.array
     t0=time.clock()
     ch=[]
     cont=0
@@ -54,7 +54,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
             chi[j]=round(float(seq[cont+j]),2)
         cont=cont+i
         ch.append(chi)
-    print '{} s in formatting'.format(time.clock()-t0) #39 seqs, go to numpy.array
+    print '{} s in formatting'.format(time.clock()-t0) #30 seqs, go to numpy.array
     return ch
 
 #%% ------------------ DISCRETIZATION -------------------
@@ -81,8 +81,8 @@ def discretize(seq, windowSize,numBins=5):
 
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
-UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
-#UPLOAD_FOLDER = '.' #wherever we run analysis.py
+#UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
+UPLOAD_FOLDER = '.' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig'])
 
 app=Flask(__name__)
@@ -194,8 +194,18 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     print 'bwt...'
     t=ss.bwt(''.join(dseq)+"$")
     print 'done!'
+    print 'rounding...0'
     res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
-    data={"seq":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum, "mean":m, "stdev":sd, "dseq":dseq, "bwt":t}
+    print 'done!'
+    print 'loading annotations...'
+    dataGFF=ann.gff()
+    dataGO=ann.go()
+    dataGOA=ann.goa()
+    #dataFASTA=fasta(1)
+    print 'done!'
+    data={"seq":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
+          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t,
+          "gff":dataGFF, "go":dataGO, "goa":dataGOA}
     session[user]=data
     return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq)
 
@@ -232,6 +242,20 @@ def search(pattern="", d=0):
         print "Search takes {}".format((time.clock()-t0))
         return jsonify(response=(str)(match))
 
+#%%
+@app.route("/annotations")
+def annotations(positions=[], window=1000, types=["any"]):
+    global data
+    
+    window=int(request.args.get("window"))
+    print window
+    pos=eval(request.args.get("positions"))
+    print pos
+    types=eval(request.args.get("types"))
+    print types
+    res=ann.annotate(pos, data["gff"], types, window)
+    #print res
+    return jsonify(response=res)
 
 
 #%%from http://mortoray.com/2014/04/09/allowing-unlimited-access-with-cors/
