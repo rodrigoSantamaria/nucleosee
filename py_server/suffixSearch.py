@@ -120,6 +120,7 @@ def bwMatchingV7(pattern, cf, fo, sa, checkpoints, k=1000):
 def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
     import numpy
     import time
+    t00=time.clock()
     step=(int)(round((float)(len(pattern))/(d+1)))
     print "{} {} {}".format(pattern, d, step)
     matches=[]
@@ -166,6 +167,7 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
         ret=ret.union(matches[i])
     ret=list(ret)
     ret.sort()
+    print "BWT search takes {}s".format(time.clock()-t00)
     return ret
 
 
