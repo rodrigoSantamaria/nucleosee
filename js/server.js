@@ -15,7 +15,7 @@ var serverPath="http://127.0.0.1:5000/";
  */
 // NOTE: Remember REST Flask calls require enable CORS in the browser!!!
 
-function sendFile(file, hashMD5)
+function SERVER_sendFile(file, hashMD5)
 {
     var response="";
     $.ajax(
@@ -72,7 +72,7 @@ function sendFile(file, hashMD5)
  *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
  *                      on.
  */
-function preprocess(filename,track,ws,nb,maxSize)
+function SERVER_preprocess(filename,track,ws,nb,maxSize)
 {
     var response=[];
     $.ajax(
@@ -102,7 +102,7 @@ function preprocess(filename,track,ws,nb,maxSize)
 
 
 
-function search(pattern,d)
+function SERVER_search(pattern,d)
 {
     var response=[];
     $.ajax(
@@ -135,11 +135,12 @@ function search(pattern,d)
 
 
 
-function searchGen()
+function SERVER_annotationsGenes()
 {
     var response=[];
     $.ajax(
         {
+            //http://localhost:5000/annotations?positions=[18000,28000,38000,45000,86000]&types=["gene","CDS"]&window=1000
             url: serverPath+"",
             type: "GET",
             datatype:"json",

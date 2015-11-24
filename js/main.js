@@ -48,16 +48,16 @@ function uploadFileAndProcessing(file, hashMD5, track, ws, nb, maxSize)
     if(DEBUG) console.log("Name of file: "+file.name);
 
     var startTime=new Date();
-    sendFile(file, hashMD5);    // passing it to the server side (best solution for >1MB files)
+    SERVER_sendFile(file, hashMD5);    // passing it to the server side (best solution for >1MB files)
     if(DEBUG) console.log("Time spent sending: "+ (new Date()-startTime)+"ms");
 
 
     // PREPROCESSING: NORMALIZE, STATISTICAL DESCRIPTORS, DISCRETIZE
     //----------------------------------------------------------------
-    if(DEBUG) console.log("\n----- PROCESSING -----");
+    if(DEBUG) console.log("\n----- PREPROCESSING -----");
 
     startTime=new Date();
-    var desc=preprocess(file.name, track, ws, nb, maxSize);
+    var desc=SERVER_preprocess(file.name, track, ws, nb, maxSize);
     if(DEBUG) console.log("Time spent preprocessing: "+ (new Date()-startTime)+"ms");
 
     return desc;
@@ -83,13 +83,15 @@ function drawing(desc, ws)
 }
 
 
+// SEARCH POINTS
+////////////////////////////////
 function searchPoints()
 {
     var pattern = $('#patternSearch').val();
     var d       = $('#dSearch').val();
 
     var startTime=new Date();
-    var result = search(pattern,d);
+    var result = SERVER_search(pattern,d);
     dataLine1_drawPoints(result.points);
     if(DEBUG) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
 }

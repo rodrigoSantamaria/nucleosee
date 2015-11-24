@@ -82,7 +82,7 @@ def discretize(seq, windowSize,numBins=5):
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
 #UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
-UPLOAD_FOLDER = '.' #wherever we run analysis.py
+UPLOAD_FOLDER = './genomes' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig'])
 
 app=Flask(__name__)
@@ -169,6 +169,7 @@ retorna    objeto JSON con los siguientes campos:
 @app.route("/preprocess")
 def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0):
     import numpy as np
+    import time
     global data
     global session
     #0) read
@@ -197,12 +198,13 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     print 'rounding...0'
     res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
     print 'done!'
+    t0=time.clock()
     print 'loading annotations...'
     dataGFF=ann.gff()
     dataGO=ann.go()
     dataGOA=ann.goa()
     #dataFASTA=fasta(1)
-    print 'done!'
+    print "done! ... annotations takes {}".format((time.clock()-t0))
     data={"seq":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
           "mean":m, "stdev":sd, "dseq":dseq, "bwt":t,
           "gff":dataGFF, "go":dataGO, "goa":dataGOA}

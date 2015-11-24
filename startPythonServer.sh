@@ -2,4 +2,5 @@
 
 
 # Start service of Python
-python ./py_server/analysis.py
+cd py_server/
+python ./analysis.py
