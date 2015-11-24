@@ -163,7 +163,7 @@ function dataLine(na, start, end, max, min, height, width, x0, y0, linewidth, co
  * @param numTicks number of ticks to draw after the first one (approximate, the algorithm may adjust a little)
  * @param color
  * @param opacity
- * @param mean  #TODO: for vertical ticks (by now only horizontal)
+ * @param mean  #TODOO: for vertical ticks (by now only horizontal)
  * @param max
  * @param min
  */
@@ -440,8 +440,8 @@ if (window.File && window.FileReader && window.FileList && window.Blob) //check 
                     console.log("real segment");
                     var esWidth=segmentEndContext-segmentStartContext;
 
-                    //TODO: segments in 1:2+ do not show the rigth ticks (remaining fragment not drawn...)
-                    //TODO: last segments are incorrectly drawn (displaced)
+                    //TODOO: segments in 1:2+ do not show the rigth ticks (remaining fragment not drawn...)
+                    //TODOO: last segments are incorrectly drawn (displaced)
                     rawSegment=new dataLine(na,strack.segments[hseg].start, strack.segments[hseg].end,max, min, graphHeight, graphWidth*(rsWidth/esWidth), startX+(strack.segments[hseg].start-segmentStartContext),graphHeight+20, '2', '#FF0000', '1', 0, false);
                     segmentTicks=new ticks(Math.round(segmentEndContext)-Math.round(segmentStartContext), startX, graphHeight+20, graphHeight, graphWidth, segmentStartContext,10, '#880000', '0.2', desc.mean, desc.max, desc.min);
                     var nas=na.slice(strack.segments[hseg].start, strack.segments[hseg].end)
@@ -487,7 +487,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) //check 
                 //sinus=new sinusoid(na, 10, 200, 10);
             }
         }
-    document.getElementById('files').addEventListener('change', this, false); //TODO: changing to a post method to upload files to server
+    document.getElementById('files').addEventListener('change', this, false); //TODOO: changing to a post method to upload files to server
     }
 else
     {

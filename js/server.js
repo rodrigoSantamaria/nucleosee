@@ -124,6 +124,28 @@ function search(pattern,d)
                 {
                     console.log("search(): "+result.msg);
                 }
+            },
+            error: function(textStatus, errorThrown)
+            {
+                console.log("search(): search failed...");
+            }
+        });
+    return response;
+}
+
+
+
+function searchGen()
+{
+    var response=[];
+    $.ajax(
+        {
+            url: serverPath+"",
+            type: "GET",
+            datatype:"json",
+            async: true,    // default: true
+            success: function(result)
+            {
 
             },
             error: function(textStatus, errorThrown)

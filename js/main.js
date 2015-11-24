@@ -1,4 +1,10 @@
-
+/*
+  ┌────────────────────────────────────────────────────────────┐
+  │ Main.js                                                    │
+  ├────────────────────────────────────────────────────────────┤
+  │ Description:                                               │
+  └────────────────────────────────────────────────────────────┘
+*/
 
 
 var user="jpiriz";
@@ -69,7 +75,6 @@ function drawing(desc, ws)
     if(DEBUG) console.log("Length of seq:"+seq.length+" (full length="+fullLength+")");
 
 
-
     // DATA LINE (preprocessed data)
     //--------------------------------
     var startTime=new Date();
@@ -85,8 +90,8 @@ function searchPoints()
 
     var startTime=new Date();
     var result = search(pattern,d);
-    drawPoints(result.points);
-    if(DEBUG) console.log("Time spent dataLine2: "+ (new Date()-startTime)+"ms");
+    dataLine1_drawPoints(result.points);
+    if(DEBUG) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
 }
 
 

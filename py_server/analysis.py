@@ -16,7 +16,7 @@ import time
 
 #BWT searches
 import sys 
-sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
+sys.path.append("/Users/jonatan/WebstormProjects/seqview/py_server")
 import suffixSearch as ss
 import annotations as ann
 from helpers import convertString
@@ -81,7 +81,7 @@ def discretize(seq, windowSize,numBins=5):
 
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
-UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
+UPLOAD_FOLDER = '/Users/jonatan/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
 #UPLOAD_FOLDER = '.' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig'])
 

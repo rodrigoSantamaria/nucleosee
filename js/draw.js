@@ -125,6 +125,14 @@ function dataLine1(seq, start, end, mean, stdev, ws)
         .attr("d", line);
 
 
+    svg.append("text")
+        .text(window+" : 1")
+        .attr("font-size", "15px")
+        .attr("x", width-50)
+        .attr("y", 15);
+
+    console.log(width);
+
     globalDL1.svg = svg;
     globalDL1.data = data;
     globalDL1.x = x;
@@ -225,11 +233,17 @@ function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
         .datum(data)
         .attr("class", "line")
         .attr("d", line);
+
+    svg.append("text")
+        .text(window+" : 1")
+        .attr("font-size", "15px")
+        .attr("x", width-50)
+        .attr("y", 15);
 }
 
 
 
-function drawPoints(points)
+function dataLine1_drawPoints(points)
 {
     console.log(points);
 
@@ -263,10 +277,8 @@ function drawPoints(points)
         .attr('class', 'datapoint')
         .attr('cx', function(d) { return globalDL1.x(d.pos); })
         .attr('cy', function(d) { return globalDL1.y(d.value); })
-        .attr('r', 6)
-        .attr('fill', 'white')
-        .attr('stroke', 'steelblue')
-        .attr('stroke-width', '3')
+        .attr('r', 3)
+        .attr('fill', 'red')
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
 }

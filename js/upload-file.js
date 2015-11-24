@@ -7,7 +7,6 @@ if (window.File && window.FileReader && window.FileList && window.Blob)
 {
     console.log("Start all (with File APIs)...");
 
-
     this.handleEvent=function(evt)
     {
         switch(event.type)
