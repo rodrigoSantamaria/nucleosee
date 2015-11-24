@@ -82,7 +82,7 @@ def discretize(seq, windowSize,numBins=5):
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
 #UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
-UPLOAD_FOLDER = '.' #wherever we run analysis.py
+UPLOAD_FOLDER = './genomes' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig'])
 
 app=Flask(__name__)
@@ -198,11 +198,16 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
     print 'done!'
     print 'loading annotations...'
+    t0=time.clock()
     dataGFF=ann.gff()
+    print "Annotations GFF take {}".format((time.clock()-t0))
+    t0=time.clock()
     dataGO=ann.go()
     dataGOA=ann.goa()
     #dataFASTA=fasta(1)
     print 'done!'
+    print "Annotations take {}".format((time.clock()-t0))
+
     data={"seq":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
           "mean":m, "stdev":sd, "dseq":dseq, "bwt":t,
           "gff":dataGFF, "go":dataGO, "goa":dataGOA}
