@@ -200,14 +200,14 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     print 'done!'
     t0=time.clock()
     print 'loading annotations...'
-    dataGFF=ann.gff()
-    dataGO=ann.go()
-    dataGOA=ann.goa()
+    #dataGFF=ann.gff()
+    #dataGO=ann.go()
+    #dataGOA=ann.goa()
     #dataFASTA=fasta(1)
     print "done! ... annotations takes {}".format((time.clock()-t0))
     data={"seq":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t,
-          "gff":dataGFF, "go":dataGO, "goa":dataGOA}
+          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t}
+          #"gff":dataGFF, "go":dataGO, "goa":dataGOA}
     session[user]=data
     return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq)
 

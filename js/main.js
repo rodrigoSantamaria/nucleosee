@@ -25,9 +25,9 @@ var DEBUG = true;
 function main(file, hashMD5)
 {
     var track=0;
-    var ws=150;         // window size: discrete to real ratio
-    var nb=5;           // num bins
-    var maxSize=100000;  // maximum number of normalized data to store
+    var ws=30;           // window size: discrete to real ratio
+    var nb=5;            // num bins
+    var maxSize=200000;  // maximum number of normalized data to store
 
 
     destroyAll(false);
@@ -78,7 +78,7 @@ function drawing(desc, ws)
     // DATA LINE (preprocessed data)
     //--------------------------------
     var startTime=new Date();
-    dataLine1(seq, 0, seq.length, desc.mean, desc.stdev, ws);
+    dataLine1(seq, 100000, 0, fullLength, desc.mean, desc.stdev, ws);
     if(DEBUG) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
 }
 
@@ -94,6 +94,7 @@ function searchPoints()
     var result = SERVER_search(pattern,d);
     dataLine1_drawPoints(result.points);
     if(DEBUG) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
+    //SERVER_annotationsGenes(globalDL1.seqPoints,["any"],globalDL1.width);
 }
 
 
@@ -108,11 +109,13 @@ function destroyAll(clear)
     $("#files").val('');
 
     // Empty all SVG images
-    if($('#lineSeq').html() != "")
-        $("#lineSeq").empty();
+    var images = ["#lineSeq", "#lineSeq2"];
 
-    if($('#lineSeq2').html() != "")
-        $("#lineSeq2").empty();
+    for(var i=0;i<images.length;i++)
+    {
+        if($(images[i]).html() != "")
+            $(images[i]).empty();
+    }
 
     // Clear console
     if(clear && DEBUG)

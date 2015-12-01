@@ -92,7 +92,7 @@ function SERVER_preprocess(filename,track,ws,nb,maxSize)
                 response.dseq=result.dseq;
                 response.fullLength=result.fullLength;
             },
-            error: function(textStatus, errorThrown)
+            error: function()
             {
                 if(DEBUG) console.log("preprocress(): discretization failed...");
             }
@@ -135,19 +135,18 @@ function SERVER_search(pattern,d)
 
 
 
-function SERVER_annotationsGenes()
+function SERVER_annotationsGenes(points,types,window)
 {
     var response=[];
     $.ajax(
         {
-            //http://localhost:5000/annotations?positions=[18000,28000,38000,45000,86000]&types=["gene","CDS"]&window=1000
-            url: serverPath+"",
+            url: serverPath+"annotations?user="+user+"&password="+password+"&positions="+points+"&types="+types+"&window="+window,
             type: "GET",
             datatype:"json",
             async: true,    // default: true
             success: function(result)
             {
-
+                console.log(result);
             },
             error: function(textStatus, errorThrown)
             {
