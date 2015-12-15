@@ -1,6 +1,6 @@
 /*
   ┌────────────────────────────────────────────────────────────┐
-  │ Main.js                                                    │
+  │ main.js                                                    │
   ├────────────────────────────────────────────────────────────┤
   │ Description:                                               │
   └────────────────────────────────────────────────────────────┘
@@ -10,7 +10,7 @@
 var user="jpiriz";
 var password="ninguna";
 
-var DEBUG = true;
+var DEBUG_GBV = true;
 
 
 
@@ -27,59 +27,62 @@ function main(file, hashMD5)
     var track=0;
     var ws=30;           // window size: discrete to real ratio
     var nb=5;            // num bins
-    var maxSize=200000;  // maximum number of normalized data to store
+    var maxSize=400000;  // maximum number of normalized data to store
 
 
     destroyAll(false);
 
-    var desc=uploadFileAndProcessing(file, hashMD5, track, ws, nb, maxSize);
+    Server.connect(DEBUG_GBV, user, password);
 
-    drawing(desc, ws);
+    var processedData=uploadFileAndPreprocess(file, hashMD5, track, ws, nb, maxSize);
+
+    drawing(processedData, ws, maxSize);
 }
 
 
-// ANALYSIS: UPLOAD FILE AND PROCESSING
-/////////////////////////////////////////
-function uploadFileAndProcessing(file, hashMD5, track, ws, nb, maxSize)
+// ANALYSIS: UPLOAD FILE AND PREPROCESSING
+////////////////////////////////////////////
+function uploadFileAndPreprocess(file, hashMD5, track, ws, nb, maxSize)
 {
     // READ FILE
     //------------
-    if(DEBUG) console.log("\n----- UPLOAD FILE -----");
-    if(DEBUG) console.log("Name of file: "+file.name);
+    if(DEBUG_GBV) console.log("\n----- UPLOAD FILE -----");
+    if(DEBUG_GBV) console.log("Name of file: "+file.name);
 
     var startTime=new Date();
-    SERVER_sendFile(file, hashMD5);    // passing it to the server side (best solution for >1MB files)
-    if(DEBUG) console.log("Time spent sending: "+ (new Date()-startTime)+"ms");
+    Server.sendFile(file, hashMD5);    // passing it to the server side (best solution for >1MB files)
+    if (DEBUG_GBV) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
 
 
     // PREPROCESSING: NORMALIZE, STATISTICAL DESCRIPTORS, DISCRETIZE
     //----------------------------------------------------------------
-    if(DEBUG) console.log("\n----- PREPROCESSING -----");
+    if (DEBUG_GBV) console.log("\n----- PREPROCESSING -----");
 
-    startTime=new Date();
-    var desc=SERVER_preprocess(file.name, track, ws, nb, maxSize);
-    if(DEBUG) console.log("Time spent preprocessing: "+ (new Date()-startTime)+"ms");
+    startTime = new Date();
+    var processedData = Server.preprocess(file.name, track, ws, nb, maxSize);
+    if (DEBUG_GBV) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
 
-    return desc;
+    return processedData;
 }
 
 
 // DRAWING
 ////////////////////////////////
-function drawing(desc, ws)
+function drawing(processedData, ws, maxSize)
 {
-    if(DEBUG) console.log("\n----- DRAWING -----");
+    if(DEBUG_GBV) console.log("\n----- DRAWING -----");
 
-    var seq=desc.seq;    // just a sampling of about 100K of the original full length sequence
-    var fullLength=desc.fullLength;
-    if(DEBUG) console.log("Length of seq:"+seq.length+" (full length="+fullLength+")");
+    var seqServer=processedData.seq;    // just a sampling of about 100K of the original full length sequence
+    var fullLength=processedData.fullLength;
+    if(DEBUG_GBV) console.log("Length of seqServer:"+seqServer.length+" (full length seq="+fullLength+")");
 
 
-    // DATA LINE (preprocessed data)
-    //--------------------------------
+    // DATALINE 1 (preprocessed data)
+    //----------------------------------
     var startTime=new Date();
-    dataLine1(seq, 100000, 0, fullLength, desc.mean, desc.stdev, ws);
-    if(DEBUG) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
+    dataLine1(seqServer,0,fullLength,fullLength, maxSize, processedData.mean, processedData.stdev, ws);
+    if(DEBUG_GBV) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
+
 }
 
 
@@ -87,16 +90,27 @@ function drawing(desc, ws)
 ////////////////////////////////
 function searchPoints()
 {
-    var pattern = $('#patternSearch').val();
-    var d       = $('#dSearch').val();
+    if(globalDL1.drawn)
+    {
+        var pattern = $('#patternSearch').val();
+        var d       = $('#dSearch').val();
 
-    var startTime=new Date();
-    var result = SERVER_search(pattern,d);
-    dataLine1_drawPoints(result.points);
-    if(DEBUG) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
-    //SERVER_annotationsGenes(globalDL1.seqPoints,["any"],globalDL1.width);
+        // DATALINE 2: DRAW POINTS
+        //----------------------------------
+        var numNucleotidesDraw = globalDL1.width;
+
+        var startTime=new Date();
+        var result=Server.search(pattern,d);
+        dataLine1_drawPoints(result.points, result.sizePattern, numNucleotidesDraw);
+        if(DEBUG_GBV) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
+
+
+        // DATALINE 2: GET ANNOTATIONS
+        //------------------------------
+        //result = Server.annotationsGenes(globalDL1.seqPoints,"[\"any\"]",globalDL1.width);
+        //console.log(result);
+    }
 }
-
 
 
 
@@ -118,7 +132,7 @@ function destroyAll(clear)
     }
 
     // Clear console
-    if(clear && DEBUG)
+    if(clear && DEBUG_GBV)
     {
         console.log(new Array(15).join("\n"));
         console.log("Reset all (with File APIs)...");

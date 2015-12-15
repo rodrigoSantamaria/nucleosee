@@ -200,13 +200,13 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     print 'done!'
     t0=time.clock()
     print 'loading annotations...'
-    #dataGFF=ann.gff()
+    dataGFF=ann.gff()
     #dataGO=ann.go()
     #dataGOA=ann.goa()
     #dataFASTA=fasta(1)
     print "done! ... annotations takes {}".format((time.clock()-t0))
-    data={"seq":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t}
+    data={"seq":seq, "res":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
+          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF}
           #"gff":dataGFF, "go":dataGO, "goa":dataGOA}
     session[user]=data
     return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq)
@@ -242,7 +242,27 @@ def search(pattern="", d=0):
         t0=time.clock()
         match=ss.bwMatchingV8("".join(data["dseq"]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d)
         print "Search takes {}".format((time.clock()-t0))
-        return jsonify(response=(str)(match))
+        return jsonify(points=(str)(match), sizePattern=len(pattern))
+
+
+
+#%%
+@app.route("/getPartSeq")
+def getPartSeq(start=0, end=0):
+    import numpy as np
+
+    global data
+
+    start=int(request.args.get("start"))
+    end=int(request.args.get("end"))
+
+    seq=data["seq"]
+    part=seq[start:end]
+    part=part.tolist()
+
+    return jsonify(partSeq=part)
+
+
 
 #%%
 @app.route("/annotations")
