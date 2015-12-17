@@ -24,11 +24,13 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.I.gff
     data=np.empty(tam,dtype=[("chromosome", "a2"),("type", "a40"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a200")])
     for i in range(skip):
         next(reader)
-    for i in range(tam):
+    for i in xrange(tam):
         row=reader.next()
         tow=data[i]
-        tow["start"]=(int)(row["start"])
-        tow["end"]=(int)(row["end"])
+        #tow["start"]=(int)(row["start"])
+        #tow["end"]=(int)(row["end"])
+        tow["start"]=(row["start"])
+        tow["end"]=(row["end"])
         tow["chromosome"]=row["chromosome"]
         tow["type"]=row["type"]
         tow["sense"]=row["sense"]

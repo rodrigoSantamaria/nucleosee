@@ -14,11 +14,7 @@ var serverPath="http://127.0.0.1:5000/";
  * @param hashMD5
  */
 // NOTE: Remember REST Flask calls require enable CORS in the browser!!!
-<<<<<<< HEAD:js/analysis.js
-function sendFile(DEBUG, user, password, file, hashMD5)
-=======
 function sendFile(file, hashMD5)
->>>>>>> jlpiriz/master:js/server.js
 {
     var response="";
     $.ajax(
@@ -121,6 +117,7 @@ function search(pattern,d)
                     if(DEBUG) console.log("search(): search done...");
 
                     // Convert to array...
+                    console.log(result.response);
                     response.points = JSON.parse(result.response);
                 }
                 else

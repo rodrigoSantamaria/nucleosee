@@ -33,13 +33,12 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     t0=time.clock()
     f=open(path)
     seq=f.readlines()
-    print '{} s in reading'.format(time.clock()-t0) #5 secs
+    print '{} s in reading'.format(time.clock()-t0) #2 secs
     t0=time.clock()
     chsize=[]
     cont=0
-    for i in xrange(len(seq)):
-        s=seq[i]
-        if s[0]=='t' and i>0:#new chromosome
+    for s in seq[1:]:
+        if s.startswith("track"):#new chromosome
          chsize.append(cont-1)
          print 'Chromosome with size {}'.format(cont-1)
          cont=0
@@ -47,7 +46,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
             cont=cont+1
     chsize.append(cont-1) 
     print 'Chromosome with size {}'.format(cont-1)
-    print '{} s in computing sizes'.format(time.clock()-t0) #39 seqs, go to numpy.array
+    print '{} s in computing sizes'.format(time.clock()-t0) #5 seqs
     t0=time.clock()
     ch=[]
     cont=0
@@ -56,47 +55,104 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         cont=cont+2
         chi=numpy.empty(i,dtype=float)
         for j in xrange(0,i-1):
-            chi[j]=round(float(seq[cont+j]),2)
+            chi[j]=float(seq[cont+j])
+        #chi.round(2)
         cont=cont+i
         ch.append(chi)
-    print '{} s in formatting'.format(time.clock()-t0) #39 seqs, go to numpy.array
+    print '{} s in formatting'.format((time.clock()-t0)) #6 seqs
     return ch
-
 #%%
-def preprocess(path="/Users/rodri/WebstormProjects/untitled/py/genomes/dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0, onlyPositive=True):
-    import numpy as np
 
+#path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/quique/23479_h90_wlt_mean.wig"
+#tal=readWig(path)
+#
+##%%
+#t0=time.clock()
+#f=open(path)
+#seq=f.readlines()
+#print '{} s in reading'.format(time.clock()-t0) 
+##%%
+#import pandas
+#import time
+#t0=time.clock()
+#seq=pandas.read_table(path, skiprows=2, names=["level"])
+#print '{} s in reading with pandas'.format(time.clock()-t0) 
+##searching for different tracks
+#t0=time.clock()
+#seq[seq.level.apply(lambda x: "track" in (str)(x))] 
+#print '{} s in searching tracks with pandas'.format(time.clock()-t0) 
+#%%
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0):
+#    global data
+#    global session
+    import numpy as np
+    import suffixSearch as ss
+    import annotations as ann
+    import time
+    t00=time.clock()
+    
     #0) read
     print 'reading...'
-    #seq=readWig(str(request.args.get("path")))
+    t0=time.clock()
+#    path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
+    path=filename
+    #track=int(request.args.get("track"))
     seq=readWig(path)
-    seq=seq[track]
-    print 'size of track {} is {}'.format(track, len(seq))
-    
+    seq=seq[track] #(TODO: by now, only first chromosome)
+    print 'done! in {}s'.format((time.clock()-t0))
     #1) normalize 
-    print 'normalizing...'
+    print 'computing statistics...'
+    t0=time.clock()
     m=np.mean(seq)
     sd=np.std(seq)
-    nseq=[(x-m)/sd for x in seq]
-    print 'mean: {}\tsd: {}'.format(m, sd)
-
+    maximum=np.max(seq)
+    minimum=np.min(seq)
+    #adding upper limit    
+    upperlim=m+2*sd#avoid outliers? testing
+    seq=[max(0,min(x,upperlim)) for x in seq]
+    print 'max seq mod {}'.format(np.max(seq))
+    #nseq=[(x-m)/sd for x in seq]
+    print '{}\t{}'.format(m,sd)
+    print 'done! in {}s'.format((time.clock()-t0))
     #2) discretize
     print 'discretizing...'
+    t0=time.clock()
     #windowSize=int(request.args.get("windowSize"))
     #numBins=int(request.args.get("numBins"))
     #maxSize=int(request.args.get("maxSize"))
-    if onlyPositive:
-        seq=[min(max(0,x),m+2*sd) for x in seq]
-        
     dseq=discretize(seq, windowSize, numBins)
-    print 'done!'
-    #TODO: broken pipe returning the object if whole 
-            #Although it is not always happening, it's clearly not sensible
-            #to send the full sequence. We sample instead 100K values 
-    #return jsonify(result=[nseq[x] for x in range(0,len(seq),max(1,len(seq)/maxSize))], fullLength=len(nseq), maximum=np.max(nseq), minimum=np.min(nseq), mean=m, sdev=sd, dseq=dseq)
-    #return {"result":[seq[x] for x in range(0,len(seq),max(1,len(seq)/maxSize))], "fullLength":len(nseq), "maximum":np.max(seq), "minimum":np.min(seq), "mean":m, "sdev":sd, "dseq":dseq}
+    print 'done! in {}s'.format((time.clock()-t0))
+    print 'bwt...'
+    t0=time.clock()
+    t=ss.bwt(''.join(dseq)+"$")
+    print 'done! in {}s'.format((time.clock()-t0))
+    print 'squeezing...'
+    t0=time.clock()
     step=max(1,len(seq)/maxSize)
-    return {"result":[np.mean(seq[x:x+step]) for x in range(0,len(seq),step)], "step":step, "fullLength":len(nseq), "maximum":np.max(seq), "minimum":np.min(seq), "mean":m, "sdev":sd, "dseq":dseq}
+    print 'step is {}'.format(step)
+    res=[round(seq[x],2) for x in xrange(0,len(seq),step)]
+    #res=[seq[i:(i+step)]/step for i in xrange(0,len(seq)-step,step)]
+    print 'done! in {}s'.format((time.clock()-t0))
+    print 'loading annotations...'
+    t0=time.clock()
+    dataGFF=ann.gff()
+    t0=time.clock()
+    dataGO=ann.go()
+    dataGOA=ann.goa()
+    #dataFASTA=fasta(1)
+    print 'done! in {}s'.format((time.clock()-t0))
+    
+    print '--- Preprocessing took {}s ---'.format((time.clock()-t00))
+
+#    data={"seq":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
+#          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t,
+#          "gff":dataGFF, "go":dataGO, "goa":dataGOA}
+#    session[user]=data
+    return {"seq": res, "fullLength":len(seq), "maximum":maximum, 
+    "minimum":minimum, "mean":m, "stdev":sd, "dseq":dseq,
+    "bwt":t, "gff":dataGFF, "go":dataGO, "goa":dataGOA}
+
+
 #%%
 def search(pattern="", d=0):
     global data
