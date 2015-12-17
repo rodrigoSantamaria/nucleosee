@@ -1,12 +1,17 @@
-
+/*
+ ┌────────────────────────────────────────────────────────────┐
+ │ upload-file.js                                             │
+ ├────────────────────────────────────────────────────────────┤
+ │ Description:                                               │
+ └────────────────────────────────────────────────────────────┘
+ */
 
 
 
 // Check if there's support for file reading
 if (window.File && window.FileReader && window.FileList && window.Blob)
 {
-    console.log("Start all (with File APIs)...");
-
+    if(DEBUG_GBV) console.log("Start all (with File APIs)...");
 
     this.handleEvent=function(evt)
     {
@@ -16,14 +21,14 @@ if (window.File && window.FileReader && window.FileList && window.Blob)
                 var files = evt.target.files;   // FileList object
                 var file=files[0];              // By now, just one file
 
-                if(DEBUG) console.log("\n----- CHECKING FILE -----");
+                if(DEBUG_GBV) console.log("\n----- CHECKING FILE -----");
                 var startTime=new Date();
                 var dfdMd5File = new $.Deferred();
                 calculateMD5(dfdMd5File, file);
                 dfdMd5File.done(function(hash)
                 {
-                    if(DEBUG) console.log("calculateMD5(): "+hash);
-                    if(DEBUG) console.log("Time spent checking (MD5): "+ (new Date()-startTime)+"ms");
+                    if(DEBUG_GBV) console.log("calculateMD5(): "+hash);
+                    if(DEBUG_GBV) console.log("Time spent checking (MD5): "+ (new Date()-startTime)+"ms");
                     main(file, hash);
                 });
 

@@ -1,0 +1,121 @@
+
+
+
+
+
+/*--------------------------------------------*/
+/*           DATALINE 1                       */
+/*--------------------------------------------*/
+
+/* X AXIS */
+.dl1.axis.x path,
+.dl1.axis.x line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+.dl1.axis.x text {
+    font-family: sans-serif;
+    font-size: 11px;
+}
+
+/* Y AXIS */
+.dl1.axis.y path,
+.dl1.axis.y line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+.dl1.axis.y text {
+    font-family: sans-serif;
+    font-size: 11px;
+}
+
+/* SCALE TEXT */
+.dl1.scale {
+    font-family: sans-serif;
+    font-size: 13px;
+}
+
+/* LINE */
+.dl1.line {
+    fill: none;
+    stroke: steelblue;
+    stroke-width: 1px;
+}
+
+/* POINTS */
+.dl1.point {
+    r:3px;
+    fill:white;
+    stroke:darkred;
+    stroke-width:1.5px;
+}
+.dl1.point:hover {
+    fill: steelblue;
+}
+.dl1.point-tip {
+    line-height: 1;
+    font-weight: bold;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border-radius: 2px;
+    font-size: 11px;
+}
+
+
+/*--------------------------------------------*/
+/*           DATALINE 2                      */
+/*--------------------------------------------*/
+
+/* X AXIS */
+.dl2.axis.x path,
+.dl2.axis.x line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+.dl2.axis.x text {
+    font-family: sans-serif;
+    font-size: 11px;
+}
+
+/* Y AXIS */
+.dl2.axis.y path,
+.dl2.axis.y line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+.dl2.axis.y text {
+    font-family: sans-serif;
+    font-size: 11px;
+}
+
+/* SCALE TEXT */
+.dl2.scale {
+    font-family: sans-serif;
+    font-size: 13px;
+}
+
+/* LINE */
+.dl2.line {
+    fill: none;
+    stroke: steelblue;
+    stroke-width: 1px;
+}
+.dl2.line.hl {
+    fill: none;
+    stroke: darkred;
+    stroke-width: 2px;
+}
+
+
+
+
+
+
+
+
+

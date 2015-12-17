@@ -8,10 +8,12 @@ Different methods to read annotations
 
 #%%
 def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.I.gff3"):
+    import time
     f=open(filename)
     import csv
     cad=f.readline()
     skip=0
+
     while(cad.startswith("#")==True):
         cad=f.readline()
         skip+=1
@@ -19,22 +21,22 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.I.gff
     f.seek(0)
     reader=csv.DictReader(f, delimiter="\t")
     reader.fieldnames=["chromosome", "source", "type", "start", "end", "xx", "sense", "xx", "id"]
-    
+
     import numpy as np
+
+
     data=np.empty(tam,dtype=[("chromosome", "a2"),("type", "a40"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a200")])
     for i in range(skip):
         next(reader)
-    for i in xrange(tam):
+    for i in range(tam):
         row=reader.next()
-        tow=data[i]
-        #tow["start"]=(int)(row["start"])
-        #tow["end"]=(int)(row["end"])
-        tow["start"]=(row["start"])
-        tow["end"]=(row["end"])
-        tow["chromosome"]=row["chromosome"]
-        tow["type"]=row["type"]
-        tow["sense"]=row["sense"]
-        tow["id"]=row["id"]
+        data[i]["start"]=(int)(row["start"])
+        data[i]["end"]=(int)(row["end"])
+        data[i]["chromosome"]=row["chromosome"]
+        data[i]["type"]=row["type"]
+        data[i]["sense"]=row["sense"]
+        data[i]["id"]=row["id"]
+
     return data
           
 
@@ -65,7 +67,7 @@ def goa(filename="genomes/annotations/spombe/goa/gene_association.pombase"):
     return data
     
 
-#%% Loads the fasta sequence of a given file (by now only working for S pombe files)
+#%% Loads the fasta sequence of a given file (by now only working forS pombe files)
 def fasta(ch):
     f=open("genomes/annotations/spombe/fasta/chromosome"+(str)(ch)+".fasta")
     reader=f.readlines()

@@ -132,7 +132,8 @@ def testUpload():
             return jsonify(response='outdated version')
     else:
         return jsonify(response='not found')
-          
+    
+      
 #@app.route("/test")
 #def test():
 #    default=""+request.args.get("default") #the only way I found to do it... (no default value can be set)
@@ -153,7 +154,6 @@ def loadSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/d
     f=open(path, "r")
     session=pickle.load(f)
     return session
-    
 #%%
 """
 Preprocesa un fichero wig para su visualización
@@ -168,63 +168,46 @@ retorna    objeto JSON con los siguientes campos:
 """
 @app.route("/preprocess")
 def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0):
-    global data
-    global session
     import numpy as np
     import time
-    t00=time.clock()
-    
+    global data
+    global session
     #0) read
     print 'reading...'
-    t0=time.clock()
     path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
     track=int(request.args.get("track"))
     seq=readWig(path)
     seq=seq[track] #(TODO: by now, only first chromosome)
-    print 'done! in {}s'.format((time.clock()-t0))
     #1) normalize 
     print 'computing statistics...'
-    t0=time.clock()
     m=np.mean(seq)
     sd=np.std(seq)
     maximum=np.max(seq)
     minimum=np.min(seq)
-   # upperlim=m+2*sd#avoid outliers? testing
-   # seq=[max(0,min(x,upperlim)) for x in seq]
-    
     #nseq=[(x-m)/sd for x in seq]
-    print 'done! in {}s'.format((time.clock()-t0))
     #2) discretize
     print 'discretizing...'
-    t0=time.clock()
     windowSize=int(request.args.get("windowSize"))
     numBins=int(request.args.get("numBins"))
     maxSize=int(request.args.get("maxSize"))
     dseq=discretize(seq, windowSize, numBins)
-    print 'done! in {}s'.format((time.clock()-t0))
+    print 'done!'
     print 'bwt...'
-    t0=time.clock()
     t=ss.bwt(''.join(dseq)+"$")
-    print 'done! in {}s'.format((time.clock()-t0))
-    print 'compressing...'
-    step=max(1,len(seq)/maxSize)
-    res=[round(seq[x],2) for x in xrange(0,len(seq),step)]
-    #res=[round(np.mean(seq[i:(i+step)]/step),2) for i in xrange(0,len(seq)-step,step)] #not worthy to compute averages
-    print 'done! in {}s'.format((time.clock()-t0))
+    print 'done!'
+    print 'rounding...0'
+    res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
+    print 'done!'
+    t0=time.clock()
     print 'loading annotations...'
-    t0=time.clock()
     dataGFF=ann.gff()
-    t0=time.clock()
-    dataGO=ann.go()
-    dataGOA=ann.goa()
+    #dataGO=ann.go()
+    #dataGOA=ann.goa()
     #dataFASTA=fasta(1)
-    print 'done! in {}s'.format((time.clock()-t0))
-    
-    print '--- Preprocessing took {}s ---'.format((time.clock()-t00))
-
-    data={"seq":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t,
-          "gff":dataGFF, "go":dataGO, "goa":dataGOA}
+    print "done! ... annotations takes {}".format((time.clock()-t0))
+    data={"seq":seq, "res":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
+          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF}
+          #"gff":dataGFF, "go":dataGO, "goa":dataGOA}
     session[user]=data
     return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq)
 
@@ -254,12 +237,32 @@ def search(pattern="", d=0):
     t=data["bwt"]
     print t["firstOccurrence"]
     if(False in [x in t["firstOccurrence"] for x in set(pattern)]):
-        return jsonify(response="error", msg="There are characters in pattern that do not correspond to the sequence characters: {}".format(t["firstOccurrence"].keys()))
+        return jsonify(response="There are characters in pattern that do not correspond to the sequence characters: {}".format(t["firstOccurrence"].keys()))
     else:
         t0=time.clock()
         match=ss.bwMatchingV8("".join(data["dseq"]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d)
         print "Search takes {}".format((time.clock()-t0))
-        return jsonify(response=(str)(match))
+        return jsonify(points=(str)(match), sizePattern=len(pattern))
+
+
+
+#%%
+@app.route("/getPartSeq")
+def getPartSeq(start=0, end=0):
+    import numpy as np
+
+    global data
+
+    start=int(request.args.get("start"))
+    end=int(request.args.get("end"))
+
+    seq=data["seq"]
+    part=seq[start:end]
+    part=part.tolist()
+
+    return jsonify(partSeq=part)
+
+
 
 #%%
 @app.route("/annotations")

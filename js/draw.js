@@ -1,281 +1,354 @@
-
+/*
+ ┌────────────────────────────────────────────────────────────┐
+ │ draw.js                                                    │
+ ├────────────────────────────────────────────────────────────┤
+ │ Description:                                               │
+ └────────────────────────────────────────────────────────────┘
+ */
 
 
 var globalSeq =
 {
-    seq : null,
+    seqServ : null,
+    fullLength : null,
     mean : null,
     stdev : null,
-    ws : null
+    ws : null,
+    scaleSeqServ : null
 };
 
 var globalDL1 =
 {
+    drawn : false,
+
+    nameSVG : "lineSeq",
+    classSVG : "dl1",
+
     graphHeight : 200,
     graphWidth : screen.width,
-    startX : 50,
-    startY : 50,
-    svg : null,
+    paddingX : 50,
+    paddingY : 50,
+
+    width : null,
+    height : null,
+    scaleSeqScreen : null,
+    scaleServScreen : null,
     data : null,
-    window : null,
     x : null,
-    y : null
+    y : null,
+    svg : null,
+    seqPoints : null
+};
+
+
+var globalDL2 =
+{
+    nameSVG : "lineSeq2",
+    classSVG : "dl2",
+
+    graphHeight : 200,
+    graphWidth : screen.width,
+    paddingX : 50,
+    paddingY : 50,
+
+    width : null,
+    height : null,
+    scaleSeqScreen : null,
+    scaleServScreen : null,
+    data : null,
+    x : null,
+    y : null,
+    svg : null
 };
 
 
 
 
-function dataLine1(seq, start, end, mean, stdev, ws)
+
+function dataLine1(seqServ, startSeq, endSeq, fullLength, maxSize, mean, stdev, ws)
 {
-    globalSeq.seq=seq;
+    // Get information of dataLine1
+    var nameSVG=globalDL1.nameSVG;
+    var classSVG=globalDL1.classSVG;
+    var width=globalDL1.graphWidth;
+    var height=globalDL1.graphHeight;
+    var x0=globalDL1.paddingX;
+    var y0=globalDL1.paddingY;
+
+    // Save information of sequence
+    globalSeq.seqServ=seqServ;
     globalSeq.mean=mean;
     globalSeq.stdev=stdev;
     globalSeq.ws=ws;
-    var width=globalDL1.graphWidth;
-    var height=globalDL1.graphHeight;
-    var x0=globalDL1.startX;
-    var y0=globalDL1.startY;
+    globalSeq.scaleSeqServ = 1;
+    if(Math.floor(fullLength/maxSize) >= 1)
+        globalSeq.scaleSeqServ = Math.floor(fullLength/maxSize);
 
 
-    // Sizes...
-    var margin = {top: y0, right: x0, bottom: y0, left: x0};
-    width = width - margin.left - margin.right;
-    height = height - margin.top - margin.bottom;
-    var sizeSeq = end-start;
-
-    // Compute zoom ratio
-    var window=1;
-    var xdist=width/sizeSeq;
-
-    if(sizeSeq>width)   // width/bps compression
-    {
-        window=Math.ceil(sizeSeq/width); // i.e. nucleotides per pixel
-        xdist=1;
-    }
-    if(DEBUG) console.log("dataLine(): nucleotides/pixel: "+window+" - start: "+start+" - end: "+end+" - size: "+sizeSeq+" - graphWidth: "+width);
+    var result = drawDataLine(nameSVG, classSVG, width, height, x0, y0,
+                              seqServ, globalSeq.scaleSeqServ, startSeq, startSeq, endSeq);
 
 
-    // Calculate 'y minimum' and 'y maximum'
-    var ymin=0;
-    var ymax=mean+3*stdev;
-    if(mean-3*stdev>0)
-        ymin=mean-3*stdev;
+    // Save information of dataLine1
+    globalDL1.width = result.width;
+    globalDL1.height = result.height;
+    globalDL1.scaleSeqScreen = result.scaleSeqScreen;
+    globalDL1.scaleServScreen = result.scaleServScreen;
+    globalDL1.data = result.data;
+    globalDL1.x = result.x;
+    globalDL1.y = result.y;
+    globalDL1.svg = result.svg;
 
-    // Create the array with a value by pixel
-    var data=[];
-    for(i=start,k=0;i<end;i+=window,k++)
-    {
-        var average=0;
-        for(j=i;j<i+window;j++)
-            if(seq[j]>0)
-                average+=seq[j];
-        average/=window;
-
-        if (average<ymin) average=ymin;
-        if (average>ymax) average=ymax;
-
-        data.push({pos: k, value: average})
-    }
-
-
-    // Scaling of the axes
-    var x = d3.scale.linear().range([0, width]).domain(d3.extent(data, function (d) { return d.pos; }));
-    var y = d3.scale.linear().range([height, 0]).domain([ymin, ymax]);
-
-    // Axis labels
-    var xAxis = d3.svg.axis().scale(x).tickFormat(function(d) {return roundTickFormat(d,window,start,end)}).orient("bottom").tickValues(getTicks(sizeSeq, window, 10));
-    var yAxis = d3.svg.axis().scale(y).orient("left");
-
-
-    // Function to draw the line
-    var line = d3.svg.line()
-        .x(function(d) { return x(d.pos); })
-        .y(function(d) { return y(d.value); });
-
-
-    // The image SVG: image
-    var svg = d3.select("#lineSeq")
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-
-    // The image SVG: axis x
-    svg.append("g")
-        .attr("class", "x axis")
-        .call(xAxis)
-        .attr("transform", "translate(0," + height + ")");
-
-    // The image SVG: axis y
-    svg.append("g")
-        .attr("class", "y axis")
-        .call(yAxis)
-        .append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", 6)
-        .attr("dy", ".71em")
-        .style("text-anchor", "end")
-
-    // The image SVG: line
-    svg.append("path")
-        .datum(data)
-        .attr("class", "line")
-        .attr("d", line);
-
-
-    globalDL1.svg = svg;
-    globalDL1.data = data;
-    globalDL1.x = x;
-    globalDL1.y = y;
-    globalDL1.window = window;
+    // We confirm that we have finished
+    globalDL1.drawn = true;
 }
 
 
-function dataLine2(DEBUG, seq, start, end, mean, stdev, height, width, x0, y0)
+function dataLine1_drawPoints(points, sizePattern, numNucleotides)
 {
-
-    // First, we delete the image, if this exist
-    if ( $("#lineSeq2").length)  { $("#lineSeq2").empty(); }
-
-    // Sizes...
-    var margin = {top: y0, right: x0, bottom: y0, left: x0};
-    width = width - margin.left - margin.right;
-    height = height - margin.top - margin.bottom;
-    var sizeSeq = end-start;
-
-    // Compute zoom ratio
-    var window=1;
-    var xdist=width/sizeSeq;
-
-    if(sizeSeq>width)   // width/bps compression
-    {
-        window=Math.ceil(sizeSeq/width); // i.e. nucleotides per pixel
-        xdist=1;
-    }
-    if(DEBUG) console.log("dataLine2(): nucleotides/pixel: "+window+" - start: "+start+" - end: "+end+" - size: "+sizeSeq+" - graphWidth: "+width);
-
-
-    // Calculate 'y minimum' and 'y maximum'
-    var ymin=0;
-    var ymax=mean+3*stdev;
-    if(mean-3*stdev>0)
-        ymin=mean-3*stdev;
-
-    // Create the array with a value by pixel
-    var data=[];
-    for(i=start,k=0;i<end;i+=window,k++)
-    {
-        var average=0;
-        for(j=i;j<i+window;j++)
-            if(seq[j]>0)
-                average+=seq[j];
-        average/=window;
-
-        if (average<ymin) average=ymin;
-        if (average>ymax) average=ymax;
-
-        data.push({pos: k, value: average})
-    }
-
-
-    // Scaling of the axes
-    var x = d3.scale.linear().range([0, width]).domain(d3.extent(data, function (d) { return d.pos; }));
-    var y = d3.scale.linear().range([height, 0]).domain([ymin, ymax]);
-
-
-    // Axis labels
-    var xAxis = d3.svg.axis().scale(x).tickFormat(function(d) {return roundTickFormat(d,window,start,end)}).orient("bottom").tickValues(getTicks(sizeSeq, window, 10));
-    var yAxis = d3.svg.axis().scale(y).orient("left");
-
-
-    // Function to draw the line
-    var line = d3.svg.line()
-        .x(function(d) { return x(d.pos); })
-        .y(function(d) { return y(d.value); });
-
-
-    // The image SVG
-    var svg = d3.select("#lineSeq2")
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    // The image SVG: axis x
-    svg.append("g")
-        .attr("class", "x axis")
-        .call(xAxis)
-        .attr("transform", "translate(0," + height + ")");
-
-    // The image SVG: axis y
-    svg.append("g")
-        .attr("class", "y axis")
-        .call(yAxis)
-        .append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", 6)
-        .attr("dy", ".71em")
-        .style("text-anchor", "end")
-
-    // The image SVG: line
-    svg.append("path")
-        .datum(data)
-        .attr("class", "line")
-        .attr("d", line);
-}
-
-
-
-function drawPoints(points)
-{
-    console.log(points);
-
-    var dataPoints=[];
+    var seqPoints=[];
     for(var i=0; i<points.length;i++)
     {
-        var point = Math.ceil(points[i] * globalSeq.ws/globalDL1.window);
-        dataPoints.push({pos: (globalDL1.data)[point].pos, value: (globalDL1.data)[point].value});
+        seqPoints.push(points[i] * globalSeq.ws);
+    }
+
+    if(DEBUG_GBV) console.log("\ndataLine1_drawPoints():");
+    if(DEBUG_GBV) console.log(seqPoints);
+
+    var dataPoints=[];
+    for(i=0; i<seqPoints.length;i++)
+    {
+        var dataPoint = Math.floor(seqPoints[i]/globalDL1.scaleSeqScreen);
+        if(DEBUG_GBV) console.log("        dataPoint: "+dataPoint);
+        dataPoints.push({pos: (globalDL1.data)[dataPoint].pos, value: (globalDL1.data)[dataPoint].value});
     }
 
 
-
-    // Mouseover tip
+    // Mouseover tip and drawing the corresponding line
     var tip = d3.tip()
-        .attr('class', 'd3-tip')
+        .attr('class', 'dl1 point-tip')
         .offset([120, 40])
-        .html(function(d)
+        .html(function(d,i)
         {
-            var algo = (screen.width/2)-50;
-            dataLine2(true, globalSeq.seq, (d.pos*globalDL1.window)-algo, (d.pos*globalDL1.window)+algo, globalSeq.mean, globalSeq.stdev, 200, screen.width, 50, 50);
-            return "<strong>" + d.pos*globalDL1.window + " position</strong><br>" + Math.round(d.value*100)/100 + " value" + "<br>";
+            dataLine2(seqPoints[i], sizePattern, numNucleotides);
+            return "<strong>" + seqPoints[i] + " position</strong><br>" + Math.round(d.value*100)/100 + " value" + "<br>";
         });
 
-
+    // Calls tip
     globalDL1.svg.call(tip);
 
-    globalDL1.svg.selectAll("circle.datapoint").remove();
+    // Remove all points
+    globalDL1.svg.selectAll(".point")
+        .remove();
 
+    // Create all new points
     globalDL1.svg.selectAll(".data")
         .data(dataPoints)
-        .enter().append("circle")
-        .attr('class', 'datapoint')
+        .enter()
+        .append("circle")
+        .attr('class', 'dl1 point')
         .attr('cx', function(d) { return globalDL1.x(d.pos); })
         .attr('cy', function(d) { return globalDL1.y(d.value); })
-        .attr('r', 6)
-        .attr('fill', 'white')
-        .attr('stroke', 'steelblue')
-        .attr('stroke-width', '3')
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
+
+    // Save information of dataLine1
+    globalDL1.seqPoints = seqPoints;
 }
 
 
+function dataLine2(point, sizePattern, numNucleotides)
+{
+    // Get information of dataLine2
+    var nameSVG=globalDL2.nameSVG;
+    var classSVG=globalDL2.classSVG;
+    var width=globalDL2.graphWidth;
+    var height=globalDL2.graphHeight;
+    var x0=globalDL2.paddingX;
+    var y0=globalDL2.paddingY;
 
 
-function getTicks(sizeSeq, window)
+    // We round to the nearest hundred from sizePattern
+    var focusLine = Math.round(sizePattern*globalSeq.ws/100)*100;
+
+    var startSeq = point-(numNucleotides/2)+(focusLine/2);
+    var endSeq   = point+(numNucleotides/2)+(focusLine/2);
+
+    // Get the part of sequence that we need to draw
+    var result = Server.getPartSeq(startSeq,endSeq);
+
+
+    var dataLine = drawDataLine(nameSVG, classSVG, width, height, x0, y0,
+                                result.partSeq, 1, startSeq, 0, numNucleotides, // scaleSeqServ is 1 because is a part of sequence
+                                point, sizePattern);
+
+
+    // Save information of dataLine2
+    globalDL2.width = dataLine.width;
+    globalDL2.height = dataLine.height;
+    globalDL2.scaleSeqScreen = dataLine.scaleSeqScreen;
+    globalDL2.scaleServScreen = dataLine.scaleServScreen;
+    globalDL2.data = dataLine.data;
+    globalDL2.x = dataLine.x;
+    globalDL2.y = dataLine.y;
+    globalDL2.svg = dataLine.svg;
+}
+
+
+function drawDataLine(nameSVG, classSVG, width, height, x0, y0, seqServ, scaleSeqServ, initialPoint, startSeq, endSeq, point, sizePattern)
+{
+    // Default values
+    point       || ( point = 0 );
+    sizePattern || ( sizePattern = 0 );
+
+
+    // First, we delete the image, if this exist
+    var imageSVG = $("#"+nameSVG);
+    if ( imageSVG.length) { imageSVG.empty(); }
+
+    // Sizes...
+    var margin = {top: y0, right: x0, bottom: y0, left: x0};
+    width = width - margin.left - margin.right;
+    height = height - margin.top - margin.bottom;
+
+
+    // Get info about sequence
+    var mean=globalSeq.mean;
+    var stdev=globalSeq.stdev;
+
+
+    // Define the scales with that we will work
+    var startData = Math.floor(startSeq/scaleSeqServ);
+    var endData = Math.ceil(endSeq/scaleSeqServ);
+    var sizeData = endData-startData;
+    var sizeSeq = endSeq-startSeq;
+
+
+    var scaleServScreen = sizeData/width;
+    var scaleSeqScreen=1;
+    if(sizeSeq>width)   // width/bps compression
+    {
+        scaleSeqScreen=sizeSeq/width; // i.e. nucleotides per pixel
+    }
+    if(DEBUG_GBV) console.log("\ndataLine(): startSeq: "+startSeq+" - endSeq: "+endSeq+" - sizeSeq: "+sizeSeq+" - graphWidth: "+width);
+    if(DEBUG_GBV) console.log("            startData: "+startData+" - endData: "+endData+" - sizeData: "+sizeData);
+    if(DEBUG_GBV) console.log("            scaleSeqScreen (nucleotides/pixel): "+scaleSeqScreen+" - scaleServScreen: "+scaleServScreen+" - scaleSeqServ: "+scaleSeqServ);
+
+
+    // Calculate 'y minimum' and 'y maximum'
+    var ymin=0;
+    var ymax=mean+3*stdev;
+    if(mean-3*stdev>0)
+        ymin=mean-3*stdev;
+
+
+    // Create the array
+    var data=[];
+    for(var i=startData,k=0;i<endData;i=i+scaleServScreen,k++) {
+        var average = 0;
+        var numValues = 0;
+        for (var j = i; j < i + scaleServScreen; j++)
+            if (seqServ[Math.round(j)] >= 0)
+            {
+                average += seqServ[Math.round(j)];
+                numValues++;
+            }
+        if(numValues != 0) average=average/numValues;
+
+        if (average<ymin) average=ymin;
+        if (average>ymax) average=ymax;
+
+        data.push({pos: k, value: average})
+    }
+
+
+    // Scaling of the axes
+    var x = d3.scale.linear()
+        .domain(d3.extent(data, function (d) { return d.pos; }))  // xmin, xmax
+        .range([0, width]);
+    var y = d3.scale.linear()
+        .domain([ymin, ymax])
+        .range([height, 0]);
+
+    // Axis labels
+    var xAxis = d3.svg.axis().scale(x).orient("bottom")
+        .tickFormat(function(d) {return roundTickFormat(d,scaleSeqScreen,initialPoint, startSeq,endSeq)})
+        .tickValues(getTicks(sizeSeq, scaleSeqScreen));
+    var yAxis = d3.svg.axis().scale(y).orient("left");
+
+    // Function to draw the line
+    var line = d3.svg.line()
+        .x(function(d) { return x(d.pos); })
+        .y(function(d) { return y(d.value); });
+
+
+    // Image SVG: image
+    var svg = d3.select("#"+nameSVG)
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // Image SVG: axis x
+    svg.append("g")
+        .attr("class", classSVG+" x axis")
+        .call(xAxis)
+        .attr("transform", "translate(0," + height + ")");
+
+    // Image SVG: axis y
+    svg.append("g")
+        .attr("class", classSVG+" y axis")
+        .call(yAxis)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end");
+
+    // The image SVG: line
+    svg.append("path")
+        .datum(data)
+        .attr("class", classSVG+" line")
+        .attr("d", line);
+
+    // The image SVG: highlighted line
+    if(point!=0)
+    {
+        var startHighlighted = Math.floor(((point-initialPoint)/scaleSeqServ)/scaleServScreen);
+        var endHighlighted = Math.floor(((sizePattern*globalSeq.ws)/scaleSeqServ)/scaleServScreen);
+
+        var data2 = data.slice(startHighlighted, startHighlighted+endHighlighted);
+
+        // The image SVG: line
+        svg.append("path")
+            .datum(data2)
+            .attr("class", classSVG + " line hl")
+            .attr("d", line);
+    }
+
+    // The image SVG: scale text
+    svg.append("text")
+        .text("1 : "+Math.round(scaleSeqScreen))
+        .attr("class", classSVG+" scale")
+        .attr("x", width-50)
+        .attr("y", 15);
+
+    // Save information of dataLine1
+    return {
+        width : width,
+        height : height,
+        scaleSeqScreen : scaleSeqScreen,
+        scaleServScreen : scaleServScreen,
+        data : data,
+        x : x,
+        y : y,
+        svg : svg
+    }
+}
+
+
+function getTicks(sizeSeq, scaleSeqScreen)
 {
     var ticks = [];
 
@@ -292,17 +365,16 @@ function getTicks(sizeSeq, window)
 
     for(var i=0; factorLabel <= (sizeSeq-i*factorLabel) ;i++)
     {
-        ticks.push((factorLabel+i*factorLabel)/window);
+        ticks.push((factorLabel+i*factorLabel)/scaleSeqScreen);
     }
 
     return ticks;
 }
 
 
-
-function roundTickFormat(d, window, start, end)
+function roundTickFormat(d, scaleSeqScreen, initialPoint, start, end)
 {
-    var tickLabel = start+d*window;
+    var tickLabel = initialPoint+d*scaleSeqScreen;
 
     if (tickLabel != "0")
     {
@@ -314,12 +386,3 @@ function roundTickFormat(d, window, start, end)
 
     return tickLabel;
 }
-
-
-
-
-
-
-
-
-
