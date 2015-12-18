@@ -26,6 +26,7 @@ from helpers import convertString
 #%% -----------  READ WIG --------------
 def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig"):
     import numpy
+    import re
     import time
     t0=time.clock()
     f=open(path)
@@ -44,18 +45,27 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     chsize.append(cont-1)
     print '{} s in computing sizes'.format(time.clock()-t0) #6 seqs, go to numpy.array
     t0=time.clock()
-    ch=[]
+    ch={}
     cont=0
+    name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont+1])))
+    ch[name]=[]
+    print "name is ", name
     for i in chsize:
         print i
         cont=cont+2
         chi=numpy.empty(i,dtype=float)
         for j in range(0,i-1):
             chi[j]=round(float(seq[cont+j]),2)
+        ch[name].append(chi)
         cont=cont+i
-        ch.append(chi)
+        if(cont<len(seq)):
+            name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
+            print "name is ", name
+            ch[name]=[]
     print '{} s in formatting'.format(time.clock()-t0) #30 seqs, go to numpy.array
     return ch
+    
+#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/23479_h90_wlt_mean.wig")
 
 #%% ------------------ DISCRETIZATION -------------------
 """Given a numerical sequence seq, this method binarizes based on the average 
@@ -167,49 +177,75 @@ retorna    objeto JSON con los siguientes campos:
                dseq        datos discretizados por la función discretize()
 """
 @app.route("/preprocess")
-def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0):
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=None):
     import numpy as np
     import time
     global data
     global session
+
     #0) read
     print 'reading...'
     path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
-    track=int(request.args.get("track"))
-    seq=readWig(path)
-    seq=seq[track] #(TODO: by now, only first chromosome)
+    track=request.args.get("track")
+    if track=="None":
+        genome=readWig(path)
+        seq=genome[genome.keys()[0]][0]
+    else:
+        genome=data["genome"]
+        seq=seq[track]
+
     #1) normalize 
+    t0=time.clock()
     print 'computing statistics...'
     m=np.mean(seq)
     sd=np.std(seq)
     maximum=np.max(seq)
     minimum=np.min(seq)
+    
+    upperlim=m+2*sd#avoid outliers? testing
+    seq=[max(0,min(x,upperlim)) for x in seq]
+    print 'done! in {}s'.format((time.clock()-t0))
+
     #nseq=[(x-m)/sd for x in seq]
     #2) discretize
+    t0=time.clock()
     print 'discretizing...'
     windowSize=int(request.args.get("windowSize"))
     numBins=int(request.args.get("numBins"))
     maxSize=int(request.args.get("maxSize"))
     dseq=discretize(seq, windowSize, numBins)
-    print 'done!'
+    print 'done! in {}s'.format((time.clock()-t0))
+
+    t0=time.clock()
     print 'bwt...'
     t=ss.bwt(''.join(dseq)+"$")
-    print 'done!'
-    print 'rounding...0'
+    print 'done! in {}s'.format((time.clock()-t0))
+
+    t0=time.clock()
+    print 'sampling...'
     res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
-    print 'done!'
+    #step=max(1,len(seq)/maxSize)
+    #res=[np.mean(seq[x:x+step]) for x in range(0,len(seq),step)] #TODO: round?
+    print 'done! in {}s'.format((time.clock()-t0))
+    print 'sample length {} and an element {}'.format(len(res), res[44])
+
     t0=time.clock()
     print 'loading annotations...'
     dataGFF=ann.gff()
-    #dataGO=ann.go()
-    #dataGOA=ann.goa()
+    print 'time in GFF:',(time.clock()-t0),'s'
+    t0=time.clock()
+    dataGO=ann.go()
+    print 'time in GO:',(time.clock()-t0),'s'
+    t0=time.clock()
+    dataGOA=ann.goa()
+    print 'time in GOA:',(time.clock()-t0),'s'
     #dataFASTA=fasta(1)
     print "done! ... annotations takes {}".format((time.clock()-t0))
-    data={"seq":seq, "res":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF}
-          #"gff":dataGFF, "go":dataGO, "goa":dataGOA}
+    data={"genome": genome, "seq":seq, "res":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
+          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF,
+          "go":dataGO, "goa":dataGOA}
     session[user]=data
-    return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq)
+    return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq, chromosomes=genome.keys())
 
 
 #%% -------------- SEARCHES -----------
@@ -249,17 +285,12 @@ def search(pattern="", d=0):
 #%%
 @app.route("/getPartSeq")
 def getPartSeq(start=0, end=0):
-    import numpy as np
-
     global data
 
     start=int(request.args.get("start"))
     end=int(request.args.get("end"))
-
     seq=data["seq"]
     part=seq[start:end]
-    part=part.tolist()
-
     return jsonify(partSeq=part)
 
 
@@ -276,9 +307,19 @@ def annotations(positions=[], window=1000, types=["any"]):
     types=eval(request.args.get("types"))
     print types
     res=ann.annotate(pos, data["gff"], types, window)
-    #print res
     return jsonify(response=res)
 
+#%%
+@app.route("/annotationsGOA")
+#annotations is the result of calling annotations
+#types by now is any. Maybe in the future we divide in BP,MF,CC
+def annotationsGOA(annotations={}, types=["any"]):
+    global data
+    
+    a=eval(request.args.get("annotations"))
+    print 'annotation size: {}'.format(len(a))
+    agon=ann.annotateGOnames(a, data["goa"], data["go"])
+    return jsonify(response=agon)
 
 #%%from http://mortoray.com/2014/04/09/allowing-unlimited-access-with-cors/
 @app.after_request

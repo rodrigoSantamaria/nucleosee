@@ -103,3 +103,29 @@ def annotate(mm, dataGFF, types=["any"], ws=1000):
                 gid=re.sub(".1$", "", gid)
                 em[x].append({"type":s["type"], "id":gid, "start":s["start"], "end":s["end"], "sense":s["sense"]})
     return em
+    
+#%%
+def annotateGO(em, dataGOA, discard=['GO:0003674','GO:0005575','GO:0008150']):
+    ego={}
+    for x in dataGOA:
+        if((x["go_id"] in discard) ==False):
+            for y in em.iterkeys():
+                if(len(em[y])>0 and em[y][0]["id"]==x["gene_id"]):
+                    #print "{} -> {}({})".format(x["gene_id"], x["go_id"], x["go_type"])
+                    if(x["go_id"] in ego.keys()):
+                        ego[x["go_id"]].add(x["gene_id"])
+                    else :
+                        ego[x["go_id"]]=set()
+                        ego[x["go_id"]].add(x["gene_id"])
+    return ego
+
+# Check GO terms with names in the matches
+def annotateGOnames(em, dataGOA, dataGO):
+    ego=annotateGO(em, dataGOA)
+    egon={}
+    for k in ego.keys():
+        try:
+            egon[k]={"name": dataGO[k], "genes": (list)(ego[k])} #'genes' must be a list to be JSON serializable
+        except KeyError:
+            print 'Key {} not found'.format(k)
+    return egon
