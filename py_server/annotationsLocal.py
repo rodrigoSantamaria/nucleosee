@@ -264,7 +264,8 @@ filter(lambda x:len(egon[x])>5, egon.keys())
 
 #%%
 #According to https://pypi.python.org/pypi/fisher/0.1.4
-def enrichmentFisher(gis, dataGOA, th=0.01):
+def enrichmentFisher(gis, dataGOA, th=0.01, correction="none"):
+    #0) Prepare sets    
     # Retrieve a dict where k=go id and value=set of genes
     goids=[x["go_id"] for x in dataGOA]
     goterms={}
@@ -280,6 +281,7 @@ def enrichmentFisher(gis, dataGOA, th=0.01):
     uni=len(unigenes)
     sel=len(gis)
     #
+    #1) Fisher's test
     from fisher import pvalue
     pvals={}
     for k in goterms.keys():
@@ -291,18 +293,35 @@ def enrichmentFisher(gis, dataGOA, th=0.01):
         uninogo=uni-unigo
     
         p = pvalue(unigo, uninogo, selgo, selnogo)
-        #pvals[k]=p.two_tail
-        if(p.two_tail<th):
-            pvals[k]={"pval":p.two_tail, "ngis":selgo, "ngo":len(goterms[k])}
-        if(p.left_tail<th):
-            pvals[k]={"pval":p.left_tail, "ngis":selgo, "ngo":len(goterms[k])}
-    return pvals
-    
-#    epvals=filter(lambda x:pvals[x]["pval"]<th, pvals.keys())   
-#    res={}
-#    for k in epvals:
-#        res[k]=pvals
-#    return res
+        pvals[k]={"pval":p.two_tail, "ngis":selgo, "ngo":len(goterms[k])}
+        
+    #2) Multiple hypotheses correction
+    if correction=="bonferroni":
+        th=th/len(goterms.keys())
+    if correction=="fwer" or correction=="fdr":#sort first
+        pvalso=[]
+        for key, value in sorted(ego.iteritems(), key=lambda (k,v): (v["pval"],k)):
+            pvalso.append(value["pval"])
+        if correction=="fwer":
+            for k in range(1,len(pvalso)):
+                if pvalso[k] > th/(len(pvalso)-k+1):
+                    th=pvalso[k-1]
+                    break
+        if correction=="fdr":
+            for k in range(0,len(pvalso)):
+                if pvalso[k] <= th*(k+1)/len(pvalso):
+                    th=pvalso[k-1]
+                    break
+        
+    print "th is {}".format(th)
+    # and filter out terms
+    pvalsf={}
+    for p in pvals.keys():
+        pv=pvals[p]
+        if(pv["pval"]<th):
+            pvalsf[p]=pv
+
+    return pvalsf
 
 # Genes of interest given some positions and after annotation (em)
 gis=set()
@@ -310,9 +329,24 @@ for x in em.keys():
     for y in em[x]:
         gis.add(y["id"])
     
-ego=enrichmentFisher(gis, dataGOA, 0.01)
+ego=enrichmentFisher(list(gis), dataGOA, 0.01, "fdr")
 for k in ego.keys():
     ego[k]["go_name"]=dataGO[k]
+print len(ego),'enriched terms'
+
+#%%
+for key in sorted(ego.iterkeys()):
+    print "%s: %s" % (key, ego[key])
+#%% FWER
+pvalso=[]
+for key, value in sorted(ego.iteritems(), key=lambda (k,v): (v["pval"],k)):
+    pvalso.append(value["pval"])
+pvalso
+for k in range(1,len(pvalso)):
+    if pvalso[k] > 0.01/(len(pvalso)-k+1):
+        print pvalso[k-1]
+        break
+pvalso
 #%% --------------------- MOTIF -------------------------
 #Given a list of positions mm and a sequence length slength, the method
 #uses a Gibbs sampler to check which are the best krange-motifs for the correponding

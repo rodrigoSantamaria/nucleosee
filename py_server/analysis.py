@@ -320,6 +320,30 @@ def annotationsGOA(annotations={}, types=["any"]):
     print 'annotation size: {}'.format(len(a))
     agon=ann.annotateGOnames(a, data["goa"], data["go"])
     return jsonify(response=agon)
+    
+#%%
+@app.route("/enrichmentGO")
+#annotations is the result of calling annotations
+#correction is for multiple hipothesis and can be 'none', 'bonferroni', 'fdr' or 'fwer'
+#alpha is the threshold, applied as is with 'none' correction or with the specified one
+def enrichmentGO(annotations={}, correction="none", alpha=0.01):
+    global data
+    
+    annotations=eval(request.args.get("annotations"))
+    alpha=float(request.args.get("alpha"))
+    correction=request.args.get("correction")
+    
+    gis=set()
+    for x in annotations.keys():
+        for y in annotations[x]:
+            gis.add(y["id"])
+    
+    ego=ann.enrichmentFisher(gis, data["goa"], alpha, correction)
+    for k in ego.keys():
+        ego[k]["go_name"]=data["go"][k]
+
+    return jsonify(response=ego)
+
 
 #%%from http://mortoray.com/2014/04/09/allowing-unlimited-access-with-cors/
 @app.after_request

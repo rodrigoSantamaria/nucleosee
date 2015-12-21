@@ -129,3 +129,64 @@ def annotateGOnames(em, dataGOA, dataGO):
         except KeyError:
             print 'Key {} not found'.format(k)
     return egon
+
+# Fisher's enrichment
+#According to https://pypi.python.org/pypi/fisher/0.1.4
+def enrichmentFisher(gis, dataGOA, th=0.01, correction="none"):
+    #0) Prepare sets    
+    # Retrieve a dict where k=go id and value=set of genes
+    goids=[x["go_id"] for x in dataGOA]
+    goterms={}
+    for x in goids:
+        goterms[x]=set()
+    for x in dataGOA:
+        goterms[x["go_id"]].add(x["gene_id"])
+    # Compute universe genes
+    unigenes=set()
+    for k in goterms.keys():
+            unigenes |= set(goterms[k])
+    unigenes=unigenes-gis
+    uni=len(unigenes)
+    sel=len(gis)
+    #
+    #1) Fisher's test
+    from fisher import pvalue
+    pvals={}
+    for k in goterms.keys():
+    
+        selgo=len(gis.intersection(goterms[k])) #number of gis in the term
+        selnogo=sel-selgo
+    
+        unigo=len(goterms[k])-selgo #number of non-gis in the term
+        uninogo=uni-unigo
+    
+        p = pvalue(unigo, uninogo, selgo, selnogo)
+        pvals[k]={"pval":p.two_tail, "ngis":selgo, "ngo":len(goterms[k])}
+        
+    #2) Multiple hypotheses correction
+    if correction=="bonferroni":
+        th=th/len(goterms.keys())
+    if correction=="fwer" or correction=="fdr":#sort first
+        pvalso=[]
+        for key, value in sorted(ego.iteritems(), key=lambda (k,v): (v["pval"],k)):
+            pvalso.append(value["pval"])
+        if correction=="fwer":
+            for k in range(1,len(pvalso)):
+                if pvalso[k] > th/(len(pvalso)-k+1):
+                    th=pvalso[k-1]
+                    break
+        if correction=="fdr":
+            for k in range(0,len(pvalso)):
+                if pvalso[k] <= th*(k+1)/len(pvalso):
+                    th=pvalso[k-1]
+                    break
+        
+    print "th is {}".format(th)
+    # and filter out terms
+    pvalsf={}
+    for p in pvals.keys():
+        pv=pvals[p]
+        if(pv["pval"]<th):
+            pvalsf[p]=pv
+
+    return pvalsf
