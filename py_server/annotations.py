@@ -130,8 +130,10 @@ def annotateGOnames(em, dataGOA, dataGO):
             print 'Key {} not found'.format(k)
     return egon
 
-# Fisher's enrichment
+#%% Fisher's enrichment
 #According to https://pypi.python.org/pypi/fisher/0.1.4
+# gis is a set of genes of interest by id
+# th is the threshold
 def enrichmentFisher(gis, dataGOA, th=0.01, correction="none"):
     #0) Prepare sets    
     # Retrieve a dict where k=go id and value=set of genes

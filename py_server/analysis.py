@@ -35,7 +35,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     t0=time.clock()
     chsize=[]
     cont=0
-    for i in range(len(seq)):
+    for i in xrange(len(seq)):
         s=seq[i]
         if s[0]=='t' and i>0:#new chromosome
          chsize.append(cont-1)
@@ -54,8 +54,9 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         print i
         cont=cont+2
         chi=numpy.empty(i,dtype=float)
-        for j in range(0,i-1):
-            chi[j]=round(float(seq[cont+j]),2)
+        for j in xrange(0,i-1):
+            #chi[j]=round(float(seq[cont+j]),2)
+            chi[j]=seq[cont+j]
         ch[name].append(chi)
         cont=cont+i
         if(cont<len(seq)):
@@ -76,16 +77,28 @@ def discretize(seq, windowSize,numBins=5):
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
     alphabet=alphabetTotal[:numBins]   
     dseq=[]
-    #sm=np.mean(seq)
-    #ssd=np.std(seq)
     maximo=max(seq)
     minimo=min(seq)
-    for i in range(0, len(seq),windowSize):
+    factor=(numBins-1)/(maximo-minimo)
+    for i in xrange(0, len(seq),windowSize):
         im=np.mean(seq[i:i+windowSize])
-        dseq.append(alphabet[(int)(np.round((numBins-1)*(im-minimo)/(maximo-minimo)))])
-        #dseq.append(alphabet[max(0,min(len(alphabet)/2+int(np.round((im-sm)/ssd)),numBins-1))])
+        #dseq.append(alphabet[(int)(np.round((numBins-1)*(im-minimo)/(maximo-minimo)))])
+        dseq.append(alphabet[(int)(factor*(im-minimo))])
     return dseq
     
+    
+    
+# def discretize(seq, windowSize,numBins=5):
+#    import numpy as np
+#    alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
+#    alphabet=alphabetTotal[:numBins]   
+#    dseq=[]
+#    maximo=max(seq)
+#    minimo=min(seq)
+#    for i in xrange(0, len(seq),windowSize):
+#        im=np.mean(seq[i:i+windowSize])
+#        dseq.append(alphabet[(int)(np.round((numBins-1)*(im-minimo)/(maximo-minimo)))])
+#    return dseq
 # --------------------------------------------
 
 
@@ -223,7 +236,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 
     t0=time.clock()
     print 'sampling...'
-    res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
+    res=[round(seq[x],2) for x in xrange(0,len(seq),max(1,len(seq)/maxSize))]
     #step=max(1,len(seq)/maxSize)
     #res=[np.mean(seq[x:x+step]) for x in range(0,len(seq),step)] #TODO: round?
     print 'done! in {}s'.format((time.clock()-t0))
