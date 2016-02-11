@@ -6,6 +6,7 @@ Searching for coincidences with Quique's perfect nucleosomes
 import sys
 sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
 import analysisLocal as al
+import annotations as ann
 import suffixSearch as ss
 import motifSearch as ms
 
@@ -35,6 +36,12 @@ ds=res["dseq"]
 text=''.join(ds)+"$"
 t=res["bwt"]
 
+#%%
+dataGFF=ann.gff("genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.gff3")
+#%%
+em=ann.annotate([61000], dataGFF, ["any"], ws=1500)
+
+em
 #%%
 t0=time.clock()
 match=ss.bwMatchingV8(text, "aba", t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"], d=0)

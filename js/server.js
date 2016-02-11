@@ -152,6 +152,8 @@
         Server.search = function (pattern,d)
         {
             var response=[];
+            pattern=pattern.replace("+", "%2B");
+            console.log("pattern is "+pattern);
             $.ajax(
                 {
                     url: _serverPath+"search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d,
@@ -204,19 +206,20 @@
         };
 
 
-        Server.annotationsGenes = function (points,types,window)
+        Server.annotationsGenes = function (points,types,window, align)
         {
             var response=[];
             $.ajax(
                 {
-                    url: _serverPath+"annotations?user="+_user+"&password="+_password+"&positions="+points+"&types="+types+"&window="+window,
+                    url: _serverPath+"annotations?user="+_user+"&password="+_password+"&positions="+points+"&types="+types+"&window="+window+"&align=\""+align+"\"",
                     type: "GET",
                     datatype:"json",
-                    async: true,    // default: true
+                    async: false,    // default: true
                     success: function(result)
                     {
                         if(_DEBUG) console.log("annotationsGenes(): get annotations of genes done...");
-                        console.log(result);
+                        //console.log(result);
+                        response = result.response;
                     },
                     error: function()
                     {
@@ -226,6 +229,28 @@
             return response;
         };
 
+        Server.enrichment = function (annotations, correction, alpha)
+        {
+            var response=[];
+            $.ajax(
+                {
+                    url: _serverPath+"enrichmentGO?user="+_user+"&password="+_password+"&annotations="+annotations+"&correction="+correction+"&alpha="+alpha,
+                    type: "GET",
+                    datatype:"json",
+                    async: false,    // default: true
+                    success: function(result)
+                    {
+                        if(_DEBUG) console.log("enrichmentGO(): done");
+                        response = result.response;
+
+                    },
+                    error: function()
+                    {
+                        if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
+                    }
+                });
+            return response;
+        };
 
         function javascript_abort(msg)
         {

@@ -20,12 +20,12 @@ var DEBUG_GBV = true;
 //************************************************************************
 //************************************************************************
 
+var ws=30;           // window size: discrete to real ratio
 
 
 function main(file, hashMD5)
 {
-    var track=0;
-    var ws=30;           // window size: discrete to real ratio
+    var track="None";
     var nb=5;            // num bins
     var maxSize=400000;  // maximum number of normalized data to store
 
@@ -89,7 +89,7 @@ function drawing(processedData, ws, maxSize)
 // SEARCH POINTS
 ////////////////////////////////
 function searchPoints()
-{
+{                       //TODO: draw number of points, e.g. "X occurrences found next to the search box
     if(globalDL1.drawn)
     {
         var pattern = $('#patternSearch').val();
@@ -97,18 +97,25 @@ function searchPoints()
 
         // DATALINE 2: DRAW POINTS
         //----------------------------------
-        var numNucleotidesDraw = globalDL1.width;
+        var numNucleotidesDraw = globalDL1.dim.width;
 
+        //RODRIGO
         var startTime=new Date();
         var result=Server.search(pattern,d);
-        dataLine1_drawPoints(result.points, result.sizePattern, numNucleotidesDraw);
+        drawPoints(result.points, result.sizePattern, numNucleotidesDraw);
         if(DEBUG_GBV) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
 
 
-        // DATALINE 2: GET ANNOTATIONS
-        //------------------------------
-        //result = Server.annotationsGenes(globalDL1.seqPoints,"[\"any\"]",globalDL1.width);
-        //console.log(result);
+        // GET ENRICHMENT
+        //var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",globalDL1.dim.width);
+        //var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",globalDL1.dim.width, "left");
+        var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",pattern*ws, "left");
+        var start = new Date().getTime();
+        var enrichment=Server.enrichment(JSON.stringify(eval(annotations)), "fdr", 0.01)
+        var end = new Date().getTime();
+        console.log('Enrichment took: ' + (end-start));
+        drawEnrichment(enrichment);
+
     }
 }
 

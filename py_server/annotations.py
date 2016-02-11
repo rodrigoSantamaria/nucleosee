@@ -7,8 +7,7 @@ Different methods to read annotations
 #%% -------------------------- ADDITIONAL ANNOTATIONS ----------------------
 
 #%%
-def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.I.gff3"):
-    import time
+def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.gff3"):
     f=open(filename)
     import csv
     cad=f.readline()
@@ -36,12 +35,11 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.I.gff
         data[i]["type"]=row["type"]
         data[i]["sense"]=row["sense"]
         data[i]["id"]=row["id"]
-
     return data
-          
+#tal=gff()          
 
 #%%  Loads the gene ontology into a dic where keys are go_ids and values are just go names by now
-def go(filename="genomes/annotations/go/gene_ontology_ext.obo"):
+def go(filename="genomes/annotations/go/go-basic.obo"):
     f=open(filename)
     lines=f.readlines()
     data={}
@@ -78,21 +76,33 @@ def fasta(ch):
     return seq
     
 #%%
-def annotate(mm, dataGFF, types=["any"], ws=1000):
+    """
+    Returns the annotations found for each interval around positions in mm given
+    the corresponding GFF data obtained with gff(). Intervals are either [x,x+ws]
+    or [x-ws*0.5, x+ws*0.5], depending on align ("left" or "center" respectively)
+    Only annotatios of the given types or all if types=["any"] are returned.
+    Typical types include "gene", "CDS", "transcript", etc.
+    """
+def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
     import numpy as np
-    print len(dataGFF)
     data2=dataGFF
     if(types[0]!="any"):
         wanted_set = set(types)  # Much faster look up than with lists, for larger lists
         @np.vectorize
         def selected(elmt): return elmt in wanted_set  # Or: selected = numpy.vectorize(wanted_set.__contains__)
         data2=dataGFF[selected(dataGFF["type"])]
-    print len(data2)
     em={} #enriched (i.e. detailed) matches, including for each the thigs found at GFF
     interval=ws*0.5
     import re
     for x in mm:
-        sel=data2[(data2["start"]>x-interval) & (data2["end"]<x+interval)]
+        #sel=data2[(data2["start"]>x-interval) & (data2["end"]<x+interval)]
+        if(align=="left"):
+            e1=x
+            s1=x+interval
+        else:
+            e1=x+interval
+            s1=x-interval
+        sel=data2[((data2["end"]>s1) & (data2["end"]<e1)) | ((data2["start"]>s1) & (data2["start"]<e1)) | ((data2["start"]<s1) & (data2["end"]>e1))]
         if(len(sel)>0):     
             em[x]=[]
             for s in sel:
@@ -103,6 +113,14 @@ def annotate(mm, dataGFF, types=["any"], ws=1000):
                 gid=re.sub(".1$", "", gid)
                 em[x].append({"type":s["type"], "id":gid, "start":s["start"], "end":s["end"], "sense":s["sense"]})
     return em
+    
+#annotate([3384450], dataGFF, types=["gene"], ws=2)
+#tal=annotate([61000], dataGFF, ws=4000)
+#for x in dataGFF:
+#    if(x["id"].find("SPCC757.15")>=0):
+#        print "{}\t{}, {}".format(x["type"],x["start"],x["end"])
+#for x in tal[61000]:
+#    print "{}\t{}, {}".format(x["id"],x["type"],x["start"])
     
 #%%
 def annotateGO(em, dataGOA, discard=['GO:0003674','GO:0005575','GO:0008150']):
@@ -134,9 +152,12 @@ def annotateGOnames(em, dataGOA, dataGO):
 #According to https://pypi.python.org/pypi/fisher/0.1.4
 # gis is a set of genes of interest by id
 # th is the threshold
-def enrichmentFisher(gis, dataGOA, th=0.01, correction="none"):
+# minGO minimum number of genes in a GO term to be considered
+# maxGO maximum numer of genes in a GO term to be considered
+def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=500):
     #0) Prepare sets    
     # Retrieve a dict where k=go id and value=set of genes
+    print "enrichment fisher"
     goids=[x["go_id"] for x in dataGOA]
     goterms={}
     for x in goids:
@@ -150,6 +171,7 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none"):
     unigenes=unigenes-gis
     uni=len(unigenes)
     sel=len(gis)
+    print "universe created"
     #
     #1) Fisher's test
     from fisher import pvalue
@@ -162,15 +184,18 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none"):
         unigo=len(goterms[k])-selgo #number of non-gis in the term
         uninogo=uni-unigo
     
-        p = pvalue(unigo, uninogo, selgo, selnogo)
-        pvals[k]={"pval":p.two_tail, "ngis":selgo, "ngo":len(goterms[k])}
+        if(unigo>=minGO and unigo<=maxGO):
+            p = pvalue(unigo, uninogo, selgo, selnogo)
+            pvals[k]={"pval":p.two_tail, "ngis":selgo, "ngo":len(goterms[k])}
+    print "fisher test finished with {} terms enriched".format(len(pvals))
         
     #2) Multiple hypotheses correction
     if correction=="bonferroni":
         th=th/len(goterms.keys())
     if correction=="fwer" or correction=="fdr":#sort first
         pvalso=[]
-        for key, value in sorted(ego.iteritems(), key=lambda (k,v): (v["pval"],k)):
+        #for key, value in sorted(ego.iteritems(), key=lambda (k,v): (v["pval"],k)):
+        for key, value in sorted(pvals.iteritems(), key=lambda (k,v): (v["pval"],k)):
             pvalso.append(value["pval"])
         if correction=="fwer":
             for k in range(1,len(pvalso)):
@@ -183,6 +208,7 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none"):
                     th=pvalso[k-1]
                     break
         
+    print "multiple hypotheses correction finished with {} terms".format(len(pvalso))
     print "th is {}".format(th)
     # and filter out terms
     pvalsf={}
@@ -190,5 +216,31 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none"):
         pv=pvals[p]
         if(pv["pval"]<th):
             pvalsf[p]=pv
+    print "number of enriched terms is {}".format(len(pvalsf))
 
     return pvalsf
+
+#%%
+#enrichmentFisher(set(["SPBC3B8.06"]), goa(), th=0.01, correction="fdr")
+#
+##%%
+#dataGOA=dg
+#gis=set(["SPBC3B8.06"])
+#
+##%%
+#print "enrichment fisher"
+#goids=[x["go_id"] for x in dataGOA]
+#goterms={}
+#for x in goids:
+#    goterms[x]=set()
+#for x in dataGOA:
+#    goterms[x["go_id"]].add(x["gene_id"])
+## Compute universe genes
+#unigenes=set()
+#for k in goterms.keys():
+#        unigenes |= set(goterms[k])
+#unigenes=unigenes-gis
+#uni=len(unigenes)
+#sel=len(gis)
+#print "universe created"
+#    #

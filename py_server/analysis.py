@@ -19,7 +19,7 @@ import sys
 #sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
 import suffixSearch as ss
 import annotations as ann
-from helpers import convertString
+import helpers as h
 
 
 # --------------------- INTERNAL METHODS -----------------
@@ -196,13 +196,15 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     global data
     global session
 
+    t00=time.clock()
     #0) read
     print 'reading...'
     path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
     track=request.args.get("track")
     if track=="None":
         genome=readWig(path)
-        seq=genome[genome.keys()[0]][0]
+        track=genome.keys()[0]
+        seq=genome[track][0]
     else:
         genome=data["genome"]
         seq=seq[track]
@@ -244,7 +246,8 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 
     t0=time.clock()
     print 'loading annotations...'
-    dataGFF=ann.gff()
+    print(h.gffPath(ch=track))
+    dataGFF=ann.gff(h.gffPath(ch=track))
     print 'time in GFF:',(time.clock()-t0),'s'
     t0=time.clock()
     dataGO=ann.go()
@@ -258,6 +261,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
           "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF,
           "go":dataGO, "goa":dataGOA}
     session[user]=data
+    print 'whole preprocess takes {}s'.format((time.clock()-t00))
     return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq, chromosomes=genome.keys())
 
 
@@ -277,9 +281,9 @@ def search(pattern="", d=0):
     
     d=int(request.args.get("d"))
     pattern=str(request.args.get("pattern"))
-    print pattern
-    pattern=convertString(pattern)
-    print pattern
+    print "{} before".format(pattern)
+    pattern=h.convertString(pattern)
+    print "{} after".format(pattern)
 #    t0=time.clock()
 #    data=loadSession(session)
 #    print "Session load takes {}".format((time.clock()-t0))
@@ -311,8 +315,9 @@ def getPartSeq(start=0, end=0):
 #%%
 @app.route("/annotations")
 def annotations(positions=[], window=1000, types=["any"]):
+    import time
+    t0=time.clock()
     global data
-    
     window=int(request.args.get("window"))
     print window
     pos=eval(request.args.get("positions"))
@@ -320,6 +325,7 @@ def annotations(positions=[], window=1000, types=["any"]):
     types=eval(request.args.get("types"))
     print types
     res=ann.annotate(pos, data["gff"], types, window)
+    print "Annotations take {}".format((time.clock()-t0))
     return jsonify(response=res)
 
 #%%
@@ -350,11 +356,12 @@ def enrichmentGO(annotations={}, correction="none", alpha=0.01):
     for x in annotations.keys():
         for y in annotations[x]:
             gis.add(y["id"])
-    
+    print "number of GIS is ----> {}".format(len(gis))
+    ego={}
     ego=ann.enrichmentFisher(gis, data["goa"], alpha, correction)
     for k in ego.keys():
-        ego[k]["go_name"]=data["go"][k]
-
+        if(data["go"].has_key(k) and data["go"][k]!="undefined"):
+            ego[k]["go_name"]=data["go"][k]
     return jsonify(response=ego)
 
 

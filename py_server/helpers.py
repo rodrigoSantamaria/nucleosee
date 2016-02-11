@@ -60,3 +60,23 @@ def convertString(text):
             i+=1
         i+=1
     return s3[0]
+#%%    
+"""
+Return the right gff for a given species/chromosome.
+This is highly heterogeneous: some organisms have all their chromosomes in a single
+gff, some have one gff per chromosome, etc.
+By now we are dealing it with this multiplexer function and by now ONLY for S pombe
+
+Another option is to force gff files to a given format.
+"""
+def gffPath(organism="Schizosaccharomyces pombe", ch="chromosome1"):
+    ret="schizosaccharomyces_pombe.I.gff3" #only pombe by now
+    if(organism=="Schizosaccharomyces pombe"):
+        roman="I"
+        if(ch.find("3")>=0 or ch.find("III")>=0):
+            roman+="II"
+        elif(ch.find("2")>=0 or ch.find("II")>=0):
+            roman+="I"
+        ret="schizosaccharomyces_pombe."+roman+".gff3"
+    return "genomes/annotations/spombe/gff/"+ret
+#%%
