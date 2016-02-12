@@ -14,9 +14,7 @@ from werkzeug.utils import secure_filename
 import os
 import time
 
-#BWT searches
-import sys 
-#sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
+#Our methods
 import suffixSearch as ss
 import annotations as ann
 import helpers as h
@@ -307,7 +305,7 @@ def getPartSeq(start=0, end=0):
     end=int(request.args.get("end"))
     seq=data["seq"]
     part=seq[start:end]
-    return jsonify(partSeq=part)
+    return jsonify(partSeq=list(part))
 
 
 
