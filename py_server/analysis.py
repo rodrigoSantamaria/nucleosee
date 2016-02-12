@@ -72,35 +72,33 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
 """Given a numerical sequence seq, this method binarizes based on the average 
 and standard deviations on windows of size windowSize. Binarzation is done
 in categories a to z (z the larger), as many as detailed by numBins"""
-def discretize(seq, windowSize,numBins=5):
+def discretize(seq, windowSize, minimo, maximo, numBins=5):
     import numpy as np
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
     alphabet=alphabetTotal[:numBins]   
     dseq=[]
-    maximo=max(seq)
-    minimo=min(seq)
     factor=(numBins-1)/(maximo-minimo)
-    for i in xrange(0, len(seq),windowSize):
-        im=np.mean(seq[i:i+windowSize])
-        #dseq.append(alphabet[(int)(np.round((numBins-1)*(im-minimo)/(maximo-minimo)))])
+    sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
+    mseq=np.mean(sseq, axis=1, keepdims=True)
+    for im in mseq:
         dseq.append(alphabet[(int)(factor*(im-minimo))])
-    return dseq
-    
-    
-    
-# def discretize(seq, windowSize,numBins=5):
+    return dseq 
+
+#def discretize(seq, windowSize, minimo, maximo, numBins=5):
 #    import numpy as np
 #    alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
 #    alphabet=alphabetTotal[:numBins]   
-#    dseq=[]
-#    maximo=max(seq)
-#    minimo=min(seq)
-#    for i in xrange(0, len(seq),windowSize):
-#        im=np.mean(seq[i:i+windowSize])
-#        dseq.append(alphabet[(int)(np.round((numBins-1)*(im-minimo)/(maximo-minimo)))])
-#    return dseq
-# --------------------------------------------
-
+#    factor=(numBins-1)/(maximo-minimo)
+#    sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
+#    mseq=np.mean(sseq, axis=1, keepdims=True)
+#    def disc(a):
+#        return alphabet[(int)(factor*(a-minimo))]
+#    return list(np.apply_along_axis(disc, 1,mseq))
+ 
+#import time
+#t0=time.clock()   
+#tal=discretize(seq,30, minimum, maximum)
+#print '{}'.format((time.clock()-t0))
 
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
@@ -214,21 +212,22 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     print 'computing statistics...'
     m=np.mean(seq)
     sd=np.std(seq)
+    
+    upperlim=m+3*sd#avoid outliers? testing
+    seq=np.clip(seq,0,upperlim)
+
     maximum=np.max(seq)
     minimum=np.min(seq)
-    
-    upperlim=m+2*sd#avoid outliers? testing
-    seq=[max(0,min(x,upperlim)) for x in seq]
-    print 'done! in {}s'.format((time.clock()-t0))
+    print 'max and min in {}s'.format((time.clock()-t0))
 
-    #nseq=[(x-m)/sd for x in seq]
+
     #2) discretize
     t0=time.clock()
     print 'discretizing...'
     windowSize=int(request.args.get("windowSize"))
     numBins=int(request.args.get("numBins"))
     maxSize=int(request.args.get("maxSize"))
-    dseq=discretize(seq, windowSize, numBins)
+    dseq=discretize(seq, windowSize, minimum, maximum, numBins)
     print 'done! in {}s'.format((time.clock()-t0))
 
     t0=time.clock()
@@ -356,7 +355,6 @@ def enrichmentGO(annotations={}, correction="none", alpha=0.01):
     for x in annotations.keys():
         for y in annotations[x]:
             gis.add(y["id"])
-    print "number of GIS is ----> {}".format(len(gis))
     ego={}
     ego=ann.enrichmentFisher(gis, data["goa"], alpha, correction)
     for k in ego.keys():

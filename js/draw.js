@@ -138,6 +138,8 @@ function drawEnrichment(enrichment)
 
         }
 
+        console.log(goterms.length+" enriched terms");
+
         var tip = d3.tip()
             .attr('class', 'dl1 goterm-tip')
             .offset([45, 0])

@@ -80,3 +80,13 @@ def gffPath(organism="Schizosaccharomyces pombe", ch="chromosome1"):
         ret="schizosaccharomyces_pombe."+roman+".gff3"
     return "genomes/annotations/spombe/gff/"+ret
 #%%
+    
+#tal=readWig()
+#seq=tal["chromosome2"][0]
+##%%
+#import numpy as np
+#import time
+#t0=time.clock()
+#np.mean(seq[:30])
+#print 'mean takes {}s'.format((time.clock()-t0))
+

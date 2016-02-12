@@ -184,7 +184,7 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
         unigo=len(goterms[k])-selgo #number of non-gis in the term
         uninogo=uni-unigo
     
-        if(unigo>=minGO and unigo<=maxGO):
+        if(unigo>=minGO and unigo<=maxGO and selgo>0):
             p = pvalue(unigo, uninogo, selgo, selnogo)
             pvals[k]={"pval":p.two_tail, "ngis":selgo, "ngo":len(goterms[k])}
     print "fisher test finished with {} terms enriched".format(len(pvals))

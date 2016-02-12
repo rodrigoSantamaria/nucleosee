@@ -12,7 +12,26 @@ var password="ninguna";
 
 var DEBUG_GBV = true;
 
+/*
+ ┌────────────────────────────────────────────────────────────┐
+ │                          TODO list                         │
+ └────────────────────────────────────────────────────────────┘
+  Frontend
+  - Permitir sobreimponer sobre DL1 una parrilla explicativa del binarizado, por ejemplo con franjas
+  de colores alternos indicando los rangos de a,b,c,d,e, etc. y quizas tambien el tamaño de la ventana
+  - Selección de cromosomas
+  - Reloj/barra de espera para cargas y búsquedas
+  - Dejar el color interno de un punto al hacer mouseout (quitarlo solo al hacer un nuevo mousein)
+  - Estilos de la web (sobre todo de la parte de arriba)
+  - Pantalla de login
 
+  Backend
+  - Intentar optimizar el cálculo de estadísticas y discretización (2.5/5s en 2M y  5/7s en 4M)
+  - Intentar optimizar los tiempos de lectura y formateo (en total unos 10s para pombe entero)
+  - Crear carpetas y fichero de contraseñas + comprobaciones
+  - Gestión de distintos organismos (ver cómo diseñarlo)
+  - Dar soporte a bigwig
+  */
 
 //************************************************************************
 //************************************************************************
@@ -104,12 +123,13 @@ function searchPoints()
         var result=Server.search(pattern,d);
         drawPoints(result.points, result.sizePattern, numNucleotidesDraw);
         if(DEBUG_GBV) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
+        console.log(result.points.length+" occurrences");
 
 
         // GET ENRICHMENT
         //var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",globalDL1.dim.width);
         //var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",globalDL1.dim.width, "left");
-        var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",pattern*ws, "left");
+        var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",pattern.length*ws, "left");
         var start = new Date().getTime();
         var enrichment=Server.enrichment(JSON.stringify(eval(annotations)), "fdr", 0.01)
         var end = new Date().getTime();
