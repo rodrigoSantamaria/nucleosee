@@ -71,7 +71,7 @@ def fasta(ch):
     reader=f.readlines()
     reader=reader[1:]
     seq=""
-    for i in xrange(len(reader)):
+    for i in range(len(reader)):
         seq=seq+reader[i].replace("\n", "")
     return seq
     
@@ -145,7 +145,7 @@ def annotateGOnames(em, dataGOA, dataGO):
         try:
             egon[k]={"name": dataGO[k], "genes": (list)(ego[k])} #'genes' must be a list to be JSON serializable
         except KeyError:
-            print 'Key {} not found'.format(k)
+            print('Key',k,' not found')
     return egon
 
 #%% Fisher's enrichment
@@ -157,7 +157,7 @@ def annotateGOnames(em, dataGOA, dataGO):
 def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=500):
     #0) Prepare sets    
     # Retrieve a dict where k=go id and value=set of genes
-    print "enrichment fisher"
+    print("enrichment fisher")
     goids=[x["go_id"] for x in dataGOA]
     goterms={}
     for x in goids:
@@ -171,10 +171,10 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
     unigenes=unigenes-gis
     uni=len(unigenes)
     sel=len(gis)
-    print "universe created"
+    print("universe created")
     #
     #1) Fisher's test
-    from fisher import pvalue
+    from fisher import pvalue #at least for mac os must be downloaded from here: https://pypi.python.org/pypi/fisher/0.1.4
     pvals={}
     for k in goterms.keys():
     
@@ -187,15 +187,17 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
         if(unigo>=minGO and unigo<=maxGO and selgo>0):
             p = pvalue(unigo, uninogo, selgo, selnogo)
             pvals[k]={"pval":p.two_tail, "ngis":selgo, "ngo":len(goterms[k])}
-    print "fisher test finished with {} terms enriched".format(len(pvals))
+    print("fisher test finished with ", len(pvals)," terms enriched")
         
     #2) Multiple hypotheses correction
     if correction=="bonferroni":
         th=th/len(goterms.keys())
     if correction=="fwer" or correction=="fdr":#sort first
         pvalso=[]
-        #for key, value in sorted(ego.iteritems(), key=lambda (k,v): (v["pval"],k)):
-        for key, value in sorted(pvals.iteritems(), key=lambda (k,v): (v["pval"],k)):
+        def keyL(k):
+            return k[1]["pval"],k[0]
+        #for key, value in sorted(pvals.iteritems(), key=lambda (k,v): (v["pval"],k)):#python2
+        for key, value in sorted(pvals.items(), key=keyL):
             pvalso.append(value["pval"])
         if correction=="fwer":
             for k in range(1,len(pvalso)):
@@ -208,20 +210,30 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
                     th=pvalso[k-1]
                     break
         
-    print "multiple hypotheses correction finished with {} terms".format(len(pvalso))
-    print "th is {}".format(th)
+    print("multiple hypotheses correction finished with ",len(pvalso),"{} terms")
+    print("th is ",th)
     # and filter out terms
     pvalsf={}
     for p in pvals.keys():
         pv=pvals[p]
         if(pv["pval"]<th):
             pvalsf[p]=pv
-    print "number of enriched terms is {}".format(len(pvalsf))
+    print("number of enriched terms is",len(pvalsf))
 
     return pvalsf
-
+    
 #%%
-#enrichmentFisher(set(["SPBC3B8.06"]), goa(), th=0.01, correction="fdr")
+#def keyL(k):
+#    return k[1]["pval"],k[0]
+#sorted(pvals.items(), key=keyL)    
+##%%
+#pvalso=[]
+#for key, value in sorted(pvals.items(), key=keyL):
+#        pvalso.append(value["pval"])
+#        
+##%%
+#path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/annotations/spombe/goa/gene_association.pombase"
+#enrichmentFisher(set(["SPBC3B8.06"]), goa(path), th=0.01, correction="fdr")
 #
 ##%%
 #dataGOA=dg

@@ -46,7 +46,6 @@ def convertString(text):
         elif(s[i]!="*"):
             s2.append(s[i])
         i+=1
-    print "s2 is {}".format(s2)
     #solve +
     if(len(s2)==1):
        return s2[0]

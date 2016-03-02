@@ -29,11 +29,11 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     t0=time.clock()
     f=open(path)
     seq=f.readlines()
-    print '{} s in reading'.format(time.clock()-t0) #2 secs
+    print ((time.clock()-t0),' s in reading') 
     t0=time.clock()
     chsize=[]
     cont=0
-    for i in xrange(len(seq)):
+    for i in range(len(seq)):
         s=seq[i]
         if s[0]=='t' and i>0:#new chromosome
          chsize.append(cont-1)
@@ -41,27 +41,27 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         else:
             cont=cont+1
     chsize.append(cont-1)
-    print '{} s in computing sizes'.format(time.clock()-t0) #6 seqs, go to numpy.array
+    print((time.clock()-t0),' s in computing sizes')
     t0=time.clock()
     ch={}
     cont=0
     name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont+1])))
     ch[name]=[]
-    print "name is ", name
+    print("name is ", name)
     for i in chsize:
-        print i
+        print(i)
         cont=cont+2
         chi=numpy.empty(i,dtype=float)
-        for j in xrange(0,i-1):
+        for j in range(0,i-1):
             #chi[j]=round(float(seq[cont+j]),2)
             chi[j]=seq[cont+j]
         ch[name].append(chi)
         cont=cont+i
         if(cont<len(seq)):
             name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
-            print "name is ", name
+            print("name is ", name)
             ch[name]=[]
-    print '{} s in formatting'.format(time.clock()-t0) #30 seqs, go to numpy.array
+    print ((time.clock()-t0),' s in formatting')
     return ch
     
 #tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/23479_h90_wlt_mean.wig")
@@ -75,8 +75,11 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5):
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
     alphabet=alphabetTotal[:numBins]   
     dseq=[]
-    factor=(numBins-1)/(maximo-minimo)
+    print("max vs min",maximo, minimo, windowSize)
+    factor=(numBins-1.0)/float(maximo-minimo)
+    print("factor",len(seq),windowSize)
     sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
+    print("seguimos",factor)
     mseq=np.mean(sseq, axis=1, keepdims=True)
     for im in mseq:
         dseq.append(alphabet[(int)(factor*(im-minimo))])
@@ -119,14 +122,14 @@ def upload_file():
         file = request.files['file']
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            print filename
+            print(filename)
             root=os.path.join(app.config['UPLOAD_FOLDER'])
             if (user in os.listdir(root))==False:                 #create directory for this user
                 os.mkdir(os.path.join(root,user))
             if filename in os.listdir(os.path.join(root,user)):
-                print '{} already uploaded'.format(filename)    #TODO: by now we avoid resubmissions (for tests)
+                print(filename,'already uploaded')    #TODO: by now we avoid resubmissions (for tests)
             else:
-                print 'uploading...'
+                print('uploading...')
                 file.save(os.path.join(root, user, filename))
             #return redirect(url_for('uploaded_file', filename=filename))
             return jsonify(path=os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -194,7 +197,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 
     t00=time.clock()
     #0) read
-    print 'reading...'
+    print('reading...')
     path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
     track=request.args.get("track")
     if track=="None":
@@ -207,7 +210,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 
     #1) normalize 
     t0=time.clock()
-    print 'computing statistics...'
+    print('computing statistics...')
     m=np.mean(seq)
     sd=np.std(seq)
     
@@ -216,49 +219,48 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 
     maximum=np.max(seq)
     minimum=np.min(seq)
-    print 'max and min in {}s'.format((time.clock()-t0))
+    print('max and min in ',(time.clock()-t0), "s")
 
 
     #2) discretize
     t0=time.clock()
-    print 'discretizing...'
+    print('discretizing...')
     windowSize=int(request.args.get("windowSize"))
     numBins=int(request.args.get("numBins"))
     maxSize=int(request.args.get("maxSize"))
     dseq=discretize(seq, windowSize, minimum, maximum, numBins)
-    print 'done! in {}s'.format((time.clock()-t0))
+    print('done!',(time.clock()-t0),' in {}s')
 
     t0=time.clock()
-    print 'bwt...'
+    print('bwt...')
     t=ss.bwt(''.join(dseq)+"$")
-    print 'done! in {}s'.format((time.clock()-t0))
+    print('done! in ',(time.clock()-t0),'s')
 
     t0=time.clock()
-    print 'sampling...'
-    res=[round(seq[x],2) for x in xrange(0,len(seq),max(1,len(seq)/maxSize))]
+    print('sampling...')
+    res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
     #step=max(1,len(seq)/maxSize)
     #res=[np.mean(seq[x:x+step]) for x in range(0,len(seq),step)] #TODO: round?
-    print 'done! in {}s'.format((time.clock()-t0))
-    print 'sample length {} and an element {}'.format(len(res), res[44])
+    print('done! in',(time.clock()-t0),'s')
 
     t0=time.clock()
-    print 'loading annotations...'
+    print('loading annotations...')
     print(h.gffPath(ch=track))
     dataGFF=ann.gff(h.gffPath(ch=track))
-    print 'time in GFF:',(time.clock()-t0),'s'
+    print('time in GFF:',(time.clock()-t0),'s')
     t0=time.clock()
     dataGO=ann.go()
-    print 'time in GO:',(time.clock()-t0),'s'
+    print('time in GO:',(time.clock()-t0),'s')
     t0=time.clock()
     dataGOA=ann.goa()
-    print 'time in GOA:',(time.clock()-t0),'s'
+    print('time in GOA:',(time.clock()-t0),'s')
     #dataFASTA=fasta(1)
-    print "done! ... annotations takes {}".format((time.clock()-t0))
+    print("done! ... annotations takes",(time.clock()-t0))
     data={"genome": genome, "seq":seq, "res":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
           "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF,
           "go":dataGO, "goa":dataGOA}
     session[user]=data
-    print 'whole preprocess takes {}s'.format((time.clock()-t00))
+    print('whole preprocess takes ',(time.clock()-t00),"s")
     return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq, chromosomes=genome.keys())
 
 
@@ -278,20 +280,20 @@ def search(pattern="", d=0):
     
     d=int(request.args.get("d"))
     pattern=str(request.args.get("pattern"))
-    print "{} before".format(pattern)
+    print(pattern,"before")
     pattern=h.convertString(pattern)
-    print "{} after".format(pattern)
+    print(pattern,"after")
 #    t0=time.clock()
 #    data=loadSession(session)
 #    print "Session load takes {}".format((time.clock()-t0))
     t=data["bwt"]
-    print t["firstOccurrence"]
+    print(t["firstOccurrence"])
     if(False in [x in t["firstOccurrence"] for x in set(pattern)]):
         return jsonify(response="There are characters in pattern that do not correspond to the sequence characters: {}".format(t["firstOccurrence"].keys()))
     else:
         t0=time.clock()
         match=ss.bwMatchingV8("".join(data["dseq"]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d)
-        print "Search takes {}".format((time.clock()-t0))
+        print("Search takes",(time.clock()-t0))
         return jsonify(points=(str)(match), sizePattern=len(pattern))
 
 
@@ -316,13 +318,13 @@ def annotations(positions=[], window=1000, types=["any"]):
     t0=time.clock()
     global data
     window=int(request.args.get("window"))
-    print window
+    print(window)
     pos=eval(request.args.get("positions"))
-    print pos
+    print(pos)
     types=eval(request.args.get("types"))
-    print types
+    print(types)
     res=ann.annotate(pos, data["gff"], types, window)
-    print "Annotations take {}".format((time.clock()-t0))
+    print("Annotations take",(time.clock()-t0),"s")
     return jsonify(response=res)
 
 #%%
@@ -333,7 +335,7 @@ def annotationsGOA(annotations={}, types=["any"]):
     global data
     
     a=eval(request.args.get("annotations"))
-    print 'annotation size: {}'.format(len(a))
+    print('annotation size: ',len(a))
     agon=ann.annotateGOnames(a, data["goa"], data["go"])
     return jsonify(response=agon)
     
@@ -344,7 +346,7 @@ def annotationsGOA(annotations={}, types=["any"]):
 #alpha is the threshold, applied as is with 'none' correction or with the specified one
 def enrichmentGO(annotations={}, correction="none", alpha=0.01):
     global data
-    
+    print("Enrichment GO")
     annotations=eval(request.args.get("annotations"))
     alpha=float(request.args.get("alpha"))
     correction=request.args.get("correction")
@@ -386,8 +388,8 @@ def load_passport():
     #TODO: check password and so on.
     if user in session.keys():
         data=session[user]
-        print len(data)
-        print data.keys()
+        print(len(data))
+        print(data.keys())
 
 #@app.after_request
 #def serialize_passport(response):

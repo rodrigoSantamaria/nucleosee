@@ -19,7 +19,7 @@ def discretize(seq=[0,0,0], windowSize=2,numBins=5):
     dseq=[]
     maximo=max(seq)
     minimo=min(seq)
-    for i in xrange(0, len(seq)-windowSize+1,windowSize):
+    for i in range(0, len(seq)-windowSize+1,windowSize):
         im=np.mean(seq[i:i+windowSize])
         dseq.append(alphabet[(int)(np.round((numBins-1)*(im-minimo)/(maximo-minimo)))])
     print len(dseq)
@@ -54,7 +54,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         print i
         cont=cont+2
         chi=numpy.empty(i,dtype=float)
-        for j in xrange(0,i-1):
+        for j in range(0,i-1):
             chi[j]=float(seq[cont+j])
         #chi.round(2)
         cont=cont+i
@@ -130,8 +130,8 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     t0=time.clock()
     step=max(1,len(seq)/maxSize)
     print 'step is {}'.format(step)
-    res=[round(seq[x],2) for x in xrange(0,len(seq),step)]
-    #res=[seq[i:(i+step)]/step for i in xrange(0,len(seq)-step,step)]
+    res=[round(seq[x],2) for x in range(0,len(seq),step)]
+    #res=[seq[i:(i+step)]/step for i in range(0,len(seq)-step,step)]
     print 'done! in {}s'.format((time.clock()-t0))
     print 'loading annotations...'
     t0=time.clock()
