@@ -152,7 +152,7 @@
         Server.search = function (pattern,d)
         {
             var response=[];
-            pattern=pattern.replace("+", "%2B");
+            pattern=pattern.replace(/\+/g, "%2B");
             console.log("pattern is "+pattern);
             $.ajax(
                 {

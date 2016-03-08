@@ -28,9 +28,28 @@ var DEBUG_GBV = true;
   Backend
   - Intentar optimizar el cálculo de estadísticas y discretización (2.5/5s en 2M y  5/7s en 4M)
   - Intentar optimizar los tiempos de lectura y formateo (en total unos 10s para pombe entero)
+        DONE: Los dos puntos anteriores están bastante optimizados. Para pombe entero estamos hablando de 10s para todo
+            el proceso ahora, incluyendo lectura, formateo, estadísticas, discretización y bwt.
+  - Guardar datos para mayor optimización en cargas posteriores
+        DONE: mediante pickle y con un retardo de 2s en la carga inicial (de 12 a 14s) tenemos luego unas cargas de 4s o menos
+        TODO: explorar pandas como alternativa a pickle, sobre todo pensando en humano
+        TODO: también pensando en humano se puede pensar en integrar el BWT u otros cálculos en el fichero que se guarde
+        TODO: se puede también pensar en NO guardar el .wig original, sólo nuestros datos, para evitar duplicaciones de memoria en disco
   - Crear carpetas y fichero de contraseñas + comprobaciones
   - Gestión de distintos organismos (ver cómo diseñarlo)
   - Dar soporte a bigwig
+  - Enriquecimiento: estamos teniendo en cuenta unos GIs que se han escogido en un cromosoma pero usando como universo
+        el genoma entero. O bien debemos tomar todos los GIs del genoma (quizás sería lo suyo, aunque habría que ver
+        cómo responde) o bien tomar como universo sólo los genes de ese cromosoma. De momento lo que hacemos es poner
+        un FDR muy estricto, pero esto no es más que un parche.
+        Ejemplo: a*5+abcba(0) en ch2 de pombe da 281 ocurrencias de las cuales 39 están en genes. El universo completo
+        son 5346 genes con alguna anotación GO --> un FDR de 0.01 no da todavía muchas anotaciones relevantes!
+
+        La idea entonces sería tener preprocesados TODOS los cromosomas? En pombe serían unos 3s por cromosoma, es
+        decir un tiempo adicional de 6s, pasando de 14 a 20s de preprocesamiento. En organismos grandes es inasumible
+        yo creo. También multiplica por el número de cromosomas el tiempo de la búsqueda. Para pombe con búsquedas
+        SIN mutaciones no es un problema pues estmos hablando de 0.016s
+
   */
 
 //************************************************************************
@@ -131,7 +150,7 @@ function searchPoints()
         //var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",globalDL1.dim.width, "left");
         var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",pattern.length*ws, "left");
         var start = new Date().getTime();
-        var enrichment=Server.enrichment(JSON.stringify(eval(annotations)), "fdr", 0.01)
+        var enrichment=Server.enrichment(JSON.stringify(eval(annotations)), "fdr", 0.00001)
         var end = new Date().getTime();
         console.log('Enrichment took: ' + (end-start));
         drawEnrichment(enrichment);

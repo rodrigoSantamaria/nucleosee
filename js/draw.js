@@ -28,7 +28,7 @@ var dimAnnotation =
     {
         height : 12,
         x0:5,
-        y0:5
+        y0:7
     }
 
 var globalSeq =
@@ -154,6 +154,8 @@ function drawEnrichment(enrichment)
 
 
         var dx=dimAnnotation.x0;
+        var dy=[];
+        var yline=0;
 
         console.log("Numero de terminos GO: "+goterms.length);
         globalDL1.svg.selectAll(".dl1.goterm")
@@ -167,10 +169,19 @@ function drawEnrichment(enrichment)
                     var ctx = canvas.getContext("2d");
                     ctx.font = goSize(d.pval)+"px sans-serif";
                     var width = ctx.measureText(" "+d.go_name+" ·").width;
-                    dx+=width;//+dimAnnotation.x0;
+
+                    dx+=width;
+                    if(dx>=dimDL.width) {
+                        yline++;
+                        dx = dimAnnotation.x0 + width;
+                        }
+                    dy[d.go_name]=dimAnnotation.y0+10*yline;
+                    console.log(d.go_name+" "+ dy[d.go_name]);
                     return dx-width; }
                 )
-            .attr('y', function(d) { return dimAnnotation.y0 })
+            .attr('y', function(d) {
+                return dy[d.go_name];//*Math.max(1,dx/dimDL.width)
+            })
             .attr('font-size', function(d) { //console.log("Tamaño de "+ d.go_name+": "+d.pval+" "+goSize(d.pval)+"px");
                 return goSize(d.pval)+"px" })
             .text(function(d){
@@ -238,7 +249,7 @@ function drawPoints(points, sizePattern, numNucleotides)
         .append("text")
         .attr('class', 'dl1 search_label')
         .attr('x', 600)
-        .attr('y', 20)
+        .attr('y', 0)
         .text(function(d){return d+" occurrences"})
 
     // Save information of dataLine1
