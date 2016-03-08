@@ -7,6 +7,16 @@ Ancillary methods for python server
 @author: rodri
 """
 
+#Evolved from http://www.rigtorp.se/2011/01/01/rolling-statistics-numpy.html
+# (however that solution get overlapping windows)
+#a must be a 1D array, does not contemplate overlap so far
+def rolling_window(a, window):
+    import numpy as np
+    shape = (a.shape[0]/window, window)
+    strides = (a.strides[0]*window, a.strides[0])
+    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+
+#%%
 def parse(text):
     chunks = ['']
 
@@ -29,6 +39,7 @@ def parse(text):
 Parses a text which may contain + and * operations (no parenthesis allowed)
 """   
 def convertString(text):
+    print("Initial text is ",text)
     s=parse(text)
     if(len(s)==1):
         return s[0]
@@ -49,16 +60,22 @@ def convertString(text):
     #solve +
     if(len(s2)==1):
        return s2[0]
-    s3=[]
+    s3=""
     i=0
     while i<len(s2)-1:
         if(s2[i+1]=='+'):
-            s3.append(s2[i]+s2[i+2])
-        elif(s2[i]!="+"):
-            s3.append(s2[i])
-            i+=1
+            if(s3==""):
+                s3+=(s2[i]+s2[i+2])
+            else:
+                s3+=s2[i+2]
+        #else:
+            #s3+=(s2[i])
+         #   i+=1
         i+=1
-    return s3[0]
+    print("Search string is ",s3)
+    return s3
+    
+#convertString("abcba+a*5+abcba")
 #%%    
 """
 Return the right gff for a given species/chromosome.

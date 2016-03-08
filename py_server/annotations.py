@@ -172,6 +172,7 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
     uni=len(unigenes)
     sel=len(gis)
     print("universe created")
+    print(sel,"gis on a universe of",uni)
     #
     #1) Fisher's test
     from fisher import pvalue #at least for mac os must be downloaded from here: https://pypi.python.org/pypi/fisher/0.1.4

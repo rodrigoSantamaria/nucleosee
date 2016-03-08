@@ -17,15 +17,16 @@ import time
 #Our methods
 import suffixSearch as ss
 import annotations as ann
-import helpers as h
+import helpers
+import pickle
+import re
+    
 
 
 # --------------------- INTERNAL METHODS -----------------
 #%% -----------  READ WIG --------------
 def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig"):
     import numpy
-    import re
-    import time
     t0=time.clock()
     f=open(path)
     seq=f.readlines()
@@ -51,10 +52,8 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     for i in chsize:
         print(i)
         cont=cont+2
-        chi=numpy.empty(i,dtype=float)
-        for j in range(0,i-1):
-            #chi[j]=round(float(seq[cont+j]),2)
-            chi[j]=seq[cont+j]
+        #chi=numpy.array(seq[cont:cont+i-1],float)
+        chi=numpy.array(seq[cont:cont+i-1], dtype=numpy.float16)
         ch[name].append(chi)
         cont=cont+i
         if(cont<len(seq)):
@@ -62,10 +61,13 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
             print("name is ", name)
             ch[name]=[]
     print ((time.clock()-t0),' s in formatting')
+    
     return ch
     
+#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/dwtMini2.wig")
 #tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/23479_h90_wlt_mean.wig")
-
+#seq=tal["1"][0]
+#np.mean(seq)
 #%% ------------------ DISCRETIZATION -------------------
 """Given a numerical sequence seq, this method binarizes based on the average 
 and standard deviations on windows of size windowSize. Binarzation is done
@@ -78,27 +80,22 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5):
     print("max vs min",maximo, minimo, windowSize)
     factor=(numBins-1.0)/float(maximo-minimo)
     print("factor",len(seq),windowSize)
-    sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
-    print("seguimos",factor)
+    
+    sseq=helpers.rolling_window(seq,windowSize)
+    #sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
     mseq=np.mean(sseq, axis=1, keepdims=True)
     for im in mseq:
         dseq.append(alphabet[(int)(factor*(im-minimo))])
     return dseq 
-
-#def discretize(seq, windowSize, minimo, maximo, numBins=5):
-#    import numpy as np
-#    alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
-#    alphabet=alphabetTotal[:numBins]   
-#    factor=(numBins-1)/(maximo-minimo)
-#    sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
-#    mseq=np.mean(sseq, axis=1, keepdims=True)
-#    def disc(a):
-#        return alphabet[(int)(factor*(a-minimo))]
-#    return list(np.apply_along_axis(disc, 1,mseq))
- 
+#%%
 #import time
+#import numpy as np
 #t0=time.clock()   
-#tal=discretize(seq,30, minimum, maximum)
+#tal=discretize(seq,30, np.min(seq), np.max(seq))
+#print '{}'.format((time.clock()-t0))
+##%%
+#t0=time.clock()   
+#tal=discretize0(seq,30, np.min(seq), np.max(seq))
 #print '{}'.format((time.clock()-t0))
 
 #----------------------- UPLOADS -----------------------
@@ -188,31 +185,56 @@ retorna    objeto JSON con los siguientes campos:
                maximum,minimum,mean,sdev   medidas estadísticas de los datos normalizados
                dseq        datos discretizados por la función discretize()
 """
+#%%
 @app.route("/preprocess")
-def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=None):
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track="None"):
     import numpy as np
-    import time
     global data
     global session
-
+    
     t00=time.clock()
     #0) read
     print('reading...')
-    path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
+    t0=time.clock()
+    basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    filename=str(request.args.get("filename"))
+    path=os.path.join(basePath,filename)
     track=request.args.get("track")
-    if track=="None":
+    picklePath=os.path.join(basePath,re.sub(r"\..*$", ".pic", filename))
+    
+    
+    if os.path.isfile(picklePath):
+        print("Pickle existis!!!")
+        f=open(picklePath)
+        genome=pickle.load(f)
+    else:
         genome=readWig(path)
+        
+        tpickle=time.clock()
+        print("pickle path:", picklePath)
+        f=open(picklePath, 'w')
+        pickle.dump(genome,f)
+        print("serialize data takes",(time.clock()-tpickle))
+
+    
+    if track=="None":
+        #genome=readWig(path)
         track=genome.keys()[0]
         seq=genome[track][0]
     else:
         genome=data["genome"]
         seq=seq[track]
-
+    
+    print("load wig takes",(time.clock()-t0))
+   
+    #0b) save to pickle
+    
+    
     #1) normalize 
     t0=time.clock()
     print('computing statistics...')
-    m=np.mean(seq)
-    sd=np.std(seq)
+    m=np.mean(seq, dtype=float)
+    sd=np.std(seq, dtype=float)
     
     upperlim=m+3*sd#avoid outliers? testing
     seq=np.clip(seq,0,upperlim)
@@ -238,15 +260,14 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 
     t0=time.clock()
     print('sampling...')
-    res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
-    #step=max(1,len(seq)/maxSize)
-    #res=[np.mean(seq[x:x+step]) for x in range(0,len(seq),step)] #TODO: round?
+    res=list(np.mean(helpers.rolling_window(seq, max(1,len(seq)/maxSize)),-1, dtype=float)) #maybe round?  
     print('done! in',(time.clock()-t0),'s')
 
+    #3) annotations
     t0=time.clock()
     print('loading annotations...')
-    print(h.gffPath(ch=track))
-    dataGFF=ann.gff(h.gffPath(ch=track))
+    print(helpers.gffPath(ch=track))
+    dataGFF=ann.gff(helpers.gffPath(ch=track))
     print('time in GFF:',(time.clock()-t0),'s')
     t0=time.clock()
     dataGO=ann.go()
@@ -260,9 +281,12 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
           "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF,
           "go":dataGO, "goa":dataGOA}
     session[user]=data
+    
     print('whole preprocess takes ',(time.clock()-t00),"s")
-    return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq, chromosomes=genome.keys())
+    print("types",m)
+    return jsonify(seq=res, fullLength=len(seq), maximum=(float)(maximum), minimum=(float)(minimum), mean=(float)(m), stdev=(float)(sd), dseq=dseq, chromosomes=genome.keys())
 
+#%%preprocess(filename="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/dwtMini2.wig")
 
 #%% -------------- SEARCHES -----------
 
@@ -280,14 +304,11 @@ def search(pattern="", d=0):
     
     d=int(request.args.get("d"))
     pattern=str(request.args.get("pattern"))
-    print(pattern,"before")
-    pattern=h.convertString(pattern)
-    print(pattern,"after")
+    pattern=helpers.convertString(pattern)
 #    t0=time.clock()
 #    data=loadSession(session)
 #    print "Session load takes {}".format((time.clock()-t0))
     t=data["bwt"]
-    print(t["firstOccurrence"])
     if(False in [x in t["firstOccurrence"] for x in set(pattern)]):
         return jsonify(response="There are characters in pattern that do not correspond to the sequence characters: {}".format(t["firstOccurrence"].keys()))
     else:
