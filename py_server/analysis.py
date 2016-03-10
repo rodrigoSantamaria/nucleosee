@@ -6,7 +6,8 @@ Created on Wed Jun  4 10:41:47 2014
 
 @author: rodri
 """
-"""PRUEBA GIT"""
+
+
 # --------------------- LIBRARIES -----------------
 from flask import Flask, jsonify, request
 from flask import redirect, url_for #for uploading files
@@ -126,7 +127,7 @@ def testUpload():
         import hashlib
         codeEx=""+request.args.get("md5")
         codeIn=hashlib.md5(open(os.path.join(cpath,filename), 'rb').read()).hexdigest()
-        if(codeEx==codeIn):
+        if(codeEx==codeIn or codeEx=="WITHOUT_MD5"):
             return jsonify(response="file exists")
         else:
             return jsonify(response='outdated version')
@@ -167,49 +168,79 @@ retorna    objeto JSON con los siguientes campos:
                dseq        datos discretizados por la función discretize()
 """
 @app.route("/preprocess")
-def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0):
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0, fastMode=0):
+
     import numpy as np
     import time
     global data
     global session
-    #0) read
-    print 'reading...'
-    path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
-    track=int(request.args.get("track"))
-    seq=readWig(path)
-    seq=seq[track] #(TODO: by now, only first chromosome)
-    #1) normalize 
-    print 'computing statistics...'
-    m=np.mean(seq)
-    sd=np.std(seq)
-    maximum=np.max(seq)
-    minimum=np.min(seq)
-    #nseq=[(x-m)/sd for x in seq]
-    #2) discretize
-    print 'discretizing...'
-    windowSize=int(request.args.get("windowSize"))
-    numBins=int(request.args.get("numBins"))
-    maxSize=int(request.args.get("maxSize"))
-    dseq=discretize(seq, windowSize, numBins)
-    print 'done!'
-    print 'bwt...'
-    t=ss.bwt(''.join(dseq)+"$")
-    print 'done!'
-    print 'rounding...0'
-    res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
-    print 'done!'
-    t0=time.clock()
-    print 'loading annotations...'
-    dataGFF=ann.gff()
-    #dataGO=ann.go()
-    #dataGOA=ann.goa()
-    #dataFASTA=fasta(1)
-    print "done! ... annotations takes {}".format((time.clock()-t0))
-    data={"seq":seq, "res":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF}
-          #"gff":dataGFF, "go":dataGO, "goa":dataGOA}
+
+    fastMode = int(request.args.get("fastMode"))
+
+    if fastMode==0:
+        #0) read
+        print 'reading...'
+        path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
+        track=int(request.args.get("track"))
+        seq=readWig(path)
+        seq=seq[track] #(TODO: by now, only first chromosome)
+        #1) normalize
+        print 'computing statistics...'
+        m=np.mean(seq)
+        sd=np.std(seq)
+        maximum=np.max(seq)
+        minimum=np.min(seq)
+        #nseq=[(x-m)/sd for x in seq]
+        #2) discretize
+        print 'discretizing...'
+        windowSize=int(request.args.get("windowSize"))
+        numBins=int(request.args.get("numBins"))
+        maxSize=int(request.args.get("maxSize"))
+        dseq=discretize(seq, windowSize, numBins)
+        print 'done!'
+        print 'bwt...'
+        t=ss.bwt(''.join(dseq)+"$")
+        print 'done!'
+        print 'rounding...0'
+        res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
+        print 'done!'
+        t0=time.clock()
+        print 'loading annotations...'
+        dataGFF=ann.gff()
+        #dataGO=ann.go()
+        #dataGOA=ann.goa()
+        #dataFASTA=fasta(1)
+        print "done! ... annotations takes {}".format((time.clock()-t0))
+        data={"seq":seq, "res":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
+              "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF}
+              #"gff":dataGFF, "go":dataGO, "goa":dataGOA}
+
+        # Save the variable "data"
+        saveDict(data, 'data.npy')
+
+    else:
+        # Read the variable "data"
+        data = loadDict('data.npy')
+
+        res=data["res"]
+        seq=data["seq"]
+        maximum=data["maximum"]
+        minimum=data["minimum"]
+        m=data["mean"]
+        sd=data["stdev"]
+        dseq=data["dseq"]
+
     session[user]=data
     return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq)
+
+
+def saveDict(dict='data', file='data.npy'):
+    import numpy as np
+    np.save(file, dict)
+
+def loadDict(file='data.npy'):
+    import numpy as np
+    return np.load(file).item()
 
 
 #%% -------------- SEARCHES -----------
@@ -277,7 +308,7 @@ def annotations(positions=[], window=1000, types=["any"]):
     print types
     res=ann.annotate(pos, data["gff"], types, window)
     #print res
-    return jsonify(response=res)
+    return jsonify(annotations=res)
 
 
 #%%from http://mortoray.com/2014/04/09/allowing-unlimited-access-with-cors/

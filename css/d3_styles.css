@@ -112,10 +112,41 @@
 }
 
 
+/*--------------------------------------------*/
+/*           DATALINE 3                      */
+/*--------------------------------------------*/
+.dl3.rect {
+    fill: none;
+}
 
 
+/*
+    Tipos de anotaciones:
+    - gene
+    - transcript
+    - exon
+    - CDS
+    - five_prime_UTR
+    - three_prime_UTR
+    - biological_region
+ */
+.dl3.line.gene {
+    fill: none;
+    stroke: grey;
+    stroke-opacity:1;
+    stroke-width: 1px;
+}
 
+.dl3.line.exon {
+    fill: none;
+    stroke: grey;
+    stroke-opacity:1;
+    stroke-width: 5px;
+}
 
-
-
-
+.dl3.line {
+    fill: none;
+    stroke: darkred;
+    stroke-opacity:0;
+    stroke-width: 2px;
+}

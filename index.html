@@ -50,8 +50,12 @@
         <output id="list"></output>
         <script src="js/upload-file.js"></script>
 
-        <button type="button" onclick="destroyAll(true)">Borrar</button>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <button type="button" onclick="destroyAll(true)">Delete</button>
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        <input type="checkbox" id="fastMode" checked>&nbsp;&nbsp;Fast mode
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp;&nbsp;
         <input type="text" id="patternSearch" value="aba">
         <select id="dSearch">
             <option value="0">0</option>
@@ -59,12 +63,13 @@
             <option value="2">2</option>
             <option value="3">3</option>
         </select>
-        <button type="button" onclick="searchPoints()">Buscar</button>
+        <button type="button" onclick="searchPoints()">Search pattern</button>
 
 
         <!-- VISUALIZATION -->
         <div id="lineSeq"></div>
         <div id="lineSeq2"></div>
+        <div id="lineSeq3"></div>
 
 
 

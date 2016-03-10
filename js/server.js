@@ -25,7 +25,6 @@
     }
 
 
-
     function defineServerLibrary()
     {
         var Server = {};
@@ -43,6 +42,7 @@
             _serverPath = serverPath;
             _user       = user;
             _password   = password;
+            _DEBUG      = DEBUG;
         };
 
 
@@ -120,12 +120,12 @@
          *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
          *                      on.
          */
-        Server.preprocess = function (filename,track,ws,nb,maxSize)
+        Server.preprocess = function (fastMode,filename,track,ws,nb,maxSize)
         {
             var response=[];
             $.ajax(
                 {
-                    url: _serverPath+"preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize,
+                    url: _serverPath+"preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&fastMode="+fastMode,
                     type: "GET",
                     datatype:"json",
                     async: false,    // default: true
@@ -197,14 +197,14 @@
                     },
                     error: function()
                     {
-                        if(_DEBUG) console.log("getPartSeq(): getPartSeq failed...");
+                        if(_DEBUG) console.log("getPartSeq(): get part of s3eq failed...");
                     }
                 });
             return response;
         };
 
 
-        Server.annotationsGenes = function (points,types,window)
+        Server.annotationsGenes = function (globalDL3,points,types,window)
         {
             var response=[];
             $.ajax(
@@ -215,12 +215,12 @@
                     async: true,    // default: true
                     success: function(result)
                     {
-                        if(_DEBUG) console.log("annotationsGenes(): get annotations of genes done...");
-                        console.log(result);
+                        globalDL3.annotations = result.annotations;
+                        if(_DEBUG) console.log("annotationsGenes(): annotations of genes done...");
                     },
                     error: function()
                     {
-                        if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
+                        if(_DEBUG) console.log("annotationsGenes(): annotations of genes failed...");
                     }
                 });
             return response;
@@ -239,78 +239,3 @@
 
 })(window);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function SERVER_getPartSeq(startSeq,endSeq)
-{
-    var response=[];
-    $.ajax(
-        {
-            url: serverPath+"getPartSeq?user="+user+"&password="+password+"&start="+startSeq+"&end="+endSeq,
-            type: "GET",
-            datatype:"json",
-            async: false,    // default: true
-            success: function(result)
-            {
-                response.partSeq = result.partSeq;
-            },
-            error: function()
-            {
-                console.log("getPartSeq(): getPartSeq failed...");
-            }
-        });
-    return response;
-}
-
-
-function SERVER_annotationsGenes(points,types,window)
-{
-    var response=[];
-    $.ajax(
-        {
-            url: serverPath+"annotations?user="+user+"&password="+password+"&positions="+points+"&types="+types+"&window="+window,
-            type: "GET",
-            datatype:"json",
-            async: true,    // default: true
-            success: function(result)
-            {
-                console.log(result);
-            },
-            error: function()
-            {
-                console.log("annotationsGenes(): annotationsGenes failed...");
-            }
-        });
-    return response;
-}

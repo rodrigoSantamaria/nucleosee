@@ -27,7 +27,7 @@ var globalDL1 =
     graphHeight : 200,
     graphWidth : screen.width,
     paddingX : 50,
-    paddingY : 50,
+    paddingY : 25,
 
     width : null,
     height : null,
@@ -49,7 +49,7 @@ var globalDL2 =
     graphHeight : 200,
     graphWidth : screen.width,
     paddingX : 50,
-    paddingY : 50,
+    paddingY : 25,
 
     width : null,
     height : null,
@@ -58,10 +58,24 @@ var globalDL2 =
     data : null,
     x : null,
     y : null,
-    svg : null
+    svg : null,
+    startSeq : null,
+    endSeq : null
 };
 
 
+var globalDL3 =
+{
+    nameSVG : "lineSeq3",
+    classSVG : "dl3",
+
+    graphHeight : 110,  // recommendation: number divisible by 3 and 2 times more dd
+    graphWidth : screen.width,
+    paddingX : 50,
+    paddingY : 25,
+
+    annotations : null
+};
 
 
 
@@ -131,6 +145,7 @@ function dataLine1_drawPoints(points, sizePattern, numNucleotides)
         .html(function(d,i)
         {
             dataLine2(seqPoints[i], sizePattern, numNucleotides);
+            dataLine3(seqPoints[i]);
             return "<strong>" + seqPoints[i] + " position</strong><br>" + Math.round(d.value*100)/100 + " value" + "<br>";
         });
 
@@ -155,6 +170,109 @@ function dataLine1_drawPoints(points, sizePattern, numNucleotides)
     // Save information of dataLine1
     globalDL1.seqPoints = seqPoints;
 }
+
+
+
+
+function dataLine3(point)
+{
+    if (globalDL3.annotations)
+    {
+        var width   = globalDL3.graphWidth;
+        var height  = globalDL3.graphHeight;
+        var x0      = globalDL3.paddingX;
+        var y0      = globalDL3.paddingY;
+        var nameSVG = globalDL3.nameSVG;
+        var annots  = globalDL3.annotations[point];
+
+        // Sizes...
+        var margin = {top: y0, right: x0, bottom: y0, left: x0};
+        width = width - margin.left - margin.right;
+        height = height - margin.top - margin.bottom;
+        var ySenseLine      = Math.round(height/3);
+        var yAntisenseLine  = Math.round(height*2/3);
+        var xStartLine = 0;
+        var xEndLine  = 0;
+        var yLine  = 0;
+
+
+        // Image SVG: image
+        var svg = d3.select("#"+nameSVG)
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        // Image SVG: rectangle to know the area where I'm drawing
+        svg.append("rect")
+            .attr("class", "rect dl3")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", width)
+            .attr("height", height);
+
+        console.log("Inicio: "+globalDL2.startSeq+" - final: "+globalDL2.endSeq);
+
+
+
+        /*
+            Tipos de anotaciones:
+            - gene
+            - transcript
+            - exon
+            - CDS
+            - five_prime_UTR
+            - three_prime_UTR
+            - biological_region
+         */
+
+
+        for(var i=0, j=annots.length; i<j;i++)
+        {
+            if(annots[i].end>=globalDL2.startSeq && globalDL2.endSeq>=annots[i].start)
+            {
+                if(i<=9)console.log("[ "+i+"] Start: "+annots[i].start+" - end: "+annots[i].end+" - y es un: "+annots[i].type+" ("+annots[i].id+", "+annots[i].sense+")");
+                if(i>9)  console.log("["+i+"] Start: "+annots[i].start+" - end: "+annots[i].end+" - y es un: "+annots[i].type+" ("+annots[i].id+", "+annots[i].sense+")");
+
+
+
+                if(annots[i].start-globalDL2.startSeq > 0)
+                {
+                    xStartLine = Math.round((annots[i].start-globalDL2.startSeq)/globalDL2.scaleSeqScreen);
+                }
+                else
+                {
+                    xStartLine = 0;
+                }
+                if(annots[i].end-globalDL2.startSeq > 0)
+                {
+                    xEndLine = Math.round((annots[i].end-globalDL2.startSeq)/globalDL2.scaleSeqScreen);
+                }
+                else
+                {
+                    xEndLine = width;
+                }
+                if(annots[i].sense == "+") yLine=ySenseLine;
+                if(annots[i].sense == "-") yLine=yAntisenseLine;
+
+                svg.append("line")
+                    .attr("class", globalDL3.classSVG+" line "+annots[i].type)
+                    .attr("x1", xStartLine)
+                    .attr("x2", xEndLine)
+                    .attr("y1", yLine)
+                    .attr("y2", yLine);
+
+            }
+        }
+
+
+
+
+
+    }
+}
+
 
 
 function dataLine2(point, sizePattern, numNucleotides)
@@ -182,7 +300,6 @@ function dataLine2(point, sizePattern, numNucleotides)
                                 result.partSeq, 1, startSeq, 0, numNucleotides, // scaleSeqServ is 1 because is a part of sequence
                                 point, sizePattern);
 
-
     // Save information of dataLine2
     globalDL2.width = dataLine.width;
     globalDL2.height = dataLine.height;
@@ -192,6 +309,8 @@ function dataLine2(point, sizePattern, numNucleotides)
     globalDL2.x = dataLine.x;
     globalDL2.y = dataLine.y;
     globalDL2.svg = dataLine.svg;
+    globalDL2.startSeq = startSeq;
+    globalDL2.endSeq = endSeq;
 }
 
 

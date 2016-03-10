@@ -24,7 +24,7 @@ var DEBUG_GBV = true;
 
 function main(file, hashMD5)
 {
-    var track=0;
+    var track=0;         // track: number of cromosome
     var ws=30;           // window size: discrete to real ratio
     var nb=5;            // num bins
     var maxSize=400000;  // maximum number of normalized data to store
@@ -58,8 +58,11 @@ function uploadFileAndPreprocess(file, hashMD5, track, ws, nb, maxSize)
     //----------------------------------------------------------------
     if (DEBUG_GBV) console.log("\n----- PREPROCESSING -----");
 
+    var fastMode=0;
+    if($('#fastMode').is(":checked")) fastMode=1;
+
     startTime = new Date();
-    var processedData = Server.preprocess(file.name, track, ws, nb, maxSize);
+    var processedData = Server.preprocess(fastMode, file.name, track, ws, nb, maxSize);
     if (DEBUG_GBV) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
 
     return processedData;
@@ -101,14 +104,15 @@ function searchPoints()
 
         var startTime=new Date();
         var result=Server.search(pattern,d);
+        result.points = [6033]; // TODO: quitar esta línea (points)
         dataLine1_drawPoints(result.points, result.sizePattern, numNucleotidesDraw);
         if(DEBUG_GBV) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
 
 
-        // DATALINE 2: GET ANNOTATIONS
+        // DATALINE 3: GET ANNOTATIONS
         //------------------------------
-        //result = Server.annotationsGenes(globalDL1.seqPoints,"[\"any\"]",globalDL1.width);
-        //console.log(result);
+        globalDL1.seqPoints = [180990]; // TODO: quitar esta línea (points)
+        Server.annotationsGenes(globalDL3, "["+globalDL1.seqPoints+"]","[\"any\"]",globalDL1.width*2);
     }
 }
 
