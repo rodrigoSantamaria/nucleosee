@@ -82,7 +82,7 @@ var globalDL2 =
 
 
 
-function dataLine1(seqServ, startSeq, endSeq, fullLength, maxSize, mean, stdev, ws)
+function dataLine1(seqServ, startSeq, endSeq, fullLength, maxSize, mean, stdev, ws, track)
 {
     // Get information of dataLine1
     var nameSVG=globalDL1.nameSVG;
@@ -90,24 +90,21 @@ function dataLine1(seqServ, startSeq, endSeq, fullLength, maxSize, mean, stdev, 
     var width=globalDL1.dim.graphWidth;
     var height=globalDL1.dim.graphHeight;
 
-    // Save information of sequence
+    // Save information of the genomic sequence
     globalSeq.seqServ=seqServ;
     globalSeq.mean=mean;
     globalSeq.stdev=stdev;
     globalSeq.ws=ws;
+    globalSeq.track=track;//chromosome or wig track it refers to
     globalSeq.scaleSeqServ = 1;
     if(Math.floor(fullLength/maxSize) >= 1)
         globalSeq.scaleSeqServ = Math.floor(fullLength/maxSize);
 
-
-//    var result = drawDataLine(nameSVG, classSVG, width, height,marginDL,
     var result = drawDataLine(nameSVG, classSVG,
         seqServ, globalSeq.scaleSeqServ, startSeq, startSeq, endSeq);
 
 
     // Save information of dataLine1
-    //globalDL1.width = result.width;
-    //globalDL1.height = result.height;
     globalDL1.scaleSeqScreen = result.scaleSeqScreen;
     globalDL1.scaleServScreen = result.scaleServScreen;
     globalDL1.data = result.data;
@@ -250,7 +247,7 @@ function drawPoints(points, sizePattern, numNucleotides)
         .attr('class', 'dl1 search_label')
         .attr('x', 600)
         .attr('y', 0)
-        .text(function(d){return d+" occurrences"})
+        .text(function(d){return d+" matches"})
 
     // Save information of dataLine1
     globalDL1.seqPoints = seqPoints;
@@ -273,7 +270,7 @@ function dataLine2(point, sizePattern, numNucleotides)
     var endSeq   = point+(numNucleotides/2)+(focusLine/2);
 
     // Get the part of sequence that we need to draw
-    var result = Server.getPartSeq(startSeq,endSeq);
+    var result = Server.getPartSeq(startSeq,endSeq, globalSeq.track);
 
 
    // var dataLine = drawDataLine(nameSVG, classSVG, width, height, globalDL2.paddingX, globalDL2.paddingY,
@@ -283,16 +280,13 @@ function dataLine2(point, sizePattern, numNucleotides)
                                 point, sizePattern);
 
     //RODRIGO
-    var annotations = Server.annotationsGenes("["+point+"]","[\"any\"]",globalDL2.dim.width, "center");
-    console.log("annotations result hola "+annotations);
+    var annotations = Server.annotationsGenes("["+point+"]","[\"any\"]",globalDL2.dim.width, "center", globalSeq.track, "False");
     if(annotations.hasOwnProperty(point))
         var annotLine = drawAnnotationLine(dataLine, annotations[point], startSeq, endSeq);
     //RODRIGO
 
 
     // Save information of dataLine2
-    //globalDL2.width = dataLine.width;
-    //globalDL2.height = dataLine.height;
     globalDL2.scaleSeqScreen = dataLine.scaleSeqScreen;
     globalDL2.scaleServScreen = dataLine.scaleServScreen;
     globalDL2.data = dataLine.data;
@@ -403,10 +397,10 @@ function drawDataLine(nameSVG, classSVG, seqServ, scaleSeqServ, initialPoint, st
     {
         scaleSeqScreen=sizeSeq/dimDL.width; // i.e. nucleotides per pixel
     }
-    if(DEBUG_GBV) console.log("\ndataLine(): startSeq: "+startSeq+" - endSeq: "+endSeq+" - sizeSeq: "+sizeSeq+" - graphWidth: "+dimDL.width);
+    /*if(DEBUG_GBV) console.log("\ndataLine(): startSeq: "+startSeq+" - endSeq: "+endSeq+" - sizeSeq: "+sizeSeq+" - graphWidth: "+dimDL.width);
     if(DEBUG_GBV) console.log("            startData: "+startData+" - endData: "+endData+" - sizeData: "+sizeData);
     if(DEBUG_GBV) console.log("            scaleSeqScreen (nucleotides/pixel): "+scaleSeqScreen+" - scaleServScreen: "+scaleServScreen+" - scaleSeqServ: "+scaleSeqServ);
-
+    */
 
     // Calculate 'y minimum' and 'y maximum'
     var ymin=0;

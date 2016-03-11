@@ -8,17 +8,24 @@ def bwt(text, numCols=1000):
     numCols=min(numCols,len(text))
     #Build cyclic rotations
     cr=numpy.empty([len(text)],dtype=[("pos", "i4"),("text", "a"+(str)(numCols)), ("initial", "a1"), ("final", "a1")]) #we now must change to numpy.array!
-    for i in range(len(text)-numCols):
+    for i in xrange(len(text)-numCols):
          p0=i-1
          if(i-1<0):
              p0=len(text)-i-1
          cr[i]=(i, text[i:i+numCols],text[i],text[p0])
-    for i in range(numCols):
+    for i in xrange(numCols):
          cr[i+len(text)-numCols]=(i+len(text)-numCols, text[len(text)-numCols+i : len(text)]+ text[0:i], text[len(text)-numCols+i], text[len(text)-numCols+i-1])
     print('time in building M:',(time.clock()-t))
+    #t=time.clock()
+    #cr2=numpy.sort(cr, order="text") #best method is default, quicksort. It is still the bottleneck in building
+    #print('time in sorting M:',(time.clock()-t))
+    
     t=time.clock()
-    cr=numpy.sort(cr, order="text") #best method is default, quicksort. It is still the bottleneck in building
+    #cr=numpy.sort(cr, order="text") #best method is default, quicksort. It is still the bottleneck in building
+    cr.sort(order="text") #best method is default, quicksort. It is still the bottleneck in building (a bit faster than the prevous one)
+    #sorted(cr["text"]) #maybe a bit faster but not with numpy
     print('time in sorting M:',(time.clock()-t))
+    
     t=time.clock()
     print('time in taking first and last:',(time.clock()-t))
     t=time.clock()
@@ -26,13 +33,16 @@ def bwt(text, numCols=1000):
     for x in set(cr["initial"]):
         fo[x]=numpy.searchsorted(cr["initial"], x)
     print('time in getting firstOccurrences:',(time.clock()-t))
+    print(type(cr["final"]))
     cp=checkpoints(cr["final"],numCols)
+    #cp=checkpoints((str)(cr["final"]),numCols)
     print('time in getting checkpoints:',(time.clock()-t))
     return {"bwt": cr["final"], "firstOccurrence":fo, "suffixArray":cr["pos"], "checkpoints":cp}
+#%%
 #text="panamabananas$"
 #pattern="ana"
 #t=bwt(text, len(pattern))
-#t
+
 
 #%% ------------ CHECKPOINTS
 #Returns a dict with the checkpoints for each symbol in text. 
@@ -45,15 +55,37 @@ def checkpoints(text, k=1000):
         checks[s]=[]
         counts[s]=0
         checks[s].append(0)
-    for i in range(len(text)):
+    for i in xrange(len(text)):
         counts[text[i]]+=1    
         if((i+1) % k ==0):
             for s in symbols:
                 checks[s].append(counts[s])
     return checks
+#%% TODO: this method is a bit faster but somehow this is giving a list index out of range in count
+#def checkpoints1(text, k=1000):
+#    checks={}
+#    counts={}
+#    symbols=set(text)
+#    for s in symbols:
+#        checks[s]=[]
+#        counts[s]=0 
+#        checks[s].append(0)
+#    for i in xrange(0,len(text),k):
+#        if(i+k<=len(text)):
+#            tt=text[i:i+k]
+#            for s in symbols:
+#                counts[s]+=tt.count(s)
+#                checks[s].append(counts[s])
+#    return checks
+#import time
 #text="smnpbnnaaaaa$a"
+#
+#t0=time.clock()
+#cp0=checkpoints0(text,5)
+#print((time.clock()-t0))
+#t0=time.clock()
 #cp=checkpoints(text,5)
-#cp
+#print((time.clock()-t0))
 
 #%% ------------- COUNT ---------------------
 #Returns the number of occurrences of symbol in text[:pos], using for it 
@@ -62,12 +94,13 @@ def checkpoints(text, k=1000):
 def count(symbol, pos, text, checkpoints, k=1000):
     if(pos==len(text)-1):
         pos-=1
-    for i in range(0,len(text),k):
+    for i in xrange(0,len(text),k):
         if(pos-i<0):
             break
     pos0=max(0,i-1)/k
+    print(pos0)
     count=checkpoints[symbol][pos0]
-    for i in range(pos0*k, pos):
+    for i in xrange(pos0*k, pos):
         if(text[i]==symbol):
             count+=1
     return count
@@ -124,7 +157,7 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
     step=(int)(round((float)(len(pattern))/(d+1)))
     print(pattern, d, step)
     matches=[]
-    for i in range(0, len(pattern), step):
+    for i in xrange(0, len(pattern), step):
         #1) seed definition
         seed=pattern[i:i+step]
         print("seed:",seed)
@@ -150,10 +183,10 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
         t0=time.clock()
         #print "CYCLIC ROTATIONS: {}".format(cr)
         #b) approximate searh
-        for m in range(len(pattern)):
+        for m in xrange(len(pattern)):
             #print "candidates left: {}".format(len(cr))
             symbol=pattern[m]
-            for j in range(len(cr)):
+            for j in xrange(len(cr)):
                 t=cr[j]
                 if(t["text"][m]!=symbol):
                     t["mismatches"]+=1
@@ -163,7 +196,7 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
         matches.append(parray)
         print("approx search takes",(time.clock()-t0),"s")
     ret=set()
-    for i in range(len(matches)):
+    for i in xrange(len(matches)):
         ret=ret.union(matches[i])
     ret=list(ret)
     ret.sort()

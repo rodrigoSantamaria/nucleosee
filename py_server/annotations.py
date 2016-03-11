@@ -36,7 +36,6 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
         data[i]["sense"]=row["sense"]
         data[i]["id"]=row["id"]
     return data
-#tal=gff()          
 
 #%%  Loads the gene ontology into a dic where keys are go_ids and values are just go names by now
 def go(filename="genomes/annotations/go/go-basic.obo"):
@@ -74,15 +73,8 @@ def fasta(ch):
     for i in range(len(reader)):
         seq=seq+reader[i].replace("\n", "")
     return seq
-    
+
 #%%
-    """
-    Returns the annotations found for each interval around positions in mm given
-    the corresponding GFF data obtained with gff(). Intervals are either [x,x+ws]
-    or [x-ws*0.5, x+ws*0.5], depending on align ("left" or "center" respectively)
-    Only annotatios of the given types or all if types=["any"] are returned.
-    Typical types include "gene", "CDS", "transcript", etc.
-    """
 def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
     import numpy as np
     data2=dataGFF
@@ -95,33 +87,36 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
     interval=ws*0.5
     import re
     for x in mm:
-        #sel=data2[(data2["start"]>x-interval) & (data2["end"]<x+interval)]
         if(align=="left"):
-            e1=x
-            s1=x+interval
+            s1=x
+            e1=x+ws
         else:
             e1=x+interval
             s1=x-interval
-        sel=data2[((data2["end"]>s1) & (data2["end"]<e1)) | ((data2["start"]>s1) & (data2["start"]<e1)) | ((data2["start"]<s1) & (data2["end"]>e1))]
+        sel=data2[(data2["start"]<s1) & (data2["end"]>e1)] #fully included
+        #sel=data2[((data2["end"]>s1) & (data2["end"]<e1)) | ((data2["start"]>s1) & (data2["start"]<e1)) | ((data2["start"]<s1) & (data2["end"]>e1))] #intersecting (more time expensive and not sure it makes a difference)
         if(len(sel)>0):     
             em[x]=[]
             for s in sel:
-                gid=s["id"] 
-                gid=re.sub(".*SP", "SP", gid)
-                gid=re.sub(":.*", "", gid)
+                gid=s["id"]
+                gid=re.sub(".*ID=", "", gid)
                 gid=re.sub(";.*$", "", gid)
-                gid=re.sub(".1$", "", gid)
+                gid=re.sub("^.*:", "", gid)
                 em[x].append({"type":s["type"], "id":gid, "start":s["start"], "end":s["end"], "sense":s["sense"]})
-    return em
-    
-#annotate([3384450], dataGFF, types=["gene"], ws=2)
-#tal=annotate([61000], dataGFF, ws=4000)
+    return em    
+#%%
+#import time
+#t0=time.clock()
+#gis=np.random.randint(0,2.5e6,3284)
+#tal=annotate(gis, dataGFF,types=["gene"], ws=4000)
+#print("it tiook",(time.clock()-t0))
+##%%
 #for x in dataGFF:
 #    if(x["id"].find("SPCC757.15")>=0):
 #        print "{}\t{}, {}".format(x["type"],x["start"],x["end"])
 #for x in tal[61000]:
 #    print "{}\t{}, {}".format(x["id"],x["type"],x["start"])
-    
+#    
 #%%
 def annotateGO(em, dataGOA, discard=['GO:0003674','GO:0005575','GO:0008150']):
     ego={}
@@ -197,16 +192,18 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
         pvalso=[]
         def keyL(k):
             return k[1]["pval"],k[0]
-        #for key, value in sorted(pvals.iteritems(), key=lambda (k,v): (v["pval"],k)):#python2
-        for key, value in sorted(pvals.items(), key=keyL):
-            pvalso.append(value["pval"])
         if correction=="fwer":
+            for key, value in sorted(pvals.items(), key=keyL):
+                pvalso.append(value["pval"])
             for k in range(1,len(pvalso)):
                 if pvalso[k] > th/(len(pvalso)-k+1):
                     th=pvalso[k-1]
                     break
         if correction=="fdr":
+            for key, value in sorted(pvals.items(), key=keyL, reverse=True):
+                    pvalso.append(value["pval"])
             for k in range(0,len(pvalso)):
+                #print(pvalso[k],"   ",th*(k+1)/len(pvalso))
                 if pvalso[k] <= th*(k+1)/len(pvalso):
                     th=pvalso[k-1]
                     break
@@ -222,7 +219,7 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
     print("number of enriched terms is",len(pvalsf))
 
     return pvalsf
-    
+#tal=enrichmentFisher(set(gis),dataGOA,0.01,"fdr")
 #%%
 #def keyL(k):
 #    return k[1]["pval"],k[0]

@@ -63,8 +63,9 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     return ch
 #%%
 
-#path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/quique/23479_h90_wlt_mean.wig"
+path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/quique/23479_h90_wlt_mean.wig"
 #tal=readWig(path)
+tal=preprocess(path, track="chromosome3")
 #
 ##%%
 #t0=time.clock()

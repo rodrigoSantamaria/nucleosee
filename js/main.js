@@ -35,6 +35,10 @@ var DEBUG_GBV = true;
         TODO: explorar pandas como alternativa a pickle, sobre todo pensando en humano
         TODO: también pensando en humano se puede pensar en integrar el BWT u otros cálculos en el fichero que se guarde
         TODO: se puede también pensar en NO guardar el .wig original, sólo nuestros datos, para evitar duplicaciones de memoria en disco
+  - Soporte a la selección de cromosomas
+        En el servidor con los cambios necesarios en cliente.
+        Básicamente, las interfaces incluyen normalmente un argumento nuevo, 'track', que de momento lo estamos poniendo
+        a processedData.chromosomes[0] pero que luego cambiará en función de un combo box.
   - Crear carpetas y fichero de contraseñas + comprobaciones
   - Gestión de distintos organismos (ver cómo diseñarlo)
   - Dar soporte a bigwig
@@ -59,9 +63,9 @@ var DEBUG_GBV = true;
 //************************************************************************
 
 var ws=30;           // window size: discrete to real ratio
+var processedData;
 
-
-function main(file, hashMD5)
+function main(file, forceReload)
 {
     var track="None";
     var nb=5;            // num bins
@@ -72,7 +76,7 @@ function main(file, hashMD5)
 
     Server.connect(DEBUG_GBV, user, password);
 
-    var processedData=uploadFileAndPreprocess(file, hashMD5, track, ws, nb, maxSize);
+    processedData=uploadFileAndPreprocess(file, forceReload, track, ws, nb, maxSize);
 
     drawing(processedData, ws, maxSize);
 }
@@ -80,7 +84,7 @@ function main(file, hashMD5)
 
 // ANALYSIS: UPLOAD FILE AND PREPROCESSING
 ////////////////////////////////////////////
-function uploadFileAndPreprocess(file, hashMD5, track, ws, nb, maxSize)
+function uploadFileAndPreprocess(file, forceReload, track, ws, nb, maxSize)
 {
     // READ FILE
     //------------
@@ -88,7 +92,7 @@ function uploadFileAndPreprocess(file, hashMD5, track, ws, nb, maxSize)
     if(DEBUG_GBV) console.log("Name of file: "+file.name);
 
     var startTime=new Date();
-    Server.sendFile(file, hashMD5);    // passing it to the server side (best solution for >1MB files)
+    Server.sendFile(file, forceReload);    // passing it to the server side (best solution for >1MB files)
     if (DEBUG_GBV) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
 
 
@@ -118,7 +122,7 @@ function drawing(processedData, ws, maxSize)
     // DATALINE 1 (preprocessed data)
     //----------------------------------
     var startTime=new Date();
-    dataLine1(seqServer,0,fullLength,fullLength, maxSize, processedData.mean, processedData.stdev, ws);
+    dataLine1(seqServer,0,fullLength,fullLength, maxSize, processedData.mean, processedData.stdev, ws, processedData.chromosomes[0]);
     if(DEBUG_GBV) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
 
 }
@@ -137,22 +141,37 @@ function searchPoints()
         //----------------------------------
         var numNucleotidesDraw = globalDL1.dim.width;
 
+        //By now working in the first chromosome returned, then we will abilitate a sel box
+        console.log("chrom are"+processedData.chromosomes[0]);
         //RODRIGO
         var startTime=new Date();
         var result=Server.search(pattern,d);
-        drawPoints(result.points, result.sizePattern, numNucleotidesDraw);
+        var pp=JSON.parse(result.points[processedData.chromosomes[0]]);
+        drawPoints(pp, result.sizePattern, numNucleotidesDraw);
         if(DEBUG_GBV) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
-        console.log(result.points.length+" occurrences");
 
-
+        //TODO: for the enrichment we require annotations on every track
         // GET ENRICHMENT
-        //var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",globalDL1.dim.width);
-        //var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",globalDL1.dim.width, "left");
-        var annotations = Server.annotationsGenes("["+result.points+"]", "[\"gene\"]",pattern.length*ws, "left");
         var start = new Date().getTime();
-        var enrichment=Server.enrichment(JSON.stringify(eval(annotations)), "fdr", 0.00001)
+
+        //var annotations=(Server.annotationsGenes("[" + points + "]", "[\"gene\"]", pattern.length * ws, "left", processedData.chromosomes[0]));
+        var annotations="";
+        var numMatches=0;
+        for(var i=0;i<processedData.chromosomes.length;i++) {
+            var points=JSON.parse(result.points[processedData.chromosomes[i]])
+            console.log(points.length+" matches in track "+processedData.chromosomes[i]);
+            numMatches+=points.length
+            annotations+=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", pattern.length * ws, "left", processedData.chromosomes[i], "True");
+            }
+        console.log("Total number of matches: "+numMatches);
         var end = new Date().getTime();
-        console.log('Enrichment took: ' + (end-start));
+        console.log('Getting annotations took: ' + (end - start));
+
+        var start = new Date().getTime();
+        var enrichment = Server.enrichment(annotations, "fdr", 0.00001)
+        var end = new Date().getTime();
+        console.log('Enrichment took: ' + (end - start));
+
         drawEnrichment(enrichment);
 
     }

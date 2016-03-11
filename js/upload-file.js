@@ -21,7 +21,9 @@ if (window.File && window.FileReader && window.FileList && window.Blob)
                 var files = evt.target.files;   // FileList object
                 var file=files[0];              // By now, just one file
 
-                if(DEBUG_GBV) console.log("\n----- CHECKING FILE -----");
+                //NOTE: MD5 computation is just too slow for a large wig (5s for the whole pombe genome)
+                //We should replace it by a 'reload' tickmark and just check if the .pic file has been already created otherwise
+                /*if(DEBUG_GBV) console.log("\n----- CHECKING FILE -----");
                 var startTime=new Date();
                 var dfdMd5File = new $.Deferred();
                 calculateMD5(dfdMd5File, file);
@@ -30,7 +32,9 @@ if (window.File && window.FileReader && window.FileList && window.Blob)
                     if(DEBUG_GBV) console.log("calculateMD5(): "+hash);
                     if(DEBUG_GBV) console.log("Time spent checking (MD5): "+ (new Date()-startTime)+"ms");
                     main(file, hash);
-                });
+                });*/
+
+                main(file, false) //false if not forcing reload, true otherwise (TODO)
 
         }
     }

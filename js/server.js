@@ -49,15 +49,16 @@
         /**
          * Uploads the file f to the server. Posterior calls to REST will be by the path of the file
          * @param file
-         * @param hashMD5
+         * @param forceReload
          */
         // NOTE: Remember REST Flask calls require enable CORS in the browser!!!
-        Server.sendFile = function (file, hashMD5)
+        Server.sendFile = function (file, forceReload)
         {
             var response="";
             $.ajax(
                 {
-                    url: _serverPath+"testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&md5="+hashMD5,
+                    //url: _serverPath+"testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&md5="+forceReload,
+                    url: _serverPath+"testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&forceReload="+forceReload,
                     type: "GET",
                     datatype:"json",
                     async: false,
@@ -139,6 +140,7 @@
                         response.stdev=result.stdev;
                         response.dseq=result.dseq;
                         response.fullLength=result.fullLength;
+                        response.chromosomes=result.chromosomes;
                     },
                     error: function()
                     {
@@ -167,7 +169,8 @@
                             if(_DEBUG) console.log("search(): search done...");
 
                             // Convert to array...
-                            response.points = JSON.parse(result.points);
+                            //response.points = JSON.parse(result.points);
+                            response.points=result.points;
                             response.sizePattern = result.sizePattern;
                         }
                         else
@@ -184,12 +187,12 @@
         };
 
 
-        Server.getPartSeq = function (startSeq,endSeq)
+        Server.getPartSeq = function (startSeq,endSeq, track)
         {
             var response=[];
             $.ajax(
                 {
-                    url: _serverPath+"getPartSeq?user="+_user+"&password="+_password+"&start="+startSeq+"&end="+endSeq,
+                    url: _serverPath+"getPartSeq?user="+_user+"&password="+_password+"&start="+startSeq+"&end="+endSeq+"&track="+track,
                     type: "GET",
                     datatype:"json",
                     async: false,    // default: true
@@ -206,12 +209,12 @@
         };
 
 
-        Server.annotationsGenes = function (points,types,window, align)
+        Server.annotationsGenes = function (points,types,window, align, track, onlyIDs)
         {
             var response=[];
             $.ajax(
                 {
-                    url: _serverPath+"annotations?user="+_user+"&password="+_password+"&positions="+points+"&types="+types+"&window="+window+"&align=\""+align+"\"",
+                    url: _serverPath+"annotations?user="+_user+"&password="+_password+"&positions="+points+"&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs,
                     type: "GET",
                     datatype:"json",
                     async: false,    // default: true
@@ -231,6 +234,9 @@
 
         Server.enrichment = function (annotations, correction, alpha)
         {
+            annotations="[\""+annotations+"\"]";
+            annotations=annotations.replace(/,/g,"\",\"");
+            console.log("Number of gene annotations:"+annotations.length)
             var response=[];
             $.ajax(
                 {
