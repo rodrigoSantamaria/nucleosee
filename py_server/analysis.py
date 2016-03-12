@@ -6,8 +6,7 @@ Created on Wed Jun  4 10:41:47 2014
 
 @author: rodri
 """
-
-
+"""PRUEBA GIT"""
 # --------------------- LIBRARIES -----------------
 from flask import Flask, jsonify, request
 from flask import redirect, url_for #for uploading files
@@ -15,23 +14,23 @@ from werkzeug.utils import secure_filename
 import os
 import time
 
-#BWT searches
-import sys 
-#sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
+#Our methods
 import suffixSearch as ss
 import annotations as ann
-from helpers import convertString
+import helpers
+import pickle
+import re
+    
 
-
+    
 # --------------------- INTERNAL METHODS -----------------
 #%% -----------  READ WIG --------------
 def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig"):
     import numpy
-    import time
     t0=time.clock()
     f=open(path)
     seq=f.readlines()
-    print '{} s in reading'.format(time.clock()-t0) #2 secs
+    print ((time.clock()-t0),' s in reading') 
     t0=time.clock()
     chsize=[]
     cont=0
@@ -43,42 +42,80 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         else:
             cont=cont+1
     chsize.append(cont-1)
-    print '{} s in computing sizes'.format(time.clock()-t0) #6 seqs, go to numpy.array
+    print((time.clock()-t0),' s in computing sizes')
     t0=time.clock()
-    ch=[]
+    ch={}
     cont=0
+    name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont+1])))
+    ch[name]=[]
+    print("name is ", name)
     for i in chsize:
-        print i
+        print(i)
         cont=cont+2
-        chi=numpy.empty(i,dtype=float)
-        for j in range(0,i-1):
-            chi[j]=round(float(seq[cont+j]),2)
+        #chi=numpy.array(seq[cont:cont+i-1],float)
+        chi=numpy.array(seq[cont:cont+i-1], dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+        ch[name].append(chi)
         cont=cont+i
-        ch.append(chi)
-    print '{} s in formatting'.format(time.clock()-t0) #30 seqs, go to numpy.array
+        if(cont<len(seq)):
+            name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
+            print("name is ", name)
+            ch[name]=[]
+    for k in ch.keys():
+        ch[k]=ch[k][0]
+    print ((time.clock()-t0),' s in formatting')
+    
     return ch
-
+    
+#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/dwtMini2.wig")
+#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/23479_h90_wlt_mean.wig")
+#seq=tal["chromosome1"][0]
+#np.mean(seq)
 #%% ------------------ DISCRETIZATION -------------------
 """Given a numerical sequence seq, this method binarizes based on the average 
 and standard deviations on windows of size windowSize. Binarzation is done
 in categories a to z (z the larger), as many as detailed by numBins"""
-def discretize(seq, windowSize,numBins=5):
+#NOTE: maybe a good idea to optimize this methos is to use numerical bins instead of letters
+def discretize(seq, windowSize, minimo, maximo, numBins=5):
     import numpy as np
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
     alphabet=alphabetTotal[:numBins]   
     dseq=[]
-    #sm=np.mean(seq)
-    #ssd=np.std(seq)
-    maximo=max(seq)
-    minimo=min(seq)
-    for i in range(0, len(seq),windowSize):
-        im=np.mean(seq[i:i+windowSize])
-        dseq.append(alphabet[(int)(np.round((numBins-1)*(im-minimo)/(maximo-minimo)))])
-        #dseq.append(alphabet[max(0,min(len(alphabet)/2+int(np.round((im-sm)/ssd)),numBins-1))])
-    return dseq
+    factor=(numBins-1.0)/float(maximo-minimo)
     
-# --------------------------------------------
-
+    sseq=helpers.rolling_window(seq,windowSize)
+    #sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
+    mseq=np.mean(sseq, axis=1, keepdims=True)
+    for im in mseq:
+        dseq.append(alphabet[(int)(factor*(im-minimo))])
+    return dseq 
+    
+#0.20s faster for 5M    
+#def discretize(seq, windowSize, minimo, maximo, numBins=5):
+#    import numpy as np
+#    #alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
+#    #alphabet=alphabetTotal[:numBins]   
+#    #alphabet=np.arange(numBins)
+#    factor=(numBins-1.0)/float(maximo-minimo)
+#    
+#    sseq=helpers.rolling_window(seq,windowSize)
+#    mseq=np.mean(sseq, axis=1, keepdims=True)
+#    dseq=np.empty(len(mseq),dtype=int)
+#    #for im in mseq:
+#    for i in xrange(len(mseq)):
+#        #dseq.append(alphabet[(int)(factor*(im-minimo))])
+#        #dseq.append((int)(factor*(im-minimo)))
+#        dseq[i]=factor*(mseq[i]-minimo)
+#    return dseq 
+#%%
+#import time
+#import numpy as np
+#t0=time.clock()   
+#tal=discretize(seq,30, np.min(seq), np.max(seq))
+#print '{}'.format((time.clock()-t0))
+##%%
+#t0=time.clock()   
+#tal0=discretize0(seq,30, np.min(seq), np.max(seq))
+#print '{}'.format((time.clock()-t0))
 
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
@@ -101,14 +138,14 @@ def upload_file():
         file = request.files['file']
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            print filename
+            print(filename)
             root=os.path.join(app.config['UPLOAD_FOLDER'])
             if (user in os.listdir(root))==False:                 #create directory for this user
                 os.mkdir(os.path.join(root,user))
             if filename in os.listdir(os.path.join(root,user)):
-                print '{} already uploaded'.format(filename)    #TODO: by now we avoid resubmissions (for tests)
+                print(filename,'already uploaded')    #TODO: by now we avoid resubmissions (for tests)
             else:
-                print 'uploading...'
+                print('uploading...')
                 file.save(os.path.join(root, user, filename))
             #return redirect(url_for('uploaded_file', filename=filename))
             return jsonify(path=os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -122,17 +159,32 @@ def uploaded_file(filename):
 @app.route('/testUpload', methods=['GET'])
 def testUpload():
     filename=""+request.args.get("filename") 
+    filename=re.sub(r"\..*$", ".pic", filename)
+    print(filename)
     cpath=os.path.join(app.config['UPLOAD_FOLDER'],user)
     if os.path.exists(cpath) and filename in os.listdir(cpath):
-        import hashlib
-        codeEx=""+request.args.get("md5")
-        codeIn=hashlib.md5(open(os.path.join(cpath,filename), 'rb').read()).hexdigest()
-        if(codeEx==codeIn or codeEx=="WITHOUT_MD5"):
-            return jsonify(response="file exists")
-        else:
+        codeEx=request.args.get("forceReload")
+        if(codeEx=="True"):
             return jsonify(response='outdated version')
+        else:
+            return jsonify(response="file exists")
     else:
         return jsonify(response='not found')
+ 
+#with md5 (too expensive)
+#def testUpload():
+#    filename=""+request.args.get("filename") 
+#    cpath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+#    if os.path.exists(cpath) and filename in os.listdir(cpath):
+#        import hashlib
+#        codeEx=""+request.args.get("md5")
+#        codeIn=hashlib.md5(open(os.path.join(cpath,filename), 'rb').read()).hexdigest()
+#        if(codeEx==codeIn):
+#            return jsonify(response="file exists")
+#        else:
+#            return jsonify(response='outdated version')
+#    else:
+#        return jsonify(response='not found')
     
       
 #@app.route("/test")
@@ -167,81 +219,123 @@ retorna    objeto JSON con los siguientes campos:
                maximum,minimum,mean,sdev   medidas estadísticas de los datos normalizados
                dseq        datos discretizados por la función discretize()
 """
+#%%
 @app.route("/preprocess")
-def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0, fastMode=0):
-
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track="None"):
     import numpy as np
-    import time
     global data
     global session
-
-    fastMode = int(request.args.get("fastMode"))
-
-    if fastMode==0:
-        #0) read
-        print 'reading...'
-        path=os.path.join(app.config['UPLOAD_FOLDER'],user,str(request.args.get("filename")))
-        track=int(request.args.get("track"))
-        seq=readWig(path)
-        seq=seq[track] #(TODO: by now, only first chromosome)
-        #1) normalize
-        print 'computing statistics...'
-        m=np.mean(seq)
-        sd=np.std(seq)
-        maximum=np.max(seq)
-        minimum=np.min(seq)
-        #nseq=[(x-m)/sd for x in seq]
-        #2) discretize
-        print 'discretizing...'
-        windowSize=int(request.args.get("windowSize"))
-        numBins=int(request.args.get("numBins"))
-        maxSize=int(request.args.get("maxSize"))
-        dseq=discretize(seq, windowSize, numBins)
-        print 'done!'
-        print 'bwt...'
-        t=ss.bwt(''.join(dseq)+"$")
-        print 'done!'
-        print 'rounding...0'
-        res=[round(seq[x],2) for x in range(0,len(seq),max(1,len(seq)/maxSize))]
-        print 'done!'
-        t0=time.clock()
-        print 'loading annotations...'
-        dataGFF=ann.gff()
-        #dataGO=ann.go()
-        #dataGOA=ann.goa()
-        #dataFASTA=fasta(1)
-        print "done! ... annotations takes {}".format((time.clock()-t0))
-        data={"seq":seq, "res":res, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
-              "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF}
-              #"gff":dataGFF, "go":dataGO, "goa":dataGOA}
-
-        # Save the variable "data"
-        saveDict(data, 'data.npy')
-
+    
+    t00=time.clock()
+    #0) read
+    print('reading...')
+    t0=time.clock()
+    basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    filename=str(request.args.get("filename"))
+    path=os.path.join(basePath,filename)
+    track=request.args.get("track")
+    windowSize=int(request.args.get("windowSize"))
+    numBins=int(request.args.get("numBins"))
+    maxSize=int(request.args.get("maxSize"))
+    picklePath=os.path.join(basePath,re.sub(r"\..*$", ".pic", filename))
+    savePickle=False
+    
+    m={}
+    sd={}
+    maximum={}
+    minimum={}
+    dseq={}#discretized (alphanumeric) sequence
+    res={}#reduced sequence
+    t={} #burrows-wheeler transform
+    dataGFF={}
+    seqd={}
+    
+    if os.path.isfile(picklePath):
+        print("Pickle exists!!!")
+        f=open(picklePath)
+        datap=pickle.load(f)
+        genome=datap["seq"]
+        t=datap["bwt"]
+        dseq=datap["dseq"]
+        maximum=datap["maximum"]
+        minimum=datap["minimum"]
+        m=datap["mean"]
+        sd=datap["stdev"]
     else:
-        # Read the variable "data"
-        data = loadDict('data.npy')
+        genome=readWig(path)
+        savePickle=True
 
-        res=data["res"]
-        seq=data["seq"]
-        maximum=data["maximum"]
-        minimum=data["minimum"]
-        m=data["mean"]
-        sd=data["stdev"]
-        dseq=data["dseq"]
 
+    if track=="None":
+        track=genome.keys()[0]
+    
+    print("load wig takes",(time.clock()-t0))
+   
+    #for each separate chromosome: TODO: include dis and bwt into pickle!
+    for k in genome.keys():
+        tk=time.clock()
+        seq=genome[k]
+        print("ch", k, "with length", len(seq))
+        if(savePickle):
+            #1) normalize 
+            t0=time.clock()
+            
+            m[k]=np.mean(seq, dtype=float)
+            sd[k]=np.std(seq, dtype=float)
+            upperlim=m[k]+3*sd[k]#avoid outliers? testing
+            seq=np.clip(seq,0,upperlim)
+        
+            maximum[k]=np.max(seq)
+            minimum[k]=np.min(seq)
+            print('\\tstats in ',(time.clock()-t0), "s")
+        
+        
+            #2) discretize
+            t0=time.clock()
+            dseq[k]=discretize(seq, windowSize, minimum[k], maximum[k], numBins)
+            print('\\tdiscretize in',(time.clock()-t0),' s')
+        
+            t0=time.clock()
+            t[k]=ss.bwt(''.join(dseq[k])+"$")
+            print('\tbwt in ',(time.clock()-t0),'s')
+    
+        t0=time.clock()
+        res[k]=list(np.mean(helpers.rolling_window(seq, max(1,len(seq)/maxSize)),-1, dtype=float)) #maybe round?  
+        print('\tsampling in',(time.clock()-t0),'s')
+    
+        t0=time.clock()
+        dataGFF[k]=ann.gff(helpers.gffPath(ch=k))
+        print('\ttime in GFF:',(time.clock()-t0),'s')
+        seqd[k]=seq
+        print("processing",k,"takes",(time.clock()-tk))
+        
+    #3) annotations
+    t0=time.clock()
+    dataGO=ann.go()
+    dataGOA=ann.goa()
+    print("done! ... GO annotations takes",(time.clock()-t0))
+    
+    data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
+          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF,
+          "go":dataGO, "goa":dataGOA}
     session[user]=data
-    return jsonify(seq=res, fullLength=len(seq), maximum=maximum, minimum=minimum, mean=m, stdev=sd, dseq=dseq)
+    
+    if(savePickle):
+        tpickle=time.clock()
+        print("pickle path:", picklePath)
+        datap={"seq":seqd, "dseq":dseq, "bwt":t, "maximum":maximum, "minimum":minimum,
+          "mean":m, "stdev":sd}
+    
+        f=open(picklePath, 'w')
+        pickle.dump(datap,f)
+        print("serialize data takes",(time.clock()-tpickle))
+        #NOTE: should removew the .wig here to avoid double memory space
 
+    print('whole preprocess takes ',(time.clock()-t00),"s")
+    print(track)
+    return jsonify(seq=res[track], fullLength=len(genome[track]), maximum=(float)(maximum[track]), minimum=(float)(minimum[track]), mean=(float)(m[track]), stdev=(float)(sd[track]), dseq=dseq[track], chromosomes=genome.keys())
 
-def saveDict(dict='data', file='data.npy'):
-    import numpy as np
-    np.save(file, dict)
-
-def loadDict(file='data.npy'):
-    import numpy as np
-    return np.load(file).item()
-
+#%%preprocess(filename="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/dwtMini2.wig")
 
 #%% -------------- SEARCHES -----------
 
@@ -252,63 +346,106 @@ pattern    patrón de búsqueda
 d          nº de mutaciones permitidas
 retorna    las posiciones dentro de dseq donde aparece el patrón
 """
-#TODO: This works, but the session load is costly. Should be improved or substituted by other method
 @app.route("/search")
 def search(pattern="", d=0):
     global data
     
+    t00=time.clock()
+    
     d=int(request.args.get("d"))
     pattern=str(request.args.get("pattern"))
-    print pattern
-    pattern=convertString(pattern)
-    print pattern
-#    t0=time.clock()
-#    data=loadSession(session)
-#    print "Session load takes {}".format((time.clock()-t0))
-    t=data["bwt"]
-    print t["firstOccurrence"]
-    if(False in [x in t["firstOccurrence"] for x in set(pattern)]):
-        return jsonify(response="There are characters in pattern that do not correspond to the sequence characters: {}".format(t["firstOccurrence"].keys()))
-    else:
-        t0=time.clock()
-        match=ss.bwMatchingV8("".join(data["dseq"]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d)
-        print "Search takes {}".format((time.clock()-t0))
-        return jsonify(points=(str)(match), sizePattern=len(pattern))
+    pattern=helpers.convertString(pattern)
+
+    search={}
+    for k in data["seq"].keys():
+        t=data["bwt"][k]
+        if(False in [x in t["firstOccurrence"] for x in set(pattern)]):
+            return jsonify(response="{}: There are characters in pattern that do not correspond to the sequence characters: {}".format(k, t["firstOccurrence"].keys()))
+        else:
+            t0=time.clock()
+            search[k]=(str)(ss.bwMatchingV8("".join(data["dseq"][k]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d))
+            print("Search ",k,"takes",(time.clock()-t0))
+#    return jsonify(points=(str)(match), sizePattern=len(pattern))
+    print("Search finished in ",(time.clock()-t00))
+    data["search"]=search
+    return jsonify(points=search, sizePattern=len(pattern))
 
 
 
 #%%
 @app.route("/getPartSeq")
-def getPartSeq(start=0, end=0):
-    import numpy as np
-
+def getPartSeq(start=0, end=0, track="None"):
     global data
-
+    import numpy as np
     start=int(request.args.get("start"))
     end=int(request.args.get("end"))
-
-    seq=data["seq"]
-    part=seq[start:end]
-    part=part.tolist()
-
-    return jsonify(partSeq=part)
+    track=str(request.args.get("track"))
+    seq=data["seq"][track]
+    part=np.array(seq[start:end],dtype=float)
+    return jsonify(partSeq=list(part))
 
 
 
 #%%
 @app.route("/annotations")
-def annotations(positions=[], window=1000, types=["any"]):
+def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs="False", align="left"):
+    import time
+    t0=time.clock()
+    global data
+    window=int(request.args.get("window"))
+    pos=eval(request.args.get("positions"))
+    types=eval(request.args.get("types"))
+    track=str(request.args.get("track"))
+    onlyIDs=str(request.args.get("onlyIDs"))
+    align=str(request.args.get("align"))
+    
+    res=ann.annotate(pos, data["gff"][track], types, window, align)
+    print("Annotations take",(time.clock()-t0),"s")
+    print(res.keys())
+    if(onlyIDs=="True"):
+        ids=[]
+        for k in res.keys():
+            kl=res[k]
+            for x in kl:
+                ids.append(x["id"])
+        return jsonify(response=list(set(ids)))
+    return jsonify(response=res)
+
+#%%
+@app.route("/annotationsGOA")
+#annotations is the result of calling annotations
+#types by now is any. Maybe in the future we divide in BP,MF,CC
+def annotationsGOA(annotations={}, types=["any"]):
     global data
     
-    window=int(request.args.get("window"))
-    print window
-    pos=eval(request.args.get("positions"))
-    print pos
-    types=eval(request.args.get("types"))
-    print types
-    res=ann.annotate(pos, data["gff"], types, window)
-    #print res
-    return jsonify(annotations=res)
+    a=eval(request.args.get("annotations"))
+    print('annotation size: ',len(a))
+    agon=ann.annotateGOnames(a, data["goa"], data["go"])
+    return jsonify(response=agon)
+    
+#%%
+@app.route("/enrichmentGO")
+#annotations is the result of calling annotations
+#correction is for multiple hipothesis and can be 'none', 'bonferroni', 'fdr' or 'fwer'
+#alpha is the threshold, applied as is with 'none' correction or with the specified one
+def enrichmentGO(annotations={}, correction="none", alpha=0.01):
+    global data
+    print("Enrichment GO")
+    gis=set(eval(request.args.get("annotations")))
+    alpha=float(request.args.get("alpha"))
+    correction=request.args.get("correction")
+    
+    #print gis
+#    gis=set()
+#    for x in annotations.keys(): #TODO here
+#        for y in annotations[x]:
+#            gis.add(y["id"])
+    ego={}
+    ego=ann.enrichmentFisher(gis, data["goa"], alpha, correction)
+    for k in ego.keys():
+        if(data["go"].has_key(k) and data["go"][k]!="undefined"):
+            ego[k]["go_name"]=data["go"][k]
+    return jsonify(response=ego)
 
 
 #%%from http://mortoray.com/2014/04/09/allowing-unlimited-access-with-cors/
@@ -336,8 +473,8 @@ def load_passport():
     #TODO: check password and so on.
     if user in session.keys():
         data=session[user]
-        print len(data)
-        print data.keys()
+        print(len(data))
+        print(data.keys())
 
 #@app.after_request
 #def serialize_passport(response):
@@ -345,6 +482,10 @@ def load_passport():
 #        session["passport_id"] = g.passport.id
 #    return response
     
+@app.route("/test")
+def test():
+    d={"a":[1,2,3], "b":[4,5,6]}
+    return jsonify(d)
 
 #-------------------- LAUNCH -----------------
 if __name__ == '__main__':

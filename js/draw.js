@@ -7,6 +7,30 @@
  */
 
 
+var marginDL =
+    {
+        top:10,
+        bottom:60,
+        left:50,
+        right:20
+    };
+
+var dimDL =
+{
+    graphHeight : 200,
+    graphWidth : screen.width,
+
+    width : screen.width-marginDL.right-marginDL.left,
+    height : 200-marginDL.top-marginDL.bottom
+};
+
+var dimAnnotation =
+    {
+        height : 12,
+        x0:5,
+        y0:7
+    }
+
 var globalSeq =
 {
     seqServ : null,
@@ -17,20 +41,17 @@ var globalSeq =
     scaleSeqServ : null
 };
 
+
 var globalDL1 =
 {
+    dim : dimDL,
+    margin : marginDL,
+
     drawn : false,
 
     nameSVG : "lineSeq",
     classSVG : "dl1",
 
-    graphHeight : 200,
-    graphWidth : screen.width,
-    paddingX : 50,
-    paddingY : 25,
-
-    width : null,
-    height : null,
     scaleSeqScreen : null,
     scaleServScreen : null,
     data : null,
@@ -43,69 +64,47 @@ var globalDL1 =
 
 var globalDL2 =
 {
+    dim : dimDL,
+    margin : marginDL,
+
     nameSVG : "lineSeq2",
     classSVG : "dl2",
 
-    graphHeight : 200,
-    graphWidth : screen.width,
-    paddingX : 50,
-    paddingY : 25,
-
-    width : null,
-    height : null,
     scaleSeqScreen : null,
     scaleServScreen : null,
     data : null,
     x : null,
     y : null,
-    svg : null,
-    startSeq : null,
-    endSeq : null
-};
-
-
-var globalDL3 =
-{
-    nameSVG : "lineSeq3",
-    classSVG : "dl3",
-
-    graphHeight : 110,  // recommendation: number divisible by 3 and 2 times more dd
-    graphWidth : screen.width,
-    paddingX : 50,
-    paddingY : 25,
-
-    annotations : null
+    svg : null
 };
 
 
 
-function dataLine1(seqServ, startSeq, endSeq, fullLength, maxSize, mean, stdev, ws)
+
+
+function dataLine1(seqServ, startSeq, endSeq, fullLength, maxSize, mean, stdev, ws, track)
 {
     // Get information of dataLine1
     var nameSVG=globalDL1.nameSVG;
     var classSVG=globalDL1.classSVG;
-    var width=globalDL1.graphWidth;
-    var height=globalDL1.graphHeight;
-    var x0=globalDL1.paddingX;
-    var y0=globalDL1.paddingY;
+    var width=globalDL1.dim.graphWidth;
+    var height=globalDL1.dim.graphHeight;
 
-    // Save information of sequence
+    // Save information of the genomic sequence
     globalSeq.seqServ=seqServ;
     globalSeq.mean=mean;
     globalSeq.stdev=stdev;
     globalSeq.ws=ws;
+    globalSeq.track=track;//chromosome or wig track it refers to
     globalSeq.scaleSeqServ = 1;
     if(Math.floor(fullLength/maxSize) >= 1)
         globalSeq.scaleSeqServ = Math.floor(fullLength/maxSize);
 
-
-    var result = drawDataLine(nameSVG, classSVG, width, height, x0, y0,
-                              seqServ, globalSeq.scaleSeqServ, startSeq, startSeq, endSeq);
+    var result = drawDataLine(nameSVG, classSVG,
+        seqServ, globalSeq.scaleSeqServ, startSeq, startSeq, endSeq);
 
 
     // Save information of dataLine1
-    globalDL1.width = result.width;
-    globalDL1.height = result.height;
     globalDL1.scaleSeqScreen = result.scaleSeqScreen;
     globalDL1.scaleServScreen = result.scaleServScreen;
     globalDL1.data = result.data;
@@ -117,8 +116,80 @@ function dataLine1(seqServ, startSeq, endSeq, fullLength, maxSize, mean, stdev, 
     globalDL1.drawn = true;
 }
 
+function drawEnrichment(enrichment)
+    {
+        globalDL1.svg.selectAll(".dl1.goterm")
+            .remove();
 
-function dataLine1_drawPoints(points, sizePattern, numNucleotides)
+        var goSize = d3.scale.log().base(10)
+            .domain([1,10e-6])  // p-values
+            .clamp(true)
+            .rangeRound([6, 14]); //letter size
+
+        var goterms=[];
+        for(var k in enrichment) {
+            if(enrichment[k].go_name!=undefined)
+                goterms.push(enrichment[k])
+            else
+                console.log("Error!: GO term "+k+" not found (possibly outdated OBO file?");
+
+        }
+
+        console.log(goterms.length+" enriched terms");
+
+        var tip = d3.tip()
+            .attr('class', 'dl1 goterm-tip')
+            .offset([45, 0])
+            //.style("opacity",.8)
+            .attr("fill","blue")
+            .html(function(d,i)
+            {
+                return "p-value: "+ d3.format(".2e")(d.pval) +"<br>" + d.ngis+"/"+ d.ngo +" genes<br>";
+            });
+
+        globalDL1.svg.call(tip);
+
+
+        var dx=dimAnnotation.x0;
+        var dy=[];
+        var yline=0;
+
+        console.log("Numero de terminos GO: "+goterms.length);
+        globalDL1.svg.selectAll(".dl1.goterm")
+            .data(goterms)
+            .enter()
+            .append("text")
+            .attr('class', 'dl1 goterm')
+            .attr('x', function(d)
+                {
+                    var canvas = document.createElement('canvas');
+                    var ctx = canvas.getContext("2d");
+                    ctx.font = goSize(d.pval)+"px sans-serif";
+                    var width = ctx.measureText(" "+d.go_name+" ·").width;
+
+                    dx+=width;
+                    if(dx>=dimDL.width) {
+                        yline++;
+                        dx = dimAnnotation.x0 + width;
+                        }
+                    dy[d.go_name]=dimAnnotation.y0+10*yline;
+                    console.log(d.go_name+" "+ dy[d.go_name]);
+                    return dx-width; }
+                )
+            .attr('y', function(d) {
+                return dy[d.go_name];//*Math.max(1,dx/dimDL.width)
+            })
+            .attr('font-size', function(d) { //console.log("Tamaño de "+ d.go_name+": "+d.pval+" "+goSize(d.pval)+"px");
+                return goSize(d.pval)+"px" })
+            .text(function(d){
+                //console.log(d.go_name);
+                return " "+d.go_name+" ·"})
+            .on('mouseover', tip.show)
+            .on('mouseout', tip.hide);
+
+    }
+
+function drawPoints(points, sizePattern, numNucleotides)
 {
     var seqPoints=[];
     for(var i=0; i<points.length;i++)
@@ -133,7 +204,6 @@ function dataLine1_drawPoints(points, sizePattern, numNucleotides)
     for(i=0; i<seqPoints.length;i++)
     {
         var dataPoint = Math.floor(seqPoints[i]/globalDL1.scaleSeqScreen);
-        if(DEBUG_GBV) console.log("        dataPoint: "+dataPoint);
         dataPoints.push({pos: (globalDL1.data)[dataPoint].pos, value: (globalDL1.data)[dataPoint].value});
     }
 
@@ -141,12 +211,11 @@ function dataLine1_drawPoints(points, sizePattern, numNucleotides)
     // Mouseover tip and drawing the corresponding line
     var tip = d3.tip()
         .attr('class', 'dl1 point-tip')
-        .offset([120, 40])
+        .offset([30, 0])
         .html(function(d,i)
         {
             dataLine2(seqPoints[i], sizePattern, numNucleotides);
-            dataLine3(seqPoints[i]);
-            return "<strong>" + seqPoints[i] + " position</strong><br>" + Math.round(d.value*100)/100 + " value" + "<br>";
+            return "<strong>"+d3.format(",")(seqPoints[i]) + ":</strong> " + d3.format(".2f")(d.value);
         });
 
     // Calls tip
@@ -162,117 +231,27 @@ function dataLine1_drawPoints(points, sizePattern, numNucleotides)
         .enter()
         .append("circle")
         .attr('class', 'dl1 point')
-        .attr('cx', function(d) { return globalDL1.x(d.pos); })
-        .attr('cy', function(d) { return globalDL1.y(d.value); })
+        .attr('cx', function(d) { return globalDL1.x(d.pos) })
+        .attr('cy', function(d) { return globalDL1.y(d.value) })
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
+
+    globalDL1.svg.selectAll(".search_label")
+        .remove();
+
+    // Draw occurrences label
+    globalDL1.svg.selectAll(".search_label")
+        .data([dataPoints.length])
+        .enter()
+        .append("text")
+        .attr('class', 'dl1 search_label')
+        .attr('x', 600)
+        .attr('y', 0)
+        .text(function(d){return d+" matches"})
 
     // Save information of dataLine1
     globalDL1.seqPoints = seqPoints;
 }
-
-
-
-
-function dataLine3(point)
-{
-    if (globalDL3.annotations)
-    {
-        var width   = globalDL3.graphWidth;
-        var height  = globalDL3.graphHeight;
-        var x0      = globalDL3.paddingX;
-        var y0      = globalDL3.paddingY;
-        var nameSVG = globalDL3.nameSVG;
-        var annots  = globalDL3.annotations[point];
-
-        // Sizes...
-        var margin = {top: y0, right: x0, bottom: y0, left: x0};
-        width = width - margin.left - margin.right;
-        height = height - margin.top - margin.bottom;
-        var ySenseLine      = Math.round(height/3);
-        var yAntisenseLine  = Math.round(height*2/3);
-        var xStartLine = 0;
-        var xEndLine  = 0;
-        var yLine  = 0;
-
-
-        // Image SVG: image
-        var svg = d3.select("#"+nameSVG)
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        // Image SVG: rectangle to know the area where I'm drawing
-        svg.append("rect")
-            .attr("class", "rect dl3")
-            .attr("x", 0)
-            .attr("y", 0)
-            .attr("width", width)
-            .attr("height", height);
-
-        console.log("Inicio: "+globalDL2.startSeq+" - final: "+globalDL2.endSeq);
-
-
-
-        /*
-            Tipos de anotaciones:
-            - gene
-            - transcript
-            - exon
-            - CDS
-            - five_prime_UTR
-            - three_prime_UTR
-            - biological_region
-         */
-
-
-        for(var i=0, j=annots.length; i<j;i++)
-        {
-            if(annots[i].end>=globalDL2.startSeq && globalDL2.endSeq>=annots[i].start)
-            {
-                if(i<=9)console.log("[ "+i+"] Start: "+annots[i].start+" - end: "+annots[i].end+" - y es un: "+annots[i].type+" ("+annots[i].id+", "+annots[i].sense+")");
-                if(i>9)  console.log("["+i+"] Start: "+annots[i].start+" - end: "+annots[i].end+" - y es un: "+annots[i].type+" ("+annots[i].id+", "+annots[i].sense+")");
-
-
-
-                if(annots[i].start-globalDL2.startSeq > 0)
-                {
-                    xStartLine = Math.round((annots[i].start-globalDL2.startSeq)/globalDL2.scaleSeqScreen);
-                }
-                else
-                {
-                    xStartLine = 0;
-                }
-                if(annots[i].end-globalDL2.startSeq > 0)
-                {
-                    xEndLine = Math.round((annots[i].end-globalDL2.startSeq)/globalDL2.scaleSeqScreen);
-                }
-                else
-                {
-                    xEndLine = width;
-                }
-                if(annots[i].sense == "+") yLine=ySenseLine;
-                if(annots[i].sense == "-") yLine=yAntisenseLine;
-
-                svg.append("line")
-                    .attr("class", globalDL3.classSVG+" line "+annots[i].type)
-                    .attr("x1", xStartLine)
-                    .attr("x2", xEndLine)
-                    .attr("y1", yLine)
-                    .attr("y2", yLine);
-
-            }
-        }
-
-
-
-
-
-    }
-}
-
 
 
 function dataLine2(point, sizePattern, numNucleotides)
@@ -280,10 +259,8 @@ function dataLine2(point, sizePattern, numNucleotides)
     // Get information of dataLine2
     var nameSVG=globalDL2.nameSVG;
     var classSVG=globalDL2.classSVG;
-    var width=globalDL2.graphWidth;
-    var height=globalDL2.graphHeight;
-    var x0=globalDL2.paddingX;
-    var y0=globalDL2.paddingY;
+    var width=globalDL2.dim.graphWidth;
+    var height=globalDL2.dim.graphHeight;
 
 
     // We round to the nearest hundred from sizePattern
@@ -293,29 +270,106 @@ function dataLine2(point, sizePattern, numNucleotides)
     var endSeq   = point+(numNucleotides/2)+(focusLine/2);
 
     // Get the part of sequence that we need to draw
-    var result = Server.getPartSeq(startSeq,endSeq);
+    var result = Server.getPartSeq(startSeq,endSeq, globalSeq.track);
 
 
-    var dataLine = drawDataLine(nameSVG, classSVG, width, height, x0, y0,
-                                result.partSeq, 1, startSeq, 0, numNucleotides, // scaleSeqServ is 1 because is a part of sequence
+   // var dataLine = drawDataLine(nameSVG, classSVG, width, height, globalDL2.paddingX, globalDL2.paddingY,
+   // var dataLine = drawDataLine(nameSVG, classSVG, width, height, marginDL,
+    var dataLine = drawDataLine(nameSVG, classSVG,
+        result.partSeq, 1, startSeq, 0, numNucleotides, // scaleSeqServ is 1 because is a part of sequence
                                 point, sizePattern);
 
+    //RODRIGO
+    var annotations = Server.annotationsGenes("["+point+"]","[\"any\"]",globalDL2.dim.width, "center", globalSeq.track, "False");
+    if(annotations.hasOwnProperty(point))
+        var annotLine = drawAnnotationLine(dataLine, annotations[point], startSeq, endSeq);
+    //RODRIGO
+
+
     // Save information of dataLine2
-    globalDL2.width = dataLine.width;
-    globalDL2.height = dataLine.height;
     globalDL2.scaleSeqScreen = dataLine.scaleSeqScreen;
     globalDL2.scaleServScreen = dataLine.scaleServScreen;
     globalDL2.data = dataLine.data;
     globalDL2.x = dataLine.x;
     globalDL2.y = dataLine.y;
     globalDL2.svg = dataLine.svg;
-    globalDL2.startSeq = startSeq;
-    globalDL2.endSeq = endSeq;
 }
 
+function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
+    {
+    var factor=dataLine.scaleSeqScreen*dataLine.scaleServScreen;
 
-function drawDataLine(nameSVG, classSVG, width, height, x0, y0, seqServ, scaleSeqServ, initialPoint, startSeq, endSeq, point, sizePattern)
-{
+        //gene line
+    dataLine.svg.append("g")
+        .selectAll(".dl2.annotation")
+        .data(annotations)
+        .enter().append("rect")
+        .attr('class', 'dl2 annotation')
+        .attr("transform", "translate(0," + (globalDL2.dim.height+20) + ")")
+        .attr("x", function(d)
+            {  return Math.max(0,(d.start-startSeq)*factor) })
+        .attr("y", function(d){  var y=0; y=d.sense=="+"?0:15; y+=(d.type=="gene" || d.type=="transcript")?5:0; return y;})
+        .attr("width", function(d){return Math.max(0,Math.min(globalDL2.dim.width-Math.max(0,(d.start-startSeq)*factor), Math.max(0,d.end-Math.max(startSeq, d.start)*factor)))})
+        .attr("height", function(d){
+            var h=dimAnnotation.height;
+            if (d.type=="gene" || d.type=="transcript")
+                h=dimAnnotation.height*.25;
+            return h});
+
+        dataLine.svg.append("g")
+            .selectAll(".dl2.annotation.arrow")
+            .data(annotations)
+            .enter().append("polygon")
+            .attr('class', 'dl2 annotation arrow')
+            .attr("transform", "translate(0," + (globalDL2.dim.height+20) + ")")
+            .attr("points", function(d){
+                //TODO
+                var y0=d.sense=="+"?0:15;
+                var x0=Math.max(0,(d.start-startSeq)*factor);
+                if(d.sense=="+")
+                    x0+=Math.min(globalDL2.dim.width-Math.max(0,(d.start-startSeq)*factor), Math.max(0,d.end-Math.max(startSeq, d.start)*factor));
+                if(d.sense=="+")
+                    path=x0+","+y0+ " " +x0+", "+(y0+dimAnnotation.height)+" "+(x0+dimAnnotation.height *.5)+","+(y0+dimAnnotation.height *.5);
+                else
+                    path=x0+","+y0+ " " +x0+", "+(y0+dimAnnotation.height)+" "+(x0-dimAnnotation.height *.5)+","+(y0+dimAnnotation.height *.5);
+                if(d.end<startSeq || d.start>startSeq+globalDL2.dim.width)
+                    return "";
+                if(d.type.indexOf("gene")>-1)
+                    return path;
+                else
+                    return "";
+            });
+
+        //TODO: far below/above cracker?
+
+        //gene labels
+    dataLine.svg.append("g")
+        .selectAll(".dl2.annotation.label")
+        .data(annotations)
+        .enter().append("text")
+        .attr('class', 'dl2 annotation label')
+        .attr("transform", "translate(0," + (globalDL2.dim.height+20) + ")")
+        .attr("x", function(d) {
+            /*if(d.sense=="-")
+               return Math.min(globalDL2.dim.width-20,(-startSeq+ d.end+3)*factor);
+            else
+                return Math.max(0,((d.start-startSeq)-100)*factor);*/
+            return Math.max(0,(d.start-startSeq+6)*factor);
+            })
+        .attr("y", function(d){   return d.sense=="+"?10:25})
+        .text(function(d){
+            //console.log(d.id+" "+ d.type +" ["+ d.start+", "+ d.end+"]"+" "+ d.sense);
+            res=""
+            if(d.end>startSeq)
+                if(d.type.indexOf("gene")>-1)
+                    res=d.id;
+            return res
+        });
+    }
+
+//function drawDataLine(nameSVG, classSVG, width, height, margin, seqServ, scaleSeqServ, initialPoint, startSeq, endSeq, point, sizePattern)
+function drawDataLine(nameSVG, classSVG, seqServ, scaleSeqServ, initialPoint, startSeq, endSeq, point, sizePattern)
+    {
     // Default values
     point       || ( point = 0 );
     sizePattern || ( sizePattern = 0 );
@@ -324,12 +378,6 @@ function drawDataLine(nameSVG, classSVG, width, height, x0, y0, seqServ, scaleSe
     // First, we delete the image, if this exist
     var imageSVG = $("#"+nameSVG);
     if ( imageSVG.length) { imageSVG.empty(); }
-
-    // Sizes...
-    var margin = {top: y0, right: x0, bottom: y0, left: x0};
-    width = width - margin.left - margin.right;
-    height = height - margin.top - margin.bottom;
-
 
     // Get info about sequence
     var mean=globalSeq.mean;
@@ -343,16 +391,16 @@ function drawDataLine(nameSVG, classSVG, width, height, x0, y0, seqServ, scaleSe
     var sizeSeq = endSeq-startSeq;
 
 
-    var scaleServScreen = sizeData/width;
+    var scaleServScreen = sizeData/dimDL.width;
     var scaleSeqScreen=1;
-    if(sizeSeq>width)   // width/bps compression
+    if(sizeSeq>dimDL.width)   // width/bps compression
     {
-        scaleSeqScreen=sizeSeq/width; // i.e. nucleotides per pixel
+        scaleSeqScreen=sizeSeq/dimDL.width; // i.e. nucleotides per pixel
     }
-    if(DEBUG_GBV) console.log("\ndataLine(): startSeq: "+startSeq+" - endSeq: "+endSeq+" - sizeSeq: "+sizeSeq+" - graphWidth: "+width);
+    /*if(DEBUG_GBV) console.log("\ndataLine(): startSeq: "+startSeq+" - endSeq: "+endSeq+" - sizeSeq: "+sizeSeq+" - graphWidth: "+dimDL.width);
     if(DEBUG_GBV) console.log("            startData: "+startData+" - endData: "+endData+" - sizeData: "+sizeData);
     if(DEBUG_GBV) console.log("            scaleSeqScreen (nucleotides/pixel): "+scaleSeqScreen+" - scaleServScreen: "+scaleServScreen+" - scaleSeqServ: "+scaleSeqServ);
-
+    */
 
     // Calculate 'y minimum' and 'y maximum'
     var ymin=0;
@@ -384,10 +432,10 @@ function drawDataLine(nameSVG, classSVG, width, height, x0, y0, seqServ, scaleSe
     // Scaling of the axes
     var x = d3.scale.linear()
         .domain(d3.extent(data, function (d) { return d.pos; }))  // xmin, xmax
-        .range([0, width]);
+        .range([0, dimDL.width]);
     var y = d3.scale.linear()
         .domain([ymin, ymax])
-        .range([height, 0]);
+        .range([dimDL.height, 0]);
 
     // Axis labels
     var xAxis = d3.svg.axis().scale(x).orient("bottom")
@@ -404,16 +452,16 @@ function drawDataLine(nameSVG, classSVG, width, height, x0, y0, seqServ, scaleSe
     // Image SVG: image
     var svg = d3.select("#"+nameSVG)
         .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        .attr("width", dimDL.width + marginDL.left + marginDL.right)
+        .attr("height", dimDL.height + marginDL.top + marginDL.bottom)
         .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        .attr("transform", "translate(" + marginDL.left + "," + marginDL.top + ")");
 
-    // Image SVG: axis x
+        // Image SVG: axis x
     svg.append("g")
         .attr("class", classSVG+" x axis")
         .call(xAxis)
-        .attr("transform", "translate(0," + height + ")");
+        .attr("transform", "translate(0," + dimDL.height + ")");
 
     // Image SVG: axis y
     svg.append("g")
@@ -426,9 +474,10 @@ function drawDataLine(nameSVG, classSVG, width, height, x0, y0, seqServ, scaleSe
         .style("text-anchor", "end");
 
     // The image SVG: line
-    svg.append("path")
-        .datum(data)
+    svg.append("g")
         .attr("class", classSVG+" line")
+        .datum(data)
+        .append("path")
         .attr("d", line);
 
     // The image SVG: highlighted line
@@ -450,18 +499,21 @@ function drawDataLine(nameSVG, classSVG, width, height, x0, y0, seqServ, scaleSe
     svg.append("text")
         .text("1 : "+Math.round(scaleSeqScreen))
         .attr("class", classSVG+" scale")
-        .attr("x", width-50)
-        .attr("y", 15);
+        .attr("x", dimDL.width-marginDL.left*2.5)
+        .attr("y", marginDL.top *.75);
+
 
     // Save information of dataLine1
     return {
-        width : width,
-        height : height,
+        width : dimDL.width,
+        height : dimDL.height,
         scaleSeqScreen : scaleSeqScreen,
         scaleServScreen : scaleServScreen,
         data : data,
         x : x,
         y : y,
+        x0 : marginDL.left,  //TODO: this is confusing
+        y0 : marginDL.top,
         svg : svg
     }
 }

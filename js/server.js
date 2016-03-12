@@ -25,6 +25,7 @@
     }
 
 
+
     function defineServerLibrary()
     {
         var Server = {};
@@ -42,22 +43,22 @@
             _serverPath = serverPath;
             _user       = user;
             _password   = password;
-            _DEBUG      = DEBUG;
         };
 
 
         /**
          * Uploads the file f to the server. Posterior calls to REST will be by the path of the file
          * @param file
-         * @param hashMD5
+         * @param forceReload
          */
         // NOTE: Remember REST Flask calls require enable CORS in the browser!!!
-        Server.sendFile = function (file, hashMD5)
+        Server.sendFile = function (file, forceReload)
         {
             var response="";
             $.ajax(
                 {
-                    url: _serverPath+"testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&md5="+hashMD5,
+                    //url: _serverPath+"testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&md5="+forceReload,
+                    url: _serverPath+"testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&forceReload="+forceReload,
                     type: "GET",
                     datatype:"json",
                     async: false,
@@ -120,12 +121,12 @@
          *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
          *                      on.
          */
-        Server.preprocess = function (fastMode,filename,track,ws,nb,maxSize)
+        Server.preprocess = function (filename,track,ws,nb,maxSize)
         {
             var response=[];
             $.ajax(
                 {
-                    url: _serverPath+"preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&fastMode="+fastMode,
+                    url: _serverPath+"preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize,
                     type: "GET",
                     datatype:"json",
                     async: false,    // default: true
@@ -139,6 +140,7 @@
                         response.stdev=result.stdev;
                         response.dseq=result.dseq;
                         response.fullLength=result.fullLength;
+                        response.chromosomes=result.chromosomes;
                     },
                     error: function()
                     {
@@ -152,6 +154,8 @@
         Server.search = function (pattern,d)
         {
             var response=[];
+            pattern=pattern.replace(/\+/g, "%2B");
+            console.log("pattern is "+pattern);
             $.ajax(
                 {
                     url: _serverPath+"search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d,
@@ -165,7 +169,8 @@
                             if(_DEBUG) console.log("search(): search done...");
 
                             // Convert to array...
-                            response.points = JSON.parse(result.points);
+                            //response.points = JSON.parse(result.points);
+                            response.points=result.points;
                             response.sizePattern = result.sizePattern;
                         }
                         else
@@ -182,12 +187,12 @@
         };
 
 
-        Server.getPartSeq = function (startSeq,endSeq)
+        Server.getPartSeq = function (startSeq,endSeq, track)
         {
             var response=[];
             $.ajax(
                 {
-                    url: _serverPath+"getPartSeq?user="+_user+"&password="+_password+"&start="+startSeq+"&end="+endSeq,
+                    url: _serverPath+"getPartSeq?user="+_user+"&password="+_password+"&start="+startSeq+"&end="+endSeq+"&track="+track,
                     type: "GET",
                     datatype:"json",
                     async: false,    // default: true
@@ -197,35 +202,61 @@
                     },
                     error: function()
                     {
-                        if(_DEBUG) console.log("getPartSeq(): get part of s3eq failed...");
+                        if(_DEBUG) console.log("getPartSeq(): getPartSeq failed...");
                     }
                 });
             return response;
         };
 
 
-        Server.annotationsGenes = function (globalDL3,points,types,window)
+        Server.annotationsGenes = function (points,types,window, align, track, onlyIDs)
         {
             var response=[];
             $.ajax(
                 {
-                    url: _serverPath+"annotations?user="+_user+"&password="+_password+"&positions="+points+"&types="+types+"&window="+window,
+                    url: _serverPath+"annotations?user="+_user+"&password="+_password+"&positions="+points+"&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs,
                     type: "GET",
                     datatype:"json",
-                    async: true,    // default: true
+                    async: false,    // default: true
                     success: function(result)
                     {
-                        globalDL3.annotations = result.annotations;
-                        if(_DEBUG) console.log("annotationsGenes(): annotations of genes done...");
+                        if(_DEBUG) console.log("annotationsGenes(): get annotations of genes done...");
+                        //console.log(result);
+                        response = result.response;
                     },
                     error: function()
                     {
-                        if(_DEBUG) console.log("annotationsGenes(): annotations of genes failed...");
+                        if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
                     }
                 });
             return response;
         };
 
+        Server.enrichment = function (annotations, correction, alpha)
+        {
+            annotations="[\""+annotations+"\"]";
+            annotations=annotations.replace(/,/g,"\",\"");
+            console.log("Number of gene annotations:"+annotations.length)
+            var response=[];
+            $.ajax(
+                {
+                    url: _serverPath+"enrichmentGO?user="+_user+"&password="+_password+"&annotations="+annotations+"&correction="+correction+"&alpha="+alpha,
+                    type: "GET",
+                    datatype:"json",
+                    async: false,    // default: true
+                    success: function(result)
+                    {
+                        if(_DEBUG) console.log("enrichmentGO(): done");
+                        response = result.response;
+
+                    },
+                    error: function()
+                    {
+                        if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
+                    }
+                });
+            return response;
+        };
 
         function javascript_abort(msg)
         {
@@ -239,3 +270,78 @@
 
 })(window);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function SERVER_getPartSeq(startSeq,endSeq)
+{
+    var response=[];
+    $.ajax(
+        {
+            url: serverPath+"getPartSeq?user="+user+"&password="+password+"&start="+startSeq+"&end="+endSeq,
+            type: "GET",
+            datatype:"json",
+            async: false,    // default: true
+            success: function(result)
+            {
+                response.partSeq = result.partSeq;
+            },
+            error: function()
+            {
+                console.log("getPartSeq(): getPartSeq failed...");
+            }
+        });
+    return response;
+}
+
+
+function SERVER_annotationsGenes(points,types,window)
+{
+    var response=[];
+    $.ajax(
+        {
+            url: serverPath+"annotations?user="+user+"&password="+password+"&positions="+points+"&types="+types+"&window="+window,
+            type: "GET",
+            datatype:"json",
+            async: true,    // default: true
+            success: function(result)
+            {
+                console.log(result);
+            },
+            error: function()
+            {
+                console.log("annotationsGenes(): annotationsGenes failed...");
+            }
+        });
+    return response;
+}

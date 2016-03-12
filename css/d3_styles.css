@@ -45,6 +45,7 @@
 }
 
 /* POINTS */
+
 .dl1.point {
     r:3px;
     fill:white;
@@ -56,12 +57,36 @@
 }
 .dl1.point-tip {
     line-height: 1;
-    font-weight: bold;
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.8);
-    color: #fff;
+    padding: 2px;
+    background: rgba(200, 200, 200, 0.8);
     border-radius: 2px;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* ONTOLOGY TERMS */
+.dl1.goterm {
+    font-family: sans-serif;
+    fill: darkred;
+    }
+
+.dl1.goterm-tip{
+    font-family: sans-serif;
+    font-size: 10px;
+    color: black;
+    fill-opacity: .8;
+    background: #FEE;
+    border: 1px;
+    border-radius: 3px;
+    padding: 2px;
+    text-align: center;
+}
+
+.dl1.search_label{
+    fill: darkred;
+    font-family: sans-serif;
     font-size: 11px;
+
 }
 
 
@@ -79,6 +104,23 @@
 .dl2.axis.x text {
     font-family: sans-serif;
     font-size: 11px;
+}
+
+/* GENE ANNOTATIONS */
+.dl2.annotation{
+    fill: #BFB;
+    fill-opacity: 1;
+}
+
+.dl2.annotation.label{
+    fill: black;
+    font-family: sans-serif;
+    font-size: 11px;
+}
+
+.dl2.annotation.arrow{
+    fill: #9F9;
+    fill-opacity: 1;
 }
 
 /* Y AXIS */
