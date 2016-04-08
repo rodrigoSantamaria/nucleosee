@@ -16,6 +16,7 @@ import time
 
 #Our methods
 import suffixSearch as ss
+import motifSearch as ms
 import annotations as ann
 import helpers
 import pickle
@@ -74,7 +75,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
 """Given a numerical sequence seq, this method binarizes based on the average 
 and standard deviations on windows of size windowSize. Binarzation is done
 in categories a to z (z the larger), as many as detailed by numBins"""
-#NOTE: maybe a good idea to optimize this methos is to use numerical bins instead of letters
+#NOTE: maybe a good idea to optimize this method is to use numerical bins instead of letters
 def discretize(seq, windowSize, minimo, maximo, numBins=5):
     import numpy as np
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
@@ -171,28 +172,6 @@ def testUpload():
     else:
         return jsonify(response='not found')
  
-#with md5 (too expensive)
-#def testUpload():
-#    filename=""+request.args.get("filename") 
-#    cpath=os.path.join(app.config['UPLOAD_FOLDER'],user)
-#    if os.path.exists(cpath) and filename in os.listdir(cpath):
-#        import hashlib
-#        codeEx=""+request.args.get("md5")
-#        codeIn=hashlib.md5(open(os.path.join(cpath,filename), 'rb').read()).hexdigest()
-#        if(codeEx==codeIn):
-#            return jsonify(response="file exists")
-#        else:
-#            return jsonify(response='outdated version')
-#    else:
-#        return jsonify(response='not found')
-    
-      
-#@app.route("/test")
-#def test():
-#    default=""+request.args.get("default") #the only way I found to do it... (no default value can be set)
-#    default=default.split(",")
-#    return jsonify(result=len(default))
-
 #%%------------- SESSION MANAGEMENT
 #data must be a dic with dseq and bwt
 def saveSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/dwtMini2.pkl", data=""):
@@ -248,6 +227,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     res={}#reduced sequence
     t={} #burrows-wheeler transform
     dataGFF={}
+    dataFASTA={}
     seqd={}
     
     if os.path.isfile(picklePath):
@@ -305,7 +285,8 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     
         t0=time.clock()
         dataGFF[k]=ann.gff(helpers.gffPath(ch=k))
-        print('\ttime in GFF:',(time.clock()-t0),'s')
+        dataFASTA[k]=ann.fasta(k)
+        print('\ttime in annotations (GFF and FASTA):',(time.clock()-t0),'s')
         seqd[k]=seq
         print("processing",k,"takes",(time.clock()-tk))
         
@@ -317,7 +298,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     
     data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
           "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF,
-          "go":dataGO, "goa":dataGOA}
+          "go":dataGO, "goa":dataGOA, "fasta":dataFASTA}
     session[user]=data
     
     if(savePickle):
@@ -411,6 +392,61 @@ def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs=
         return jsonify(response=list(set(ids)))
     return jsonify(response=res)
 
+#%%
+@app.route("/nucleotides")
+def nucleotides(start=0, end=10, track="None"):
+    global data
+
+    start=int(request.args.get("start"))
+    end=int(request.args.get("end"))
+    track=str(request.args.get("track"))
+    print(data["fasta"].keys())
+    return jsonify(response=data["fasta"][track][start:end])
+ 
+#%%
+@app.route("/nucProfile")
+def nucProfile(positions=[], size=10, track="None"):
+    global data
+    import time
+    t00=time.clock()
+    pos=eval(request.args.get("positions"))
+    size=int(request.args.get("size"))
+    track=str(request.args.get("track"))
+    #align=str(request.args.get("align"))
+    
+    #basic operatons (prof and c might not be very useful)
+    seqs={}
+    for p in pos:
+        seqs[p]=data["fasta"][track][p:p+size].upper()
+        print seqs[p]
+    c=ms.consensus(seqs.values())
+    prof=ms.profile(seqs.values())
+
+    #gibbs sampling for motif search
+    if(len(seqs)>1):
+        t0=time.clock()
+        for x in range(9,10,1): #for different k
+            for i in range(1):
+                bm=ms.gibbsSampler(seqs.values(),x,1000)
+                print(i,")",x, bm["score"], 1.0*bm["score"]/x)
+        print("Whole Gibbs took",(time.clock()-t0))    
+    mot={}
+    motloc={}
+    for i in range(len(bm["motifs"])):
+           mot[seqs.keys()[i]]=bm["motifs"][i]
+           motloc[seqs.keys()[i]]=seqs.values()[i].find(bm["motifs"][i])
+#           
+#    #Alignment is superslow  we only do it if #seqx<50 with kalign to keep times <=1s
+#    if(len(pos)<=50):
+#        align=helpers.align(seqs, method="kalign_msa")
+#        ac=ms.consensus(align.values())
+#        aprof=ms.profile(align.values())
+#        print("nucProfile with alignment took",(time.clock()-t00))
+#        return jsonify(seqs=seqs, consensus=c, alignment=align, aconsensus=ac, aprofile=aprof)
+#    print("No alignment performed: too many sequences")
+    print("nucProfile took",(time.clock()-t00))
+    return jsonify(seqs=seqs, consensus=c, profile=prof, motifs=mot, locations=motloc)
+ 
 #%%
 @app.route("/annotationsGOA")
 #annotations is the result of calling annotations

@@ -7,6 +7,59 @@ Ancillary methods for python server
 @author: rodri
 """
 
+#Superslow for interaction: 10 seqs of 600 nucleotides takes 14s
+def align(seqs, method="clustalw"):
+    import os
+    from Bio.Alphabet import generic_dna
+    from Bio.Seq import Seq
+    from Bio.SeqRecord import SeqRecord
+    
+    sr=[]
+    for k in seqs.keys():
+        sr.append(SeqRecord(Seq(seqs[k], generic_dna), id=(str)(k)))
+    
+    from Bio import SeqIO
+    output=open("unaligned.fasta", "w")
+    SeqIO.write(sr,output, "fasta")
+    output.close()
+
+    import subprocess
+    p=subprocess.Popen(["/usr/bin/env", "t_coffee","-quiet -method "+method+" -infile unaligned.fasta -outfile aligned.aln -output=fasta"], bufsize=-1, cwd=u'/Users/rodri/WebstormProjects/seqview/py_server')
+    #p=subprocess.Popen(["/usr/bin/env", "t_coffee","-quiet -output "+method+" -infile mitDNAprimates.fasta -outfile aligned.aln"], bufsize=-1, cwd=u'/Users/rodri/WebstormProjects/seqview/py_server')
+    #p.wait()
+    p.communicate()
+   
+    lines=open("aligned.aln").readlines()
+    aln={}
+    k=""
+    for l in lines:
+        l=l.replace("\n","")
+        if(l[0]=='>'):
+            k=l.replace(">","").replace("  <unknown description>","")
+            aln[k]=""
+        else:
+            aln[k]+=l
+    #os.remove("aligned.aln")
+    os.remove("unaligned.fasta")
+    os.remove("unaligned.dnd")
+    return aln
+
+#%%
+#import time
+#t0=time.clock()
+#t=align({},"clustalw")
+#print("Clustal takes ",(time.clock()-t0))
+##t0=time.clock()
+##t=align({},"mafft")
+##print("Clustal takes ",(time.clock()-t0))
+#t0=time.clock()
+#t=align({},"tcoffee")
+#print("Clustal takes ",(time.clock()-t0))
+##t0=time.clock()
+##t=align({},"kalign")
+##print("Clustal takes ",(time.clock()-t0))
+#    
+#%%
 #Evolved from http://www.rigtorp.se/2011/01/01/rolling-statistics-numpy.html
 # (however that solution get overlapping windows)
 #a must be a 1D array, does not contemplate overlap so far

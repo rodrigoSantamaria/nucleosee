@@ -65,14 +65,19 @@ def goa(filename="genomes/annotations/spombe/goa/gene_association.pombase"):
     
 
 #%% Loads the fasta sequence of a given file (by now only working forS pombe files)
+#it takes only 0.125s for the pombe genomw (the three chromosomes)
 def fasta(ch):
-    f=open("genomes/annotations/spombe/fasta/chromosome"+(str)(ch)+".fasta")
+    f=open("genomes/annotations/spombe/fasta/"+(str)(ch)+".fasta")
     reader=f.readlines()
     reader=reader[1:]
-    seq=""
-    for i in range(len(reader)):
-        seq=seq+reader[i].replace("\n", "")
-    return seq
+    return "".join(reader).replace("\n","")
+    
+#import time
+#t0=time.clock()
+#for x in ["chromosome1","chromosome2","chromosome3"]:
+#    tal=fasta(x)
+#print(time.clock()-t0)
+
 
 #%%
 def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
@@ -110,7 +115,7 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
 #gis=np.random.randint(0,2.5e6,3284)
 #tal=annotate(gis, dataGFF,types=["gene"], ws=4000)
 #print("it tiook",(time.clock()-t0))
-##%%
+#%%
 #for x in dataGFF:
 #    if(x["id"].find("SPCC757.15")>=0):
 #        print "{}\t{}, {}".format(x["type"],x["start"],x["end"])
