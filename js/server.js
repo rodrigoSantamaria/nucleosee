@@ -150,6 +150,72 @@
             return response;
         };
 
+        /**
+         * Calls the REST service available to retrieve a sequence of nucleotides
+         * @param start
+         * @param end
+         * @param track
+         * @returns sequence for that interval
+         */
+        Server.nucleotides = function (start,end,track)
+        {
+            var response=[];
+            $.ajax(
+                {
+                    url: _serverPath+"nucleotides?user="+_user+"&password="+_password+"&start="+start+"&end="+end+"&track="+track,
+                    type: "GET",
+                    datatype:"json",
+                    async: false,    // default: true
+                    success: function(result)
+                    {
+                        if(_DEBUG) console.log("nucleotides(): done");
+                        response.seq=result.response; // this is only a sample, as it is too large to show as a whole and to send via REST
+                    },
+                    error: function()
+                    {
+                        if(_DEBUG) console.log("preprocress(): discretization failed...");
+                    }
+                });
+            return response;
+        };
+
+        /**
+         * Calls the REST service available to retrieve a sequence of nucleotides
+         * @param positions: array with numerical starting positions
+         * @param size: length from the starting points
+         * @param track: chromosome or track where the sequences must be taken from
+         * @returns sequence for that interval
+         */
+        Server.nucProfile = function (positions,size,track)
+        {
+            var response=[];
+            $.ajax(
+                {
+                    url: _serverPath+"nucProfile?user="+_user+"&password="+_password+"&positions="+positions+"&size="+size+"&track="+track,
+                    type: "GET",
+                    datatype:"json",
+                    async: false,    // default: true
+                    success: function(result)
+                    {
+                        if(_DEBUG) console.log("nucProfile(): done");
+                        response.seqs=result.seqs;
+                        response.profile=result.profile;
+                        response.consensus=result.consensus;
+                        //The following three may be undefined if the number of positions is larger than 50-100
+                        response.alignment=result.alignment;
+                        response.aconsensus=result.aconsensus;
+                        response.aprofile=result.aprofile;
+                        //these ones are related to motif finding
+                        response.motifs=result.motifs;
+                        response.locations=result.locations;//motifs locations inside seqs
+                    },
+                    error: function()
+                    {
+                        if(_DEBUG) console.log("preprocress(): discretization failed...");
+                    }
+                });
+            return response;
+        };
 
         Server.search = function (pattern,d)
         {

@@ -131,7 +131,7 @@ function drawing(processedData, ws, maxSize)
 // SEARCH POINTS
 ////////////////////////////////
 function searchPoints()
-{                       //TODO: draw number of points, e.g. "X occurrences found next to the search box
+{
     if(globalDL1.drawn)
     {
         var pattern = $('#patternSearch').val();
@@ -150,7 +150,6 @@ function searchPoints()
         drawPoints(pp, result.sizePattern, numNucleotidesDraw);
         if(DEBUG_GBV) console.log("Time spent search: "+ (new Date()-startTime)+"ms");
 
-        //TODO: for the enrichment we require annotations on every track
         // GET ENRICHMENT
         var start = new Date().getTime();
 
@@ -158,10 +157,12 @@ function searchPoints()
         var annotations="";
         var numMatches=0;
         for(var i=0;i<processedData.chromosomes.length;i++) {
-            var points=JSON.parse(result.points[processedData.chromosomes[i]])
+            var points=JSON.parse(result.points[processedData.chromosomes[i]]);
+            for( var j=0;j<points.length;j++)
+                points[j]*=ws;
             console.log(points.length+" matches in track "+processedData.chromosomes[i]);
             numMatches+=points.length
-            annotations+=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", pattern.length * ws, "left", processedData.chromosomes[i], "True");
+            annotations+=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "True");
             }
         console.log("Total number of matches: "+numMatches);
         var end = new Date().getTime();
@@ -170,9 +171,19 @@ function searchPoints()
         var start = new Date().getTime();
         var enrichment = Server.enrichment(annotations, "fdr", 0.00001)
         var end = new Date().getTime();
-        console.log('Enrichment took: ' + (end - start));
+        console.log('Enrichment analysis took: ' + (end - start));
 
         drawEnrichment(enrichment);
+
+        //GET SEQUENCES, MOTIFS, (ALIGNMENT), CONSENSUS
+        //NOTE: alignment takes more than 1s if there's >50 sequences! (using the fastest method: kalign)
+        var start = new Date().getTime();
+        for( var j=0;j<pp.length;j++)
+            pp[j]*=ws;
+        var response=Server.nucProfile("["+pp+"]",result.sizePattern*ws,globalSeq.track); //TODO: by now only on this chromosome
+        var end = new Date().getTime();
+        console.log("Sequence analysis took: "+(end-start))
+        setSequences(response)
 
     }
 }
@@ -188,7 +199,7 @@ function destroyAll(clear)
     $("#files").val('');
 
     // Empty all SVG images
-    var images = ["#lineSeq", "#lineSeq2"];
+    var images = ["#lineSeq", "#lineSeq2", "#lineSeq3"];
 
     for(var i=0;i<images.length;i++)
     {
