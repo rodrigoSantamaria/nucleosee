@@ -101,8 +101,14 @@ function uploadFileAndPreprocess(file, forceReload, track, ws, nb, maxSize)
     if (DEBUG_GBV) console.log("\n----- PREPROCESSING -----");
 
     startTime = new Date();
-    var processedData = Server.preprocess(file.name, track, ws, nb, maxSize);
+    var processedData0 = Server.preprocess(file.name, track, ws, nb, maxSize);
     if (DEBUG_GBV) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
+
+    /* Esto es lo que habría que hacer para invocar al cambio de cromosoma
+    startTime = new Date();
+    var processedData=Server.getTrack("chromosome2");
+    if (DEBUG_GBV) console.log("Time spent getTrack: " + (new Date() - startTime) + "ms");
+    */
 
     return processedData;
 }
@@ -169,7 +175,7 @@ function searchPoints()
         console.log('Getting annotations took: ' + (end - start));
 
         var start = new Date().getTime();
-        var enrichment = Server.enrichment(annotations, "fdr", 0.00001)
+        var enrichment = Server.enrichment(annotations, "fdr", 0.01)
         var end = new Date().getTime();
         console.log('Enrichment analysis took: ' + (end - start));
 
@@ -184,7 +190,6 @@ function searchPoints()
         var end = new Date().getTime();
         console.log("Sequence analysis took: "+(end-start))
         setSequences(response)
-
     }
 }
 

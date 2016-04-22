@@ -251,7 +251,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     
     print("load wig takes",(time.clock()-t0))
    
-    #for each separate chromosome: TODO: include dis and bwt into pickle!
+    #for each separate chromosome: TODO: include ds and bwt into pickle!
     for k in genome.keys():
         tk=time.clock()
         seq=genome[k]
@@ -297,7 +297,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     print("done! ... GO annotations takes",(time.clock()-t0))
     
     data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF,
+          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF, "res":res,
           "go":dataGO, "goa":dataGOA, "fasta":dataFASTA}
     session[user]=data
     
@@ -314,9 +314,21 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 
     print('whole preprocess takes ',(time.clock()-t00),"s")
     print(track)
-    return jsonify(seq=res[track], fullLength=len(genome[track]), maximum=(float)(maximum[track]), minimum=(float)(minimum[track]), mean=(float)(m[track]), stdev=(float)(sd[track]), dseq=dseq[track], chromosomes=genome.keys())
+    return jsonify(seq=res[track], fullLength=len(genome[track]), maximum=(float)(maximum[track]), minimum=(float)(minimum[track]), mean=(float)(m[track]), stdev=(float)(sd[track]), dseq=dseq[track], chromosomes=sorted(genome.keys()))
 
 #%%preprocess(filename="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/dwtMini2.wig")
+
+#%%
+@app.route("/getTrack")
+def getTrack(track="None"):
+    global data
+
+    track=request.args.get("track")
+    if track=="None":
+        track=data["res"].keys()[0]
+
+    print("returning chromosome",track)
+    return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], chromosomes=sorted(data["res"].keys()))
 
 #%% -------------- SEARCHES -----------
 
@@ -428,13 +440,15 @@ def nucProfile(positions=[], size=10, track="None"):
         for x in range(9,10,1): #for different k
             for i in range(1):
                 bm=ms.gibbsSampler(seqs.values(),x,1000)
-                print(i,")",x, bm["score"], 1.0*bm["score"]/x)
+                print(i,")",x, bm["score"], bm["score"]/len(seqs))
         print("Whole Gibbs took",(time.clock()-t0))    
+    else:
+        bm={}
     mot={}
     motloc={}
     for i in range(len(bm["motifs"])):
-           mot[seqs.keys()[i]]=bm["motifs"][i]
-           motloc[seqs.keys()[i]]=seqs.values()[i].find(bm["motifs"][i])
+               mot[seqs.keys()[i]]=bm["motifs"][i]
+               motloc[seqs.keys()[i]]=seqs.values()[i].find(bm["motifs"][i])
 #           
 #    #Alignment is superslow  we only do it if #seqx<50 with kalign to keep times <=1s
 #    if(len(pos)<=50):
@@ -445,7 +459,7 @@ def nucProfile(positions=[], size=10, track="None"):
 #        return jsonify(seqs=seqs, consensus=c, alignment=align, aconsensus=ac, aprofile=aprof)
 #    print("No alignment performed: too many sequences")
     print("nucProfile took",(time.clock()-t00))
-    return jsonify(seqs=seqs, consensus=c, profile=prof, motifs=mot, locations=motloc)
+    return jsonify(seqs=seqs, consensus=c, profile=prof, motifs=mot, locations=motloc, motifConsensus=bm["consensus"], motifProfile=bm["profile"])
  
 #%%
 @app.route("/annotationsGOA")

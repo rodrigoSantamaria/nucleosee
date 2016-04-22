@@ -249,14 +249,6 @@ function drawPoints(points, sizePattern, numNucleotides)
     // Calls tip
     globalDL1.svg.call(tip);
 
-    //NEW: another tooltip, fully hand-made
-    /*var tooltip=d3.select("#lineSeq")
-        .append("div")
-        .attr("class", "tooltip");
-    tooltip.append("div")
-        .attr("class", "text");*/
-
-
     // Remove all points
     globalDL1.svg.selectAll(".point")
         .remove();
@@ -271,18 +263,6 @@ function drawPoints(points, sizePattern, numNucleotides)
         .attr('cy', function(d) { return globalDL1.y(d.value) })
     .on('mouseover', tip.show)
     .on('mouseout', tip.hide);
-    /*.on('mouseenter', function(d,i){
-            tooltip.select(".text").html("<strong>"+d3.format(",")(seqPoints[i]) + ":</strong> "+(d3.format(".2f")(d.value)));
-            tooltip.style("display","block")
-                    .style('top', (d3.event.layerY + 10) + 'px')
-                    .style('left', (d3.event.layerX + 10) + 'px');
-
-            dataLine2(seqPoints[i], sizePattern, numNucleotides);
-        })
-    .on('mouseout', function(d){
-        tooltip.style("display", "none");
-    });*/
-
 
     globalDL1.svg.selectAll(".search_label")
         .remove();
@@ -449,8 +429,11 @@ function setSequences(response)
         globalDL3.aprofile=response.aprofile;
         globalDL3.consensus=response.consensus;
         globalDL3.profile=response.profile;
+
         globalDL3.motifs=response.motifs;
         globalDL3.locations=response.locations;
+        globalDL3.motifConsensus=response.motifConsensus;
+        globalDL3.motifProfile=response.motifProfile;
     }
 
 /**
@@ -595,6 +578,7 @@ function drawNucleotides(nameSVG, classSVG, start, point, wholeSeq, startWholeSe
                     break;
             }
 
+            shownKeys.push("consensus");
             //Draw locations
             svg.selectAll("Nucleotides_Text"+key)
                 .data(shownKeys)
@@ -603,11 +587,46 @@ function drawNucleotides(nameSVG, classSVG, start, point, wholeSeq, startWholeSe
                 .text(function (d) { return d; })
                 .attr("class", classSVG+" axis y text")
                 .attr("x", x0-45)
-                .attr("y", function(d,i){ return marginDL.top * 1.7 + separator*3 + i * letterHeight});
+                .attr("y", function(d,i){ return marginDL.top * 1.7 + separator*3.5 + i * letterHeight});
+
+            //draw consensus motif
+            var letters = []
+            for (var i in globalDL3.motifConsensus)
+                letters.push(globalDL3.motifConsensus[i])
+
+            var colscale=d3.scale.linear().domain([0,1]).range(["white", "black"]);
+
+            console.log("scale done");
+            svg.selectAll("consensus")
+                .data(letters)
+                .enter()
+                .append("text")
+                .text(function (d) {
+                    return d
+                })
+                .attr("class", classSVG + " consensus")
+                .attr("fill", function (d, i) {
+                    return colscale(globalDL3.motifProfile[d][i])
+                })
+                .style("font-weight", function (d, i) {
+                    //if (globalDL3.motifProfile[d][i] > 0.9)
+                    //    return "bold";
+                    //else
+                        return "bold";
+                })
+                .style("text-decoration", function(d,i){
+                    if (globalDL3.motifProfile[d][i] > 0.9)
+                        return "underline";
+                    else
+                        return "";})
+                .attr("x", function (d, i) {
+                    return (x0 +dimDL.width *.5-letterWidth *.5 + letterWidth * i)
+                })
+                .attr("y", marginDL.top * 1.7 + separator * 2 + cont * letterHeight);
 
 
-            //Draw the consensus sequence (by now not considered useful, maybe with alignments...)
-            /*if (globalDL3.aconsensus == undefined) {
+        /*    //Draw the consensus sequence (by now not considered useful, maybe with alignments...)
+            if (globalDL3.aconsensus == undefined) {
                 var letters = []
                 for (var i = displace; i < Math.min(displace+numLetters, globalDL3.consensus.length); i++)
                     letters.push(globalDL3.consensus[i])

@@ -150,6 +150,37 @@
             return response;
         };
 
+
+        Server.getTrack = function (track)
+        {
+            var response=[];
+            $.ajax(
+                {
+                    url: _serverPath+"getTrack?user="+_user+"&password="+_password+"&track="+track,
+                    type: "GET",
+                    datatype:"json",
+                    async: false,    // default: true
+                    success: function(result)
+                    {
+                        if(_DEBUG) console.log("getTrack(): getTrack done...");
+                        response.seq=result.seq; // this is only a sample, as it is too large to show as a whole and to send via REST
+                        response.max=result.maximum;
+                        response.min=result.minimum;
+                        response.mean=result.mean;
+                        response.stdev=result.stdev;
+                        response.dseq=result.dseq;
+                        response.fullLength=result.fullLength;
+                        response.chromosomes=result.chromosomes;
+                    },
+                    error: function()
+                    {
+                        if(_DEBUG) console.log("getTrack(): getTrack failed...");
+                    }
+                });
+            return response;
+        };
+
+
         /**
          * Calls the REST service available to retrieve a sequence of nucleotides
          * @param start
@@ -208,6 +239,9 @@
                         //these ones are related to motif finding
                         response.motifs=result.motifs;
                         response.locations=result.locations;//motifs locations inside seqs
+                        response.motifConsensus=result.motifConsensus;
+                        response.motifProfile=result.motifProfile;
+
                     },
                     error: function()
                     {
