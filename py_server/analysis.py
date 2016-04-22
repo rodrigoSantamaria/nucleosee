@@ -247,7 +247,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 
 
     if track=="None":
-        track=genome.keys()[0]
+        track=sorted(genome.keys())[0]
     
     print("load wig takes",(time.clock()-t0))
    
