@@ -144,7 +144,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .fail(function()
                 {
                     if(_DEBUG) console.log("sendFile(): testUpload failed...");
-                    javascript_abort(XMLHttpRequest.statusText);
+                    javascript_abort();
                 });
         };
 
@@ -553,3 +553,4 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
     }
 
 })(window);
+
