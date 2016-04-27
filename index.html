@@ -1,69 +1,133 @@
-<!doctype html>
-<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
-<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
-<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang=""> <!--<![endif]-->
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Genome Browser Visualization</title>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!--=========================  CSS  =========================-->
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" href="css/libs/bootstrap.min.css">
+    <link rel="stylesheet" href="css/libs/normalize.css">
+    <link rel="stylesheet" href="css/libs/main.css">
+
+    <link rel="stylesheet" href="css/d3_styles.css">
+    <!--=========================================================-->
+
+    <!--=========================  JS  ==========================-->
+    <script src="js/libs/modernizr-2.8.3.min.js"></script>
+    <script src="js/libs/jquery-1.11.3.min.js"></script>
+    <script src="js/libs/d3-3.5.6.min.js"></script>
+    <script src="js/libs/d3-tip-0.6.7.js"></script>
+    <script src="js/libs/md5.js"></script>
+
+    <script src="js/main.js"></script>
+    <script src="js/server.js"></script>
+    <script src="js/draw.js"></script>
+    <!--=========================================================-->
+</head>
+
+<body>
+    <!--[if lt IE 7]>
+    <p class="browsehappy">
+        You are using an <strong>outdated</strong> browser. Please
+        <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.
+    </p>
+    <![endif]-->
 
 
-        <title>Genome Browser Visualization</title>
-        <link rel="icon" type="image/ico" href="favicon.ico"/>
+    <!-- START VIEW -->
+    <div class="container start-view">
+        <div class="row">
+            <div class="col-md-4 col-md-offset-4">
+                <div class="login-panel panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Please Sign In</h3>
+                    </div>
+                    <div class="panel-body">
+                        <form role="form">
+                            <fieldset>
+                                <div class="form-group">
+                                    <input class="form-control" id="username" placeholder="Username" name="username" autofocus>
+                                </div>
+                                <div class="form-group">
+                                    <input class="form-control" id="password" placeholder="Password" name="password" type="password" value="">
+                                </div>
+                                <a href="#" id="btLogin" class="btn btn-lg btn-success btn-block">Login</a>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
-        <!--=========================  CSS  =========================-->
-        <link rel="stylesheet" href="css/normalize.css">
-        <link rel="stylesheet" href="css/main.css">
 
-        <link rel="stylesheet" href="css/d3_styles.css">
-        <!--=========================================================-->
+    <!-- CORE VIEW -->
+    <div class="core-view" style="display:none">
 
-        <!--=========================  JS  ==========================-->
-        <script src="js/libs/modernizr-2.8.3.min.js"></script>
-        <script src="js/libs/jquery-1.11.3.min.js"></script>
-        <script src="js/libs/d3-3.5.6.min.js"></script>
-        <script src="js/libs/d3-tip-0.6.7.js"></script>
-        <script src="js/libs/md5.js"></script>
+        <!-- FILE UPLOAD and SEARCH -->
+        <div style="float:left;">
+            <!-- FILE UPLOAD -->
+            <div style="margin-top:5px;">
+                <div style="float:left;margin-left: 30px;margin-right:10px;">
+                    <input type="file" id="files" name="files[]" multiple style="float:left"/>
+                    <!--output id="list"></output-->
+                    <script src="js/upload-file.js"></script>
+                </div>
+                <div style="float:left;margin-left:10px;margin-right:10px;">
+                    <input type="checkbox" id="reload">Reload<br>
+                </div>
+                <div style="float:left;margin-left:10px;margin-right:10px;">
+                    <button type="button" style="float:left" onclick="destroyAll(true)">Delete</button>
+                </div>
+            </div>
 
-        <script src="js/main.js"></script>
-        <script src="js/server.js"></script>
-        <script src="js/draw.js"></script>
-        <!--=========================================================-->
-    </head>
+            <!-- SEARCH -->
+            <div>
 
+                <!--div style="float:left;margin-top:4px;margin-left:30px;margin-right:20px;">
+                    <button type="button"id="btConfigParams">Params</button>
+                </div-->
 
-    <body>
-        <!--[if lt IE 7]>
-        <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please
-            <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.
-        </p>
-        <![endif]-->
+                <div style="float:left;margin-top:4px;margin-left:30px;margin-right:5px;">
+                    <input type="text" id="patternSearch">
+                </div>
+                <div style="float:left;margin-top:4px;margin-left:5px;margin-right:10px;">
+                    <select id="dSearch">
+                        <option value="0" selected="selected">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                    </select>
+                </div>
+                <div style="float:left;margin-top:4px;margin-left:10px;margin-right:10px;">
+                    <button type="button" onclick="searchPattern()">Search pattern</button>
+                </div>
+            </div>
+        </div>
 
+        <!-- CHROMOSOME ICONS -->
+        <div style="float:left;margin-left:20px;" id="imagesChromosomes"></div>
 
-        <!--=================================================  BODY ===================================================-->
-
-        <!-- FILE UPLOAD -->
-        <input type="file" id="files" name="files[]" multiple />
-        <output id="list"></output>
-        <script src="js/upload-file.js"></script>
-
-        <button type="button" onclick="destroyAll(true)">Delete</button>
-        &nbsp;&nbsp;&nbsp;&nbsp;
-        <input type="checkbox" id="fastMode" checked>&nbsp;&nbsp;Fast mode
-        &nbsp;&nbsp;&nbsp;&nbsp;
-        &nbsp;&nbsp;&nbsp;&nbsp;
-        &nbsp;&nbsp;&nbsp;&nbsp;
-        <input type="text" id="patternSearch" value="aba">
-        <select id="dSearch">
-            <option value="0">0</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-        </select>
-        <button type="button" onclick="searchPoints()">Search pattern</button>
+        <!-- LOGOUT -->
+        <div style="float:right;margin-left:10px;margin-right:100px;margin-top:5px;;">
+            <button type="button" id="btLogout">Logout</button>
+        </div>
 
 
         <!-- VISUALIZATION -->
@@ -71,20 +135,160 @@
         <div id="lineSeq2"></div>
         <div id="lineSeq3"></div>
 
+    </div>
 
 
 
-        <!--===========================================================================================================-->
+    <!-- IMAGE OF "LOADING..." -->
+    <div class="div-loading" id="divLoading" style="display:none">
+        <img class="div-loading-image" src="images/loading.gif"/>
+    </div>
 
 
-        <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
-        <!--script>
-            (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
-                    function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
-                e=o.createElement(i);r=o.getElementsByTagName(i)[0];
-                e.src='https://www.google-analytics.com/analytics.js';
-                r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
-            ga('create','UA-XXXXX-X','auto');ga('send','pageview');
-        </script-->
-    </body>
+    <!-- Modal -->
+    <div class="modal fade" id="modalConfigParams" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <!-- Modal: header -->
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h3 class="modal-title">Modify parameters of preprocess</h3>
+                </div>
+
+                <!-- Modal: body -->
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-sm-7 col-sm-offset-1">
+                            <label class="control-label" for="paramWS">Window size</label>
+                        </div>
+                        <div class="col-sm-3">
+                            <input class="form-control" type="text" id="paramWS">
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top:10px;">
+                        <div class="col-sm-7 col-sm-offset-1">
+                            <label class="control-label" for="paramNB">Number of bins</label>
+                        </div>
+                        <div class="col-sm-3">
+                            <input class="form-control" type="text" id="paramNB">
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top:10px;">
+                        <div class="col-sm-7 col-sm-offset-1">
+                            <label class="control-label" for="paramMaxSize">Maximum number of normalized data</label>
+                        </div>
+                        <div class="col-sm-3">
+                            <input class="form-control" type="text" id="paramMaxSize">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal: footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" id="btConfigParamsSave" class="btn btn-primary">Save changes</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <!--script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script-->
+    <script src="js/libs/bootstrap.min.js"></script>
+
+
+
+    <script>
+
+        // This part of the code is executed automatically when the page is ready
+        $(window).ready(function()
+        {
+
+            // CHANGE PARAMS (WITH RELOAD)
+            ////////////////////////////////////////////
+            reloadParams(false);
+
+            $('#reload').change(function()
+            {
+                if($(this).is(":checked"))
+                {
+                    reloadParams(false);
+                    $('#modalConfigParams').modal();
+                }
+            });
+
+            $('#btConfigParamsSave').click(function()
+            {
+                reloadParams(true);
+            });
+
+            function reloadParams(saveParams)
+            {
+                var IParamWS        = $('#paramWS');
+                var IParamNB        = $('#paramNB');
+                var IParamMaxSize   = $('#paramMaxSize');
+
+                if(saveParams)
+                {
+                    GVB_GLOBAL.ws       = IParamWS.val();
+                    GVB_GLOBAL.nb       = IParamNB.val();
+                    GVB_GLOBAL.maxSize  = IParamMaxSize.val();
+                }
+
+                IParamWS.val(GVB_GLOBAL.ws);
+                IParamNB.val(GVB_GLOBAL.nb);
+                IParamMaxSize.val(GVB_GLOBAL.maxSize);
+
+                $('#modalConfigParams').modal('hide');
+            }
+
+
+            // LOGIN and LOGOUT
+            ////////////////////////////////////////////
+            $('#btLogin').click(function()
+            {
+                var username = $('#username').val();
+                var password = $('#password').val();
+
+                if(Server.connect(true, username, password, "divLoading"))
+                {
+                    $('.start-view').hide();
+                    $('.core-view').show();
+                }
+                else
+                {
+                    alert("The user or password is incorrect");
+                }
+
+                return false;
+            });
+
+            $('#btLogout').click(function()
+            {
+                $('.core-view').hide();
+                $('.start-view').show();
+
+                return false;
+            });
+
+
+            // TESTING (TODO: remove this)
+            ////////////////////////////////////////////////
+                //$('#patternSearch').val("aaaaabcba");
+                $('#patternSearch').val("a*5+abcba*2");
+                //$('#patternSearch').val("a*5+abcba"); // esta es la buena con enrichment
+                $('#username').val("jpiriz");
+                $('#password').val("alguna");
+                $('#btLogin').click();
+            ////////////////////////////////////////////////
+
+        });
+    </script>
+</body>
 </html>

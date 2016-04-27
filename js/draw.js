@@ -7,29 +7,23 @@
  */
 
 
+
 var marginDL =
-    {
-        top:10,
-        bottom:60,
-        left:50,
-        right:20
-    };
+{
+    top:10,
+    bottom:60,
+    left:50,
+    right:20
+};
 
 var dimDL =
 {
-    graphHeight : 200,
     graphWidth : screen.width,
+    graphHeight : 200,
 
     width : screen.width-marginDL.right-marginDL.left,
     height : 200-marginDL.top-marginDL.bottom
 };
-
-var dimAnnotation =
-    {
-        height : 12,
-        x0:5,
-        y0:7
-    }
 
 var globalSeq =
 {
@@ -42,426 +36,288 @@ var globalSeq =
 };
 
 
+//chromosome level
 var globalDL1 =
 {
-    dim : dimDL,
-    margin : marginDL,
+    // Commom variables (used in the core)
+    cv :
+    {
+        nameSVG : "lineSeq",
+        classSVG : "dl1",
+
+        svg : null,
+        scaleSeqScreen : null,
+        scaleServScreen : null,
+        data : null,
+        xScale : null,
+        yScale : null,
+
+        margin :
+        {
+            top: marginDL.top,
+            bottom:marginDL.bottom,
+            left:marginDL.left,
+            right:marginDL.right
+        },
+        dim :
+        {
+            graphWidth : dimDL.graphWidth,
+            graphHeight : dimDL.graphHeight,
+            width : dimDL.width,
+            height : dimDL.height
+        }
+    },
 
     drawn : false,
 
-    nameSVG : "lineSeq",
-    classSVG : "dl1",
-
-    scaleSeqScreen : null,
-    scaleServScreen : null,
-    data : null,
-    x : null,
-    y : null,
-    svg : null,
     seqPoints : null
 };
 
 
+//nucleosome level
 var globalDL2 =
 {
-    dim : dimDL,
-    margin : marginDL,
+    // Commom variables (used in the core)
+    cv :
+    {
+        nameSVG : "lineSeq2",
+        classSVG : "dl2",
 
-    nameSVG : "lineSeq2",
-    classSVG : "dl2",
+        svg : null,
+        scaleSeqScreen : null,
+        scaleServScreen : null,
+        data : null,
+        xScale : null,
+        yScale : null,
 
-    scaleSeqScreen : null,
-    scaleServScreen : null,
-    data : null,
-    x : null,
-    y : null,
-    svg : null
+        margin :
+        {
+            top: marginDL.top,
+            bottom:marginDL.bottom,
+            left:marginDL.left,
+            right:marginDL.right
+        },
+        dim :
+        {
+            graphWidth : dimDL.graphWidth,
+            graphHeight : dimDL.graphHeight,
+            width : dimDL.width,
+            height : dimDL.height
+        }
+    },
+
+    startSeq : null,
+    endSeq : null
 };
 
 
 
 
-
-function dataLine1(seqServ, startSeq, endSeq, fullLength, maxSize, mean, stdev, ws, track)
+function dataLine_1(track, fullLength, seqServ, startSeq, endSeq, maxSize, mean, stdev, ws)
 {
-    // Get information of dataLine1
-    var nameSVG=globalDL1.nameSVG;
-    var classSVG=globalDL1.classSVG;
-    var width=globalDL1.dim.graphWidth;
-    var height=globalDL1.dim.graphHeight;
+    var startTime=new Date();
 
     // Save information of the genomic sequence
-    globalSeq.seqServ=seqServ;
-    globalSeq.mean=mean;
-    globalSeq.stdev=stdev;
-    globalSeq.ws=ws;
-    globalSeq.track=track;//chromosome or wig track it refers to
-    globalSeq.scaleSeqServ = 1;
+    globalSeq.ws            = ws;
+    globalSeq.track         = track; // chromosome or wig track it refers to
+    globalSeq.seqServ       = seqServ;
+    globalSeq.mean          = mean;
+    globalSeq.stdev         = stdev;
+    globalSeq.scaleSeqServ  = 1;
+
     if(Math.floor(fullLength/maxSize) >= 1)
         globalSeq.scaleSeqServ = Math.floor(fullLength/maxSize);
 
-    var result = drawDataLine(nameSVG, classSVG,
-        seqServ, globalSeq.scaleSeqServ, startSeq, startSeq, endSeq);
 
+    // We use the core function
+    dataLine_core(false, globalSeq, globalDL1,
+        globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
 
-    // Save information of dataLine1
-    globalDL1.scaleSeqScreen = result.scaleSeqScreen;
-    globalDL1.scaleServScreen = result.scaleServScreen;
-    globalDL1.data = result.data;
-    globalDL1.x = result.x;
-    globalDL1.y = result.y;
-    globalDL1.svg = result.svg;
 
     // We confirm that we have finished
     globalDL1.drawn = true;
+
+    if(DEBUG_GBV) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
 }
 
-function drawEnrichment(enrichment)
-    {
-        globalDL1.svg.selectAll(".dl1.goterm")
-            .remove();
-
-        var goSize = d3.scale.log().base(10)
-            .domain([1,10e-6])  // p-values
-            .clamp(true)
-            .rangeRound([6, 14]); //letter size
-
-        var goterms=[];
-        for(var k in enrichment) {
-            if(enrichment[k].go_name!=undefined)
-                goterms.push(enrichment[k])
-            else
-                console.log("Error!: GO term "+k+" not found (possibly outdated OBO file?");
-
-        }
-
-        console.log(goterms.length+" enriched terms");
-
-        var tip = d3.tip()
-            .attr('class', 'dl1 goterm-tip')
-            .offset([45, 0])
-            //.style("opacity",.8)
-            .attr("fill","blue")
-            .html(function(d,i)
-            {
-                return "p-value: "+ d3.format(".2e")(d.pval) +"<br>" + d.ngis+"/"+ d.ngo +" genes<br>";
-            });
-
-        globalDL1.svg.call(tip);
-
-
-        var dx=dimAnnotation.x0;
-        var dy=[];
-        var yline=0;
-
-        console.log("Numero de terminos GO: "+goterms.length);
-        globalDL1.svg.selectAll(".dl1.goterm")
-            .data(goterms)
-            .enter()
-            .append("text")
-            .attr('class', 'dl1 goterm')
-            .attr('x', function(d)
-                {
-                    var canvas = document.createElement('canvas');
-                    var ctx = canvas.getContext("2d");
-                    ctx.font = goSize(d.pval)+"px sans-serif";
-                    var width = ctx.measureText(" "+d.go_name+" ·").width;
-
-                    dx+=width;
-                    if(dx>=dimDL.width) {
-                        yline++;
-                        dx = dimAnnotation.x0 + width;
-                        }
-                    dy[d.go_name]=dimAnnotation.y0+10*yline;
-                    console.log(d.go_name+" "+ dy[d.go_name]);
-                    return dx-width; }
-                )
-            .attr('y', function(d) {
-                return dy[d.go_name];//*Math.max(1,dx/dimDL.width)
-            })
-            .attr('font-size', function(d) { //console.log("Tamaño de "+ d.go_name+": "+d.pval+" "+goSize(d.pval)+"px");
-                return goSize(d.pval)+"px" })
-            .text(function(d){
-                //console.log(d.go_name);
-                return " "+d.go_name+" ·"})
-            .on('mouseover', tip.show)
-            .on('mouseout', tip.hide);
-
-    }
-
-function drawPoints(points, sizePattern, numNucleotides)
+function dataLine_1_drawPoints(points, sizePattern, numNucleotidesDraw)
 {
+    if(DEBUG_GBV) console.log("\ndataLine_1_drawPoints(): "+points.length+" points");
+
+    // We calculate the points found in the sequence
     var seqPoints=[];
     for(var i=0; i<points.length;i++)
     {
         seqPoints.push(points[i] * globalSeq.ws);
     }
 
-    if(DEBUG_GBV) console.log("\ndataLine1_drawPoints():");
-    if(DEBUG_GBV) console.log(seqPoints);
-
+    // Now, with seqPoints, we calculate the points found in the dataLine
     var dataPoints=[];
     for(i=0; i<seqPoints.length;i++)
     {
-        var dataPoint = Math.floor(seqPoints[i]/globalDL1.scaleSeqScreen);
-        dataPoints.push({pos: (globalDL1.data)[dataPoint].pos, value: (globalDL1.data)[dataPoint].value});
+        var dataPoint = Math.round(seqPoints[i]/globalDL1.cv.scaleSeqScreen);
+        dataPoints.push({pos: (globalDL1.cv.data)[dataPoint].pos, value: (globalDL1.cv.data)[dataPoint].value});
     }
 
 
     // Mouseover tip and drawing the corresponding line
     var tip = d3.tip()
         .attr('class', 'dl1 point-tip')
-        .offset([30, 0])
+        .offset([30, 0])// [top, left] to center the tip
         .html(function(d,i)
         {
-            dataLine2(seqPoints[i], sizePattern, numNucleotides);
-            return "<strong>"+d3.format(",")(seqPoints[i]) + ":</strong> " + d3.format(".2f")(d.value);
+            dataLine_2(seqPoints[i], sizePattern, numNucleotidesDraw);
+            return "<strong>"+d3.format(",")(seqPoints[i]) + " :</strong> " + d3.format(".2f")(d.value);  // e.g. "307,770 : 0.79"
         });
 
     // Calls tip
-    globalDL1.svg.call(tip);
+    globalDL1.cv.svg.call(tip);
 
-    // Remove all points
-    globalDL1.svg.selectAll(".point")
+
+    // Remove all points (previous) and occurrences label
+    globalDL1.cv.svg.selectAll(".point")
+        .remove();
+    globalDL1.cv.svg.select(".search-label")
         .remove();
 
+
     // Create all new points
-    globalDL1.svg.selectAll(".data")
+    globalDL1.cv.svg.selectAll(".data")
         .data(dataPoints)
         .enter()
         .append("circle")
-        .attr('class', 'dl1 point')
-        .attr('cx', function(d) { return globalDL1.x(d.pos) })
-        .attr('cy', function(d) { return globalDL1.y(d.value) })
+        .attr('class', globalDL1.cv.classSVG+' point')
+        .attr('cx', function(d) { return globalDL1.cv.xScale(d.pos); })
+        .attr('cy', function(d) { return globalDL1.cv.yScale(d.value); })
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
 
-    globalDL1.svg.selectAll(".search_label")
-        .remove();
+
+    // Keep colored the selected point
+    $(".dl1.point").bind( "mouseover", function()
+    {
+        $(".dl1.point").attr('class', globalDL1.cv.classSVG+' point');
+        $(this).attr('class', globalDL1.cv.classSVG+' point pressed');
+    });
+
 
     // Draw occurrences label
-    globalDL1.svg.selectAll(".search_label")
-        .data([dataPoints.length])
-        .enter()
+    globalDL1.cv.svg.append("g")
+        .attr("class", globalDL1.cv.classSVG+" search-label")
         .append("text")
-        .attr('class', 'dl1 search_label')
-        .attr('x', 600)
-        .attr('y', 0)
-        .text(function(d){return d+" matches"})
+        .attr('x', (globalDL1.cv.dim.width/2)-100)
+        .attr('y', 10)
+        .text(dataPoints.length+" matches");
+
 
     // Save information of dataLine1
     globalDL1.seqPoints = seqPoints;
 }
 
-
-function dataLine2(point, sizePattern, numNucleotides)
+function dataLine_core(DEBUG, globalSeq, globalDL,
+                       seqServ, scaleSeqServ, startSeq, endSeq, initialPoint,
+                       point, sizePattern)
 {
-    // Get information of dataLine2
-    var nameSVG=globalDL2.nameSVG;
-    var classSVG=globalDL2.classSVG;
-    var width=globalDL2.dim.graphWidth;
-    var height=globalDL2.dim.graphHeight;
-
-
-    // We round to the nearest hundred from sizePattern
-    var focusLine = Math.round(sizePattern*globalSeq.ws/100)*100;
-
-    var startSeq = point-(numNucleotides/2)+(focusLine/2);
-    var endSeq   = point+(numNucleotides/2)+(focusLine/2);
-
-    // Get the part of sequence that we need to draw
-    var result = Server.getPartSeq(startSeq,endSeq, globalSeq.track);
-
-
-   // var dataLine = drawDataLine(nameSVG, classSVG, width, height, globalDL2.paddingX, globalDL2.paddingY,
-   // var dataLine = drawDataLine(nameSVG, classSVG, width, height, marginDL,
-    var dataLine = drawDataLine(nameSVG, classSVG,
-        result.partSeq, 1, startSeq, 0, numNucleotides, // scaleSeqServ is 1 because is a part of sequence
-                                point, sizePattern);
-
-    //RODRIGO
-    var annotations = Server.annotationsGenes("["+point+"]","[\"any\"]",globalDL2.dim.width, "center", globalSeq.track, "False");
-    if(annotations.hasOwnProperty(point))
-        var annotLine = drawAnnotationLine(dataLine, annotations[point], startSeq, endSeq);
-    //RODRIGO
-
-
-    // Save information of dataLine2
-    globalDL2.scaleSeqScreen = dataLine.scaleSeqScreen;
-    globalDL2.scaleServScreen = dataLine.scaleServScreen;
-    globalDL2.data = dataLine.data;
-    globalDL2.x = dataLine.x;
-    globalDL2.y = dataLine.y;
-    globalDL2.svg = dataLine.svg;
-}
-
-function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
-    {
-    var factor=dataLine.scaleSeqScreen*dataLine.scaleServScreen;
-
-        //gene line
-    dataLine.svg.append("g")
-        .selectAll(".dl2.annotation")
-        .data(annotations)
-        .enter().append("rect")
-        .attr('class', 'dl2 annotation')
-        .attr("transform", "translate(0," + (globalDL2.dim.height+20) + ")")
-        .attr("x", function(d)
-            {  return Math.max(0,(d.start-startSeq)*factor) })
-        .attr("y", function(d){  var y=0; y=d.sense=="+"?0:15; y+=(d.type=="gene" || d.type=="transcript")?5:0; return y;})
-        .attr("width", function(d){return Math.max(0,Math.min(globalDL2.dim.width-Math.max(0,(d.start-startSeq)*factor), Math.max(0,d.end-Math.max(startSeq, d.start)*factor)))})
-        .attr("height", function(d){
-            var h=dimAnnotation.height;
-            if (d.type=="gene" || d.type=="transcript")
-                h=dimAnnotation.height*.25;
-            return h});
-
-        dataLine.svg.append("g")
-            .selectAll(".dl2.annotation.arrow")
-            .data(annotations)
-            .enter().append("polygon")
-            .attr('class', 'dl2 annotation arrow')
-            .attr("transform", "translate(0," + (globalDL2.dim.height+20) + ")")
-            .attr("points", function(d){
-                //TODO
-                var y0=d.sense=="+"?0:15;
-                var x0=Math.max(0,(d.start-startSeq)*factor);
-                if(d.sense=="+")
-                    x0+=Math.min(globalDL2.dim.width-Math.max(0,(d.start-startSeq)*factor), Math.max(0,d.end-Math.max(startSeq, d.start)*factor));
-                if(d.sense=="+")
-                    path=x0+","+y0+ " " +x0+", "+(y0+dimAnnotation.height)+" "+(x0+dimAnnotation.height *.5)+","+(y0+dimAnnotation.height *.5);
-                else
-                    path=x0+","+y0+ " " +x0+", "+(y0+dimAnnotation.height)+" "+(x0-dimAnnotation.height *.5)+","+(y0+dimAnnotation.height *.5);
-                if(d.end<startSeq || d.start>startSeq+globalDL2.dim.width)
-                    return "";
-                if(d.type.indexOf("gene")>-1)
-                    return path;
-                else
-                    return "";
-            });
-
-        //TODO: far below/above cracker?
-
-        //gene labels
-    dataLine.svg.append("g")
-        .selectAll(".dl2.annotation.label")
-        .data(annotations)
-        .enter().append("text")
-        .attr('class', 'dl2 annotation label')
-        .attr("transform", "translate(0," + (globalDL2.dim.height+20) + ")")
-        .attr("x", function(d) {
-            /*if(d.sense=="-")
-               return Math.min(globalDL2.dim.width-20,(-startSeq+ d.end+3)*factor);
-            else
-                return Math.max(0,((d.start-startSeq)-100)*factor);*/
-            return Math.max(0,(d.start-startSeq+6)*factor);
-            })
-        .attr("y", function(d){   return d.sense=="+"?10:25})
-        .text(function(d){
-            //console.log(d.id+" "+ d.type +" ["+ d.start+", "+ d.end+"]"+" "+ d.sense);
-            res=""
-            if(d.end>startSeq)
-                if(d.type.indexOf("gene")>-1)
-                    res=d.id;
-            return res
-        });
-    }
-
-//function drawDataLine(nameSVG, classSVG, width, height, margin, seqServ, scaleSeqServ, initialPoint, startSeq, endSeq, point, sizePattern)
-function drawDataLine(nameSVG, classSVG, seqServ, scaleSeqServ, initialPoint, startSeq, endSeq, point, sizePattern)
-    {
     // Default values
     point       || ( point = 0 );
     sizePattern || ( sizePattern = 0 );
 
+    // Get info about sequence
+    var mean = globalSeq.mean;
+    var stdev = globalSeq.stdev;
+
+
+    // Get information of dataLine
+    var nameSVG     = globalDL.cv.nameSVG;
+    var classSVG    = globalDL.cv.classSVG;
+    var width       = globalDL.cv.dim.width;
+    var height      = globalDL.cv.dim.height;
+    var margin      = globalDL.cv.margin;
+
 
     // First, we delete the image, if this exist
-    var imageSVG = $("#"+nameSVG);
-    if ( imageSVG.length) { imageSVG.empty(); }
-
-    // Get info about sequence
-    var mean=globalSeq.mean;
-    var stdev=globalSeq.stdev;
+    var image = $("#"+nameSVG);
+    if ( image.length) { image.empty(); }
 
 
     // Define the scales with that we will work
-    var startData = Math.floor(startSeq/scaleSeqServ);
-    var endData = Math.ceil(endSeq/scaleSeqServ);
-    var sizeData = endData-startData;
     var sizeSeq = endSeq-startSeq;
+    var startData = Math.floor(startSeq/scaleSeqServ);
+    var endData = Math.floor(endSeq/scaleSeqServ);
+    var sizeData = endData-startData;
 
-
-    var scaleServScreen = sizeData/dimDL.width;
+    var scaleServScreen = sizeData/width;
     var scaleSeqScreen=1;
-    if(sizeSeq>dimDL.width)   // width/bps compression
+    if(sizeSeq>width)   // width/bps compression
     {
-        scaleSeqScreen=sizeSeq/dimDL.width; // i.e. nucleotides per pixel
+        scaleSeqScreen = sizeSeq/width; // i.e. nucleotides per pixel
     }
-    /*if(DEBUG_GBV) console.log("\ndataLine(): startSeq: "+startSeq+" - endSeq: "+endSeq+" - sizeSeq: "+sizeSeq+" - graphWidth: "+dimDL.width);
-    if(DEBUG_GBV) console.log("            startData: "+startData+" - endData: "+endData+" - sizeData: "+sizeData);
-    if(DEBUG_GBV) console.log("            scaleSeqScreen (nucleotides/pixel): "+scaleSeqScreen+" - scaleServScreen: "+scaleServScreen+" - scaleSeqServ: "+scaleSeqServ);
-    */
+    if(DEBUG) console.log("dataLine("+classSVG+"): startSeq: "+startSeq+" - endSeq: "+endSeq+" - sizeSeq: "+sizeSeq+" - width(pixels): "+width);
+    if(DEBUG) console.log("            startData: "+startData+" - endData: "+endData+" - sizeData: "+sizeData);
+    if(DEBUG) console.log("            scaleSeqScreen (nucleotides/pixel): "+scaleSeqScreen+" - scaleServScreen: "+scaleServScreen+" - scaleSeqServ: "+scaleSeqServ);
+
 
     // Calculate 'y minimum' and 'y maximum'
-    var ymin=0;
-    var ymax=mean+3*stdev;
-    if(mean-3*stdev>0)
-        ymin=mean-3*stdev;
+    var ymin = 0;
+    var ymax = mean+(3*stdev);
+    if(mean-(3*stdev) > 0)
+        ymin = mean-3*stdev;
 
 
     // Create the array
-    var data=[];
-    for(var i=startData,k=0;i<endData;i=i+scaleServScreen,k++) {
+    var data = [];
+    for(var i=startData, k=0; i < endData; i=i+scaleServScreen, k++)
+    {
         var average = 0;
         var numValues = 0;
-        for (var j = i; j < i + scaleServScreen; j++)
+        for (var j=i; j < i+scaleServScreen; j++)
             if (seqServ[Math.round(j)] >= 0)
             {
                 average += seqServ[Math.round(j)];
                 numValues++;
             }
-        if(numValues != 0) average=average/numValues;
+        if(numValues != 0) average = average/numValues;
 
-        if (average<ymin) average=ymin;
-        if (average>ymax) average=ymax;
+        if (average < ymin) average = ymin;
+        if (average > ymax) average = ymax;
 
         data.push({pos: k, value: average})
     }
 
 
     // Scaling of the axes
-    var x = d3.scale.linear()
+    var xScale = d3.scale.linear()
         .domain(d3.extent(data, function (d) { return d.pos; }))  // xmin, xmax
-        .range([0, dimDL.width]);
-    var y = d3.scale.linear()
+        .range([0, width]);
+    var yScale = d3.scale.linear()
         .domain([ymin, ymax])
-        .range([dimDL.height, 0]);
+        .range([height, 0]);
 
     // Axis labels
-    var xAxis = d3.svg.axis().scale(x).orient("bottom")
+    var xAxis = d3.svg.axis().scale(xScale).orient("bottom")
         .tickFormat(function(d) {return roundTickFormat(d,scaleSeqScreen,initialPoint, startSeq,endSeq)})
         .tickValues(getTicks(sizeSeq, scaleSeqScreen));
-    var yAxis = d3.svg.axis().scale(y).orient("left");
+    var yAxis = d3.svg.axis().scale(yScale).orient("left");
 
     // Function to draw the line
     var line = d3.svg.line()
-        .x(function(d) { return x(d.pos); })
-        .y(function(d) { return y(d.value); });
+        .x(function(d) { return xScale(d.pos); })
+        .y(function(d) { return yScale(d.value); });
 
 
     // Image SVG: image
     var svg = d3.select("#"+nameSVG)
         .append("svg")
-        .attr("width", dimDL.width + marginDL.left + marginDL.right)
-        .attr("height", dimDL.height + marginDL.top + marginDL.bottom)
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
         .append("g")
-        .attr("transform", "translate(" + marginDL.left + "," + marginDL.top + ")");
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-        // Image SVG: axis x
+    // Image SVG: axis x
     svg.append("g")
         .attr("class", classSVG+" x axis")
         .call(xAxis)
-        .attr("transform", "translate(0," + dimDL.height + ")");
+        .attr("transform", "translate(0," + height + ")");
 
     // Image SVG: axis y
     svg.append("g")
@@ -480,6 +336,7 @@ function drawDataLine(nameSVG, classSVG, seqServ, scaleSeqServ, initialPoint, st
         .append("path")
         .attr("d", line);
 
+
     // The image SVG: highlighted line
     if(point!=0)
     {
@@ -489,35 +346,30 @@ function drawDataLine(nameSVG, classSVG, seqServ, scaleSeqServ, initialPoint, st
         var data2 = data.slice(startHighlighted, startHighlighted+endHighlighted);
 
         // The image SVG: line
-        svg.append("path")
-            .datum(data2)
+        svg.append("g")
             .attr("class", classSVG + " line hl")
+            .datum(data2)
+            .append("path")
             .attr("d", line);
     }
 
     // The image SVG: scale text
-    svg.append("text")
-        .text("1 : "+Math.round(scaleSeqScreen))
+    svg.append("g")
         .attr("class", classSVG+" scale")
-        .attr("x", dimDL.width-marginDL.left*2.5)
-        .attr("y", marginDL.top *.75);
+        .append("text")
+        .text("1 : "+Math.round(scaleSeqScreen))
+        .attr("x", width-margin.left*2.5)
+        .attr("y", margin.top*0.75);
 
 
-    // Save information of dataLine1
-    return {
-        width : dimDL.width,
-        height : dimDL.height,
-        scaleSeqScreen : scaleSeqScreen,
-        scaleServScreen : scaleServScreen,
-        data : data,
-        x : x,
-        y : y,
-        x0 : marginDL.left,  //TODO: this is confusing
-        y0 : marginDL.top,
-        svg : svg
-    }
+    // Save information of dataLine
+    globalDL.cv.svg = svg;
+    globalDL.cv.scaleSeqScreen = scaleSeqScreen;
+    globalDL.cv.scaleServScreen = scaleServScreen;
+    globalDL.cv.data = data;
+    globalDL.cv.xScale = xScale;
+    globalDL.cv.yScale = yScale;
 }
-
 
 function getTicks(sizeSeq, scaleSeqScreen)
 {
@@ -542,7 +394,6 @@ function getTicks(sizeSeq, scaleSeqScreen)
     return ticks;
 }
 
-
 function roundTickFormat(d, scaleSeqScreen, initialPoint, start, end)
 {
     var tickLabel = initialPoint+d*scaleSeqScreen;
@@ -557,3 +408,603 @@ function roundTickFormat(d, scaleSeqScreen, initialPoint, start, end)
 
     return tickLabel;
 }
+
+
+
+
+
+//-------------------------------------------------------------
+
+
+
+var dimAnnotation =
+{
+    height : 12,
+    x0:5,
+    y0:7
+};
+
+
+function dataLine_1_drawEnrichment(enrichment)
+{
+    globalDL1.cv.svg.selectAll(".dl1.goterm")
+        .remove();
+
+    var goSize = d3.scale.log().base(10)
+        .domain([1,10e-6])  // p-values
+        .clamp(true)
+        .rangeRound([6, 14]); //letter size
+
+    var goterms=[];
+    for(var k in enrichment) {
+        if(enrichment[k].go_name!=undefined)
+            goterms.push(enrichment[k])
+        else
+            console.log("Error!: GO term "+k+" not found (possibly outdated OBO file?");
+
+    }
+
+    console.log(goterms.length+" enriched terms");
+
+    var tip = d3.tip()
+        .attr('class', 'dl1 goterm-tip')
+        .offset([45, 0])
+        //.style("opacity",.8)
+        .attr("fill","blue")
+        .html(function(d,i)
+        {
+            return "p-value: "+ d3.format(".2e")(d.pval) +"<br>" + d.ngis+"/"+ d.ngo +" genes<br>";
+        });
+
+    globalDL1.cv.svg.call(tip);
+
+
+    var dx=dimAnnotation.x0;
+    var dy=[];
+    var yline=0;
+
+    //console.log("Numero de terminos GO: "+goterms.length);
+    globalDL1.cv.svg.selectAll(".dl1.goterm")
+        .data(goterms)
+        .enter()
+        .append("text")
+        .attr('class', 'dl1 goterm')
+        .attr('x', function(d)
+        {
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext("2d");
+            ctx.font = goSize(d.pval)+"px sans-serif";
+            var width = ctx.measureText(" "+d.go_name+" ·").width;
+
+            dx+=width;
+            if(dx>=dimDL.width) {
+                yline++;
+                dx = dimAnnotation.x0 + width;
+            }
+            dy[d.go_name]=dimAnnotation.y0+10*yline;
+            //console.log(d.go_name+" "+ dy[d.go_name]);
+            return dx-width; }
+    )
+        .attr('y', function(d) {
+            return dy[d.go_name];//*Math.max(1,dx/dimDL.width)
+        })
+        .attr('font-size', function(d) { //console.log("Tamaño de "+ d.go_name+": "+d.pval+" "+goSize(d.pval)+"px");
+            return goSize(d.pval)+"px" })
+        .text(function(d){
+            //console.log(d.go_name);
+            return " "+d.go_name+" ·"})
+        .on('mouseover', tip.show)
+        .on('mouseout', tip.hide);
+
+}
+
+function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
+{
+
+    var factor=dataLine.cv.scaleSeqScreen*dataLine.cv.scaleServScreen; // TODO: factor es 1?    SIEMPRE??
+
+    //console.log(annotations);
+    //console.log(factor);
+
+
+    //gene line
+    dataLine.cv.svg.append("g")
+        .selectAll(".dl2.annotation")
+        .data(annotations)
+        .enter().append("rect")
+        .attr('class', 'dl2 annotation')
+        .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
+        .attr("x", function(d)
+        {  return Math.max(0,(d.start-startSeq)*factor) })
+        .attr("y", function(d){  var y=0; y=d.sense=="+"?0:15; y+=(d.type=="gene" || d.type=="transcript")?5:0; return y;})
+        .attr("width", function(d){return Math.max(0,Math.min(globalDL2.cv.dim.width-Math.max(0,(d.start-startSeq)*factor), Math.max(0,d.end-Math.max(startSeq, d.start)*factor)))})
+        .attr("height", function(d){
+            var h=dimAnnotation.height;
+            if (d.type=="gene" || d.type=="transcript")
+                h=dimAnnotation.height*.25;
+            return h});
+
+    //gene arrow
+    dataLine.cv.svg.append("g")
+        .selectAll(".dl2.annotation.arrow")
+        .data(annotations)
+        .enter().append("polygon")
+        .attr('class', 'dl2 annotation arrow')
+        .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
+        .attr("points", function(d){
+            //TODO
+            var y0=d.sense=="+"?0:15;
+            var x0=Math.max(0,(d.start-startSeq)*factor);
+            if(d.sense=="+")
+                x0+=Math.min(globalDL2.cv.dim.width-Math.max(0,(d.start-startSeq)*factor), Math.max(0,d.end-Math.max(startSeq, d.start)*factor));
+            if(d.sense=="+")
+                path=x0+","+y0+ " " +x0+", "+(y0+dimAnnotation.height)+" "+(x0+dimAnnotation.height *.5)+","+(y0+dimAnnotation.height *.5);
+            else
+                path=x0+","+y0+ " " +x0+", "+(y0+dimAnnotation.height)+" "+(x0-dimAnnotation.height *.5)+","+(y0+dimAnnotation.height *.5);
+            if(d.end<startSeq || d.start>startSeq+globalDL2.cv.dim.width)
+                return "";
+            if(d.type.indexOf("gene")>-1)
+                return path;
+            else
+                return "";
+        });
+
+    //TODO: far below/above cracker?
+
+    //gene labels
+    dataLine.cv.svg.append("g")
+        .selectAll(".dl2.annotation.label")
+        .data(annotations)
+        .enter().append("text")
+        .attr('class', 'dl2 annotation label')
+        .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
+        .attr("x", function(d) {
+            return Math.max(0,(d.start-startSeq+6)*factor);
+        })
+        .attr("y", function(d){   return d.sense=="+"?10:25})
+        .text(function(d){
+            res="";
+            if(d.end>startSeq)
+                if(d.type.indexOf("gene")>-1)
+                    res=d.id;
+            return res;
+        });
+
+}
+
+
+function setSequences(response)
+{
+    globalDL3.seqs=response.seqs;
+    globalDL3.alignment=response.alignment;
+    globalDL3.aconsensus=response.aconsensus;
+    globalDL3.aprofile=response.aprofile;
+    globalDL3.consensus=response.consensus;
+    globalDL3.profile=response.profile;
+
+    globalDL3.motifs=response.motifs;
+    globalDL3.locations=response.locations;
+    globalDL3.motifConsensus=response.motifConsensus;
+    globalDL3.motifProfile=response.motifProfile;
+}
+
+
+function dataLine_2(point, sizePattern, numNucleotides)
+{
+    // We round to the nearest hundred from sizePattern. E.g. 270 --> 300,  540 --> 500
+    var focusLine = Math.round(sizePattern*globalSeq.ws/100)*100;
+
+    var startSeq = point-(numNucleotides/2)+(focusLine/2);
+    var endSeq   = point+(numNucleotides/2)+(focusLine/2);
+
+    // Get the part of sequence that we need to draw
+    var result = Server.getPartSeq(globalSeq.track, startSeq, endSeq); //the abundance
+
+    // We use the core function
+    dataLine_core(false, globalSeq, globalDL2,
+        result.partSeq, 1, 0, numNucleotides, startSeq,
+        point, sizePattern);
+
+    // Save information of dataLine2
+    globalDL2.startSeq = startSeq;
+    globalDL2.endSeq = endSeq;
+
+
+    //-------------------------------------------------------------
+
+    //remove the nucleotide line too
+    var imageSVG = $("#lineSeq3");
+    if ( imageSVG.length) { imageSVG.empty(); }
+
+    var nuc=Server.nucleotides(startSeq, endSeq, globalSeq.track);//and the nucleotides for the third lane
+
+
+    globalDL2.cv.svg.selectAll(".dl2.line").on("mouseover", function (d)
+    {
+
+        //DRAWING BRACKETS
+        var bh=40;//bracket height
+        var x0=d3.event.layerX-marginDL.left;
+        var y0=d3.event.layerY-dimDL.height*2+30;
+        //console.log(x0+","+y0+" start: "+start);
+
+        //determine the width of the brackets (note: approximate)
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext("2d");
+        ctx.font = "12px Courier New";
+        var width = ctx.measureText("A").width;
+        var len=dimDL.width/(width*2)
+
+        //var start=startSeq+d3.event.layerX-marginDL.left; //by now just taking the matched sequence.
+        var start=startSeq+d3.event.layerX-marginDL.left-len; //taking the left bracket as start
+
+        //replace brackets
+        d3.selectAll(".dl2.line.bracket").remove();//removes everything, not only brackets
+        drawBracket(globalDL2.cv.nameSVG,"dl2 line",x0-len, y0, true, bh);
+        drawBracket(globalDL2.cv.nameSVG,"dl2 line",x0+len, y0, false, bh);
+
+        //DRAWING NUCLEOTIDES
+        drawNucleotides("lineSeq3", "dl3", start, point, nuc.seq, startSeq);
+    });
+
+
+
+
+    var annotations = Server.annotationsGenes(point,"[\"any\"]",globalDL2.cv.dim.width, "center", globalSeq.track, "False");
+    if(annotations.hasOwnProperty(point)) // if object "annotations" has no the point, don't draw the line annotations
+    {
+        console.log("tiene punto(s)");
+        //console.log(annotations);
+        var annotLine = drawAnnotationLine(globalDL2, annotations[point], startSeq, endSeq);
+    }
+    else
+    {
+        console.log("no tiene punto(s)");
+        //console.log(annotations);
+    }
+}
+
+
+
+/**
+ * Draws a bracket figure
+ * @param svg to which we append the brackets
+ * @param x0 middle point x of the bracket
+ * @param y0 middle point y of the braket vertical line
+ * @param left true if it's a left bracket, false if it's right
+ * @param height height of the bracket
+ */
+function drawBracket(nameSVG, classSVG, x0, y0, left, height, clean)
+{
+    var desp=left?5:-5;
+    var bracket="M "+(x0+desp)+", "+(y0-height *.5)+
+        " L "+(x0)+", "+(y0-height *.5)+
+        " L "+(x0)+", "+(y0+height *.5)+
+        " L "+(x0+desp)+", "+(y0+height *.5);
+
+    if(clean)
+    {
+        d3.select("#"+nameSVG)
+            .select("svg")
+            .select("g")
+            .selectAll("")
+    }
+    // The image SVG: line
+    d3.select("#"+nameSVG)
+        .select("svg")
+        .select("g")
+        .append("path")
+        .attr("d", bracket)
+        .attr("class", classSVG+" bracket")
+}
+
+
+
+//nucleotide level
+var globalDL3 =
+{
+    dim : dimDL,
+    margin : marginDL,
+
+    nameSVG : "lineSeq3",
+    classSVG : "dl3",
+
+    scaleSeqScreen : null,
+    scaleServScreen : null,
+    data : null,
+    x : null,
+    y : null,
+    svg : null,
+
+
+    seqs: null,
+    alignment: null,
+    aconsensus: null,
+    aprofile: null,
+    consensus: null,
+    profile: null,
+
+    motifs: null,
+    locations: null,
+    motifConsensus: null,
+    motifProfile: null
+};
+
+
+
+/**
+ *
+ * @param nameSVG Name of the svg tag hosting the image
+ * @param classSVG Class of the svg tag hosting the image
+ * @param start starting position from the mouse hovering
+ * @param point point in the sequences retrieved corresponding to our visualization
+ * @param wholeSeq all the nucleotides visualized (not only the ones matching the pattern but all the ones in lane2)
+ * @returns {{width: *, height: *, data: *, x0: number, y0: number, svg: *}}
+ */
+function drawNucleotides(nameSVG, classSVG, start, point, wholeSeq, startWholeSeq)
+{
+    start=Math.round(start);
+    startWholeSeq=Math.round(startWholeSeq);
+    wholeSeq=wholeSeq.toUpperCase();
+
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext("2d");
+    ctx.font = "12px Courier New";
+    var letterWidth = ctx.measureText("A").width;
+
+    var displace=Math.round(Math.max(0,start-point)); //if left bracket is below the first nucleotide of the seq we set to 0
+
+    var numLetters=Math.floor(dimDL.width/letterWidth);
+    var seq=globalDL3.seqs[point];      //searched seq (do not confuse with wholeSeq)
+    var startSearchedSeq=point
+
+    // First, we delete the image, if this exist
+    var imageSVG = $("#" + nameSVG);
+    if (imageSVG.length) {
+        imageSVG.empty();
+    }
+
+    // Image SVG: image
+    var svg = d3.select("#" + nameSVG)
+        .append("svg")
+        .attr("width", dimDL.width + marginDL.left + marginDL.right)
+        .attr("height", dimDL.height + marginDL.top + marginDL.bottom)
+        .append("g")
+        .attr("transform", "translate(" + marginDL.left + "," + marginDL.top + ")");
+    //.attr("class", "dl3 ")
+
+    svg.selectAll("text").remove();
+
+    // The image SVG: scale text
+    svg.append("text")
+        .text(Math.round(letterWidth) + " : 1")
+        .attr("class", classSVG + " scale")
+        .attr("x", dimDL.width - marginDL.left * 2.5)
+        .attr("y", marginDL.top - 5);
+
+    var x0 = marginDL.left - 50;
+
+    //draw context brackets
+    drawBracket(nameSVG, classSVG, x0 - 5, dimDL.height * 0.5, true, dimDL.height);
+    drawBracket(nameSVG, classSVG, dimDL.width + 5, dimDL.height * 0.5, false, dimDL.height);
+
+
+    //Draw the sequence
+    var letters = []
+    for (var i = start-startWholeSeq; i < start-startWholeSeq+numLetters; i++)
+        letters.push(wholeSeq[i]);
+    var motloc=globalDL3.locations[point]; //TODO: check -1 values in locations
+
+    svg.selectAll("mainNucleotides")
+        .data(letters)
+        .enter()
+        .append("text")
+        .text(function (d) {
+            return d
+        })
+        .attr("class", classSVG + " text")
+        .attr("fill", function (d, i) {
+            if (i+start>=point && i+start<point+seq.length)
+                return "darkred";
+            else
+                return "steelblue";
+        })
+        .style("font-weight", function (d, i) {
+            if (start+i>=point+motloc && start+i<point+motloc+globalDL3.motifs[point].length)
+                return "bold";
+            else
+                return "";
+        })
+
+        .attr("x", function (d, i) {
+            return (x0 + letterWidth * i)
+        })
+        .attr("y", marginDL.top * 1.7);
+
+
+    //Draw the remaining sequences:
+    var cont = 1;
+    var letterHeight = 12;
+    var separator = 5;
+    var shownKeys=[];
+    for (var key in globalDL3.seqs) {
+        if (key != point) {
+            shownKeys.push(key);
+            var letters0 = []
+            var j=0
+            for (var i = 0; i<wholeSeq.length;i++)
+                if(i<point-startWholeSeq || i>=point-startWholeSeq+seq.length)
+                    letters0.push("-");
+                else letters0.push(globalDL3.seqs[key][j++]);
+
+            var letters=[]
+            for (var i = start-startWholeSeq; i < start-startWholeSeq+numLetters; i++)
+                letters.push(letters0[i]);
+
+            var motloc=globalDL3.locations[key];
+
+            svg.selectAll("Nucleotides_"+key)
+                .data(letters)
+                .enter()
+                .append("text")
+                .text(function (d) {
+                    return d
+                })
+                .attr("class", classSVG + " text")
+                .attr("fill", function (d, i) {
+                    if (i+start>=point && i+start<point+seq.length)
+                        return "darkred";
+                    else
+                        return "steelblue";
+                })
+                .style("font-weight", function (d, i) {
+                    if (start+i>=point+motloc && start+i<point+motloc+globalDL3.motifs[point].length)
+                        return "bold";
+                    else
+                        return "";
+                })
+                .attr("x", function (d, i) {
+                    return (x0 + letterWidth * i)
+                })
+                .attr("y", marginDL.top * 1.7 + separator + cont * letterHeight);
+
+            cont += 1;
+        }
+        if (cont > 8)
+            break;
+    }
+
+    shownKeys.push("consensus");
+    //Draw locations
+    svg.selectAll("Nucleotides_Text"+key)
+        .data(shownKeys)
+        .enter()
+        .append("text")
+        .text(function (d) { return d; })
+        .attr("class", classSVG+" axis y text")
+        .attr("x", x0-45)
+        .attr("y", function(d,i){ return marginDL.top * 1.7 + separator*3.5 + i * letterHeight});
+
+    //draw consensus motif
+    var letters = []
+    for (var i in globalDL3.motifConsensus)
+        letters.push(globalDL3.motifConsensus[i])
+
+    var colscale=d3.scale.linear().domain([0,1]).range(["white", "black"]);
+
+    console.log("scale done");
+    svg.selectAll("consensus")
+        .data(letters)
+        .enter()
+        .append("text")
+        .text(function (d) {
+            return d
+        })
+        .attr("class", classSVG + " consensus")
+        .attr("fill", function (d, i) {
+            return colscale(globalDL3.motifProfile[d][i])
+        })
+        .style("font-weight", function (d, i) {
+            //if (globalDL3.motifProfile[d][i] > 0.9)
+            //    return "bold";
+            //else
+            return "bold";
+        })
+        .style("text-decoration", function(d,i){
+            if (globalDL3.motifProfile[d][i] > 0.9)
+                return "underline";
+            else
+                return "";})
+        .attr("x", function (d, i) {
+            return (x0 +dimDL.width *.5-letterWidth *.5 + letterWidth * i)
+        })
+        .attr("y", marginDL.top * 1.7 + separator * 2 + cont * letterHeight);
+
+
+    /*    //Draw the consensus sequence (by now not considered useful, maybe with alignments...)
+     if (globalDL3.aconsensus == undefined) {
+     var letters = []
+     for (var i = displace; i < Math.min(displace+numLetters, globalDL3.consensus.length); i++)
+     letters.push(globalDL3.consensus[i])
+     svg.selectAll("consensus")
+     .data(letters)
+     .enter()
+     .append("text")
+     .text(function (d) {
+     return d
+     })
+     .attr("class", classSVG + " consensus")
+     .attr("fill", function (d, i) {
+     if (globalDL3.profile[d][displace+i] > 0.5)
+     //if(globalDL3.profile[i]>0.5)
+     return "black";
+     else if (globalDL3.profile[d][displace+i] > 0.25)
+     //else if(globalDL3.profile[i]>0.25)
+     return "lightgrey";
+     else
+     return "white";
+     })
+     .style("font-weight", function (d, i) {
+     if (globalDL3.profile[d][displace+i] > 0.75)
+     //if(globalDL3.profile[i]>0.75)
+     return "bold";
+     else
+     return "";
+     })
+     .attr("x", function (d, i) {
+     return (x0 + letterWidth * i)
+     })
+     .attr("y", marginDL.top * 1.7 + separator * 2 + cont * letterHeight);
+     }
+     else {
+     //draw consensus from the alignment: it's ready but we need to think more about it
+     var letters = []
+     for (var i = 0; i < globalDL3.aconsensus.length; i++)
+     letters.push(globalDL3.aconsensus[i])
+     svg.selectAll("aconsensus")
+     .data(letters)
+     .enter()
+     .append("text")
+     .text(function (d) {
+     return d
+     })
+     .attr("class", classSVG + " consensus")
+     .attr("fill", function (d, i) {
+     if (globalDL3.aprofile[d][i] > 0.5)
+     //if(globalDL3.aprofile[i]>0.5)
+     return "black";
+     else if (globalDL3.aprofile[d][i] > 0.25)
+     //else if(globalDL3.aprofile[i]>0.25)
+     return "lightgrey";
+     else
+     return "white";
+     })
+     .style("font-weight", function (d, i) {
+     if (globalDL3.aprofile[d][i] > 0.75)
+     //if(globalDL3.aprofile[i]>0.75)
+     return "bold";
+     else
+     return "";
+     })
+     .attr("x", function (d, i) {
+     return (x0 + letterWidth * i)
+     })
+     .attr("y", marginDL.top * 1.7 + 15);
+     }*/
+    globalDL3.svg = svg;
+    globalDL3.data=seq;
+
+    // Save information of dataLine1
+    return {
+        width : dimDL.width,
+        height : dimDL.height,
+        data : seq,
+        x0 : marginDL.left,
+        y0 : marginDL.top,
+        svg : svg
+    }
+}
+
+
+
+

@@ -204,4 +204,3 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
     return ret
 
 
-

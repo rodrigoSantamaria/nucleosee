@@ -176,5 +176,3 @@ def search(pattern="", d=0):
 
 
 
-
-

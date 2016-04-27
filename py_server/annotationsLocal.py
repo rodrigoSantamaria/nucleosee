@@ -387,3 +387,4 @@ def motif(mm, slength, dataFASTA, krange=range(8,9)):
     return {'motifs':bm, 'score':bs, 'consensus':ms.consensus(bm)}
     
 motif(mm, len(pattern)*ws, dataFASTA, range(8,9)) #about 1 min per k range
+
