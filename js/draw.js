@@ -209,7 +209,7 @@ function drawEnrichment(enrichment, annotations)
                         yline++;
                         dx = dimAnnotation.x0 + width;
                         }
-                    dy[d.go_name]=dimAnnotation.y0+10*yline;
+                    dy[d.go_name]=dimAnnotation.y0+globalDL1.dim.height+25+10*yline;
                     console.log(d.go_name+" "+ dy[d.go_name]);
                     return dx-width; }
                 )
@@ -339,7 +339,35 @@ function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
                     return "";
             });
 
-        //TODO: far below/above cracker?
+
+    //draw crackers if the annotation goes beyond screen limits
+    dataLine.svg.append("g")
+        .selectAll(".dl2.annotation.cracker")
+        .data(annotations)
+        .enter().append("path")
+        .attr('class', 'dl2 annotation cracker')
+        .attr("transform", "translate(0," + (globalDL2.dim.height+20) + ")")
+        .attr("d", function(d){
+            var cw=3;//cracker width and height
+            var ch=10;
+            var x0=0; var y0=1;
+            if (d.start < startSeq)
+                {
+                x0+=5;
+                if(d.sense=="-")
+                    y0+=15;
+                return "M"+(x0+cw *.5)+","+y0+"L"+x0+","+(y0+ch*.5)+"L"+(x0+cw)+","+(y0+ch*.5)+"L"+x0+","+(y0+ch);
+                }
+            if (d.end > endSeq)
+                {
+                if (d.sense == "-")
+                    y0 += 15;
+                x0+=globalDL2.dim.width-10;
+                return "M"+(x0+cw *.5)+","+y0+"L"+x0+","+(y0+ch*.5)+"L"+(x0+cw)+","+(y0+ch*.5)+"L"+x0+","+(y0+ch);
+                }
+            return "";
+        });
+
 
         //gene labels
     dataLine.svg.append("g")
@@ -349,7 +377,7 @@ function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
         .attr('class', 'dl2 annotation label')
         .attr("transform", "translate(0," + (globalDL2.dim.height+20) + ")")
         .attr("x", function(d) {
-            return Math.max(0,(d.start-startSeq+6)*factor);
+            return Math.max(10,(d.start-startSeq+6)*factor);
             })
         .attr("y", function(d){   return d.sense=="+"?10:25})
         .text(function(d){
@@ -360,6 +388,7 @@ function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
             return res
         });
     }
+
 
 function dataLine2(point, sizePattern, numNucleotides) {
     // Get information of dataLine2
