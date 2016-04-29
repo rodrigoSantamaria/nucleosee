@@ -76,7 +76,7 @@ function main(file, forceReload)
 
     Server.connect(DEBUG_GBV, user, password);
 
-    processedData=uploadFileAndPreprocess(file, forceReload, track, ws, nb, maxSize);
+    processedData=uploadFileAndPreprocess(file, forceReload, track, ws, nb, maxSize,2, "False");//stdev and repreprocess the latest 2
 
     drawing(processedData, ws, maxSize);
 }
@@ -84,7 +84,7 @@ function main(file, forceReload)
 
 // ANALYSIS: UPLOAD FILE AND PREPROCESSING
 ////////////////////////////////////////////
-function uploadFileAndPreprocess(file, forceReload, track, ws, nb, maxSize)
+function uploadFileAndPreprocess(file, forceReload, track, ws, nb, maxSize, stdev, repreprocess)
 {
     // READ FILE
     //------------
@@ -101,7 +101,7 @@ function uploadFileAndPreprocess(file, forceReload, track, ws, nb, maxSize)
     if (DEBUG_GBV) console.log("\n----- PREPROCESSING -----");
 
     startTime = new Date();
-    var processedData0 = Server.preprocess(file.name, track, ws, nb, maxSize);
+    var processedData = Server.preprocess(file.name, track, ws, nb, maxSize, stdev, repreprocess);
     if (DEBUG_GBV) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
 
     /* Esto es lo que habría que hacer para invocar al cambio de cromosoma
@@ -160,26 +160,49 @@ function searchPoints()
         var start = new Date().getTime();
 
         //var annotations=(Server.annotationsGenes("[" + points + "]", "[\"gene\"]", pattern.length * ws, "left", processedData.chromosomes[0]));
-        var annotations="";
         var numMatches=0;
+
+        //This is a much faster code but does not retrieve gene-annotation mappings
+        var gis="";
+        var annotations=null;
         for(var i=0;i<processedData.chromosomes.length;i++) {
             var points=JSON.parse(result.points[processedData.chromosomes[i]]);
             for( var j=0;j<points.length;j++)
                 points[j]*=ws;
             console.log(points.length+" matches in track "+processedData.chromosomes[i]);
             numMatches+=points.length
-            annotations+=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "True");
+            gis+=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "True");
             }
+         gis=gis.replace(/,$/, "");
+
+/*      //Will solve posterior annotation queries, but it's very time consuming (increases from 1 to 10
+        var gis=""//genes of interest
+        var annotations={}//for each position, the genes in it
+        for(var i=0;i<processedData.chromosomes.length;i++) {
+            var points=JSON.parse(result.points[processedData.chromosomes[i]]);
+            for( var j=0;j<points.length;j++)
+                points[j]*=ws;
+            console.log(points.length+" matches in track "+processedData.chromosomes[i]);
+            numMatches+=points.length
+            //annotations[processedData.chromosomes[i]]=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "False");
+            annotations[processedData.chromosomes[i]]=Server.annotationsGenes("[" + points + "]", "[\"any\"]", globalDL2.dim.width, "center", processedData.chromosomes[i], "False");//this here might be too burdening
+            gis+=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "True");
+
+        }
+        gis=gis.replace(/,$/, "");*/
+
         console.log("Total number of matches: "+numMatches);
         var end = new Date().getTime();
+        setAnnotations(gis,annotations)
         console.log('Getting annotations took: ' + (end - start));
 
+
         var start = new Date().getTime();
-        var enrichment = Server.enrichment(annotations, "fdr", 0.01)
+        var enrichment = Server.enrichment(gis, "fdr", 0.01)
         var end = new Date().getTime();
         console.log('Enrichment analysis took: ' + (end - start));
 
-        drawEnrichment(enrichment);
+        drawEnrichment(enrichment, annotations);
 
         //GET SEQUENCES, MOTIFS, (ALIGNMENT), CONSENSUS
         //NOTE: alignment takes more than 1s if there's >50 sequences! (using the fastest method: kalign)

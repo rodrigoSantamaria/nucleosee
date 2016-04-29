@@ -142,7 +142,7 @@ function dataLine1(seqServ, startSeq, endSeq, fullLength, maxSize, mean, stdev, 
 }
 
 
-function drawEnrichment(enrichment)
+function drawEnrichment(enrichment, annotations)
     {
         globalDL1.svg.selectAll(".dl1.goterm")
             .remove();
@@ -166,15 +166,26 @@ function drawEnrichment(enrichment)
         var tip = d3.tip()
             .attr('class', 'dl1 goterm-tip')
             .offset([45, 0])
-            //.style("opacity",.8)
-            .attr("fill","blue")
             .html(function(d,i)
             {
-                return "p-value: "+ d3.format(".2e")(d.pval) +"<br>" + d.ngis+"/"+ d.ngo +" genes<br>";
+                var text="p-value: "+ d3.format(".2e")(d.pval) +"<br>" + d.ngis+"/"+ d.ngo +" genes<br>";
+                /*if(fixed)
+                    {
+                    console.log("Fixed!");
+                    for (var g in d.gis)
+                        text += d.gis[g] + "<br>";
+                    }*/
+                //TODO: highlight the gis in the track visible now (infrasructure ready on globalDL1.iannotations and enrichment.gis)
+                //Such infrastructure requires pre-load of every position annotations: quite expensive in time at the search
+                /*console.log("Related positions:")
+                for(var g in d.gis)ls
+
+                    console.log(d.gis[g]+"\t"+globalDL1.iannotations[globalSeq.track][d.gis[g]]);*/
+                //This is asking now to the go terms annotations
+                return text;
             });
 
         globalDL1.svg.call(tip);
-
 
         var dx=dimAnnotation.x0;
         var dy=[];
@@ -211,7 +222,8 @@ function drawEnrichment(enrichment)
                 //console.log(d.go_name);
                 return " "+d.go_name+" ·"})
             .on('mouseover', tip.show)
-            .on('mouseout', tip.hide);
+            .on('mouseout', tip.hide)
+            //.on('click', function(){tip.fixed?fix.show(true):fix.show(false); tip.fixed=!tip.fixed;});
 
     }
 
@@ -230,7 +242,7 @@ function drawPoints(points, sizePattern, numNucleotides)
     for(i=0; i<seqPoints.length;i++)
     {
         var dataPoint = Math.floor(seqPoints[i]/globalDL1.scaleSeqScreen);
-        dataPoints.push({pos: (globalDL1.data)[dataPoint].pos, value: (globalDL1.data)[dataPoint].value});
+        dataPoints.push({real_pos: seqPoints[i], pos: (globalDL1.data)[dataPoint].pos, value: (globalDL1.data)[dataPoint].value});
     }
 
 
@@ -240,8 +252,8 @@ function drawPoints(points, sizePattern, numNucleotides)
         .offset([30, 0])
         .html(function(d,i)
         {
-            dataLine2(seqPoints[i], sizePattern, numNucleotides);
-            return "<strong>"+d3.format(",")(seqPoints[i]) + ":</strong> " + d3.format(".2f")(d.value);
+            dataLine2(d.real_pos, sizePattern, numNucleotides);
+            return "<strong>"+d3.format(",")(d.real_pos) + ":</strong> " + d3.format(".2f")(d.value);
         });
 
 
@@ -409,6 +421,9 @@ function dataLine2(point, sizePattern, numNucleotides) {
     var annotations = Server.annotationsGenes("["+point+"]","[\"any\"]",globalDL2.dim.width, "center", globalSeq.track, "False");
     if(annotations.hasOwnProperty(point))
         var annotLine = drawAnnotationLine(dataLine, annotations[point], startSeq, endSeq);
+    //NOTE: this if we compute annotations previously, in the moment of the search (might be time consuming)
+    //if(globalDL1.annotations[globalSeq.track].hasOwnProperty(point))
+    //    var annotLine = drawAnnotationLine(dataLine, globalDL1.annotations[globalSeq.track][point], startSeq, endSeq);
     // >>>>>> RODRIGO
 
 
@@ -434,6 +449,24 @@ function setSequences(response)
         globalDL3.locations=response.locations;
         globalDL3.motifConsensus=response.motifConsensus;
         globalDL3.motifProfile=response.motifProfile;
+    }
+
+function setAnnotations(gis, annotations)
+    {
+    globalDL1.gis=gis;                 //list of gene ids
+    if(annotations!=null)
+        {
+        globalDL1.annotations = annotations;//position -> element id (element can be a gene or other entity)
+        globalDL1.iannotations = {}       //gene id -> position
+        for (var p in annotations) {
+            globalDL1.iannotations[p] = {}
+            for (var e in annotations[p]) {
+                for (var i = 0; i < annotations[p][e].length; i++)
+                    if (annotations[p][e][i]["type"] == "gene")
+                        globalDL1.iannotations[p][annotations[p][e][i]["id"]] = e
+            }
+        }
+        }
     }
 
 /**

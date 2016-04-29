@@ -121,12 +121,12 @@
          *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
          *                      on.
          */
-        Server.preprocess = function (filename,track,ws,nb,maxSize)
+        Server.preprocess = function (filename,track,ws,nb,maxSize, stdev, reload)
         {
             var response=[];
             $.ajax(
                 {
-                    url: _serverPath+"preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize,
+                    url: _serverPath+"preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&stdev="+stdev+"&recharge="+reload,
                     type: "GET",
                     datatype:"json",
                     async: false,    // default: true
@@ -334,9 +334,11 @@
 
         Server.enrichment = function (annotations, correction, alpha)
         {
+            console.log("Annotations are: ",annotations)
             annotations="[\""+annotations+"\"]";
             annotations=annotations.replace(/,/g,"\",\"");
             console.log("Number of gene annotations:"+annotations.length)
+            console.log("Annotations are: ",annotations)
             var response=[];
             $.ajax(
                 {

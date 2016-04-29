@@ -98,8 +98,9 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
         else:
             e1=x+interval
             s1=x-interval
-        sel=data2[(data2["start"]<s1) & (data2["end"]>e1)] #fully included
-        #sel=data2[((data2["end"]>s1) & (data2["end"]<e1)) | ((data2["start"]>s1) & (data2["start"]<e1)) | ((data2["start"]<s1) & (data2["end"]>e1))] #intersecting (more time expensive and not sure it makes a difference)
+        #sel=data2[(data2["start"]<s1) & (data2["end"]>e1)] #search window fully inside the annotated interval
+        #sel=data2[(data2["start"]<s1) & (data2["end"]>e1)] #annotated interval fully inside the search window
+        sel=data2[((data2["end"]>s1) & (data2["end"]<e1)) | ((data2["start"]>s1) & (data2["start"]<e1)) | ((data2["start"]<s1) & (data2["end"]>e1))] #intersecting (more time expensive and not sure it makes a difference)
         if(len(sel)>0):     
             em[x]=[]
             for s in sel:
@@ -179,15 +180,16 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
     pvals={}
     for k in goterms.keys():
     
-        selgo=len(gis.intersection(goterms[k])) #number of gis in the term
-        selnogo=sel-selgo
+        gisInTerm=gis.intersection(goterms[k])
+        selgo=len(gisInTerm) #gi and go
+        selnogo=sel-selgo #gi not go
     
         unigo=len(goterms[k])-selgo #number of non-gis in the term
-        uninogo=uni-unigo
-    
+        uninogo=uni-len(gis)-len(goterms[k])+selgo
         if(unigo>=minGO and unigo<=maxGO and selgo>0):
-            p = pvalue(unigo, uninogo, selgo, selnogo)
-            pvals[k]={"pval":p.two_tail, "ngis":selgo, "ngo":len(goterms[k])}
+            p = pvalue(selgo, selnogo, unigo, uninogo)
+            #pvals[k]={"pval":p.right_tail, "ngis":selgo, "ngo":len(goterms[k])}
+            pvals[k]={"pval":p.right_tail, "ngis":selgo, "ngo":len(goterms[k]), "gis":list(gisInTerm)}
     print("fisher test finished with ", len(pvals)," terms enriched")
         
     #2) Multiple hypotheses correction
@@ -212,8 +214,7 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
                 if pvalso[k] <= th*(k+1)/len(pvalso):
                     th=pvalso[k-1]
                     break
-        
-    print("multiple hypotheses correction finished with ",len(pvalso),"{} terms")
+        print("multiple hypotheses correction finished with ",len(pvalso),"{} terms")
     print("th is ",th)
     # and filter out terms
     pvalsf={}
@@ -224,6 +225,9 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
     print("number of enriched terms is",len(pvalsf))
 
     return pvalsf
+#%%
+#tal=enrichmentFisher(set(gis),dataGOA, 0.01, "fdr")
+#fisher.pvalue(2,294,255,4584)
 #tal=enrichmentFisher(set(gis),dataGOA,0.01,"fdr")
 #%%
 #def keyL(k):

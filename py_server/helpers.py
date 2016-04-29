@@ -7,42 +7,69 @@ Ancillary methods for python server
 @author: rodri
 """
 
-#Superslow for interaction: 10 seqs of 600 nucleotides takes 14s
-def align(seqs, method="clustalw"):
-    import os
-    from Bio.Alphabet import generic_dna
-    from Bio.Seq import Seq
-    from Bio.SeqRecord import SeqRecord
+#%%
+"""
+This script crops a wig file so max values cannot exceed a given value based
+on standard deviations
+@author: rodri
+"""
     
-    sr=[]
-    for k in seqs.keys():
-        sr.append(SeqRecord(Seq(seqs[k], generic_dna), id=(str)(k)))
-    
-    from Bio import SeqIO
-    output=open("unaligned.fasta", "w")
-    SeqIO.write(sr,output, "fasta")
-    output.close()
+#%%
+#wig="/Users/rodri/Documents/investigacion/IBFG/quique/mono-H3K9_me2_norm_center_wlt.wig"
+#ch=a.readWig(wig)
+#f=open(wig.replace(".wig", "")+"-cropped.wig", "w")
+#for k in ch.keys():
+#    print("computing mean and values")
+#    chi=ch[k]
+#    th=np.mean(chi)+numSD*np.std(chi)
+#    for j in xrange(len(chi)):
+#        chi[j]=str(np.min([th,(float)(chi[j])]))
+#    print("writing header")
+#    f.write("track type=wiggle_0 name=cropped_wig description=\"cropped to "+str(numSD)+" standard deviations\"")
+#    f.write("fixedStep chrom="+str(k)+" start=1 step=1")
+#    print("writing lines")
+#    f.writelines([chi])
+#   # return
+#f.close()
+#%%    
 
-    import subprocess
-    p=subprocess.Popen(["/usr/bin/env", "t_coffee","-quiet -method "+method+" -infile unaligned.fasta -outfile aligned.aln -output=fasta"], bufsize=-1, cwd=u'/Users/rodri/WebstormProjects/seqview/py_server')
-    #p=subprocess.Popen(["/usr/bin/env", "t_coffee","-quiet -output "+method+" -infile mitDNAprimates.fasta -outfile aligned.aln"], bufsize=-1, cwd=u'/Users/rodri/WebstormProjects/seqview/py_server')
-    #p.wait()
-    p.communicate()
-   
-    lines=open("aligned.aln").readlines()
-    aln={}
-    k=""
-    for l in lines:
-        l=l.replace("\n","")
-        if(l[0]=='>'):
-            k=l.replace(">","").replace("  <unknown description>","")
-            aln[k]=""
-        else:
-            aln[k]+=l
-    #os.remove("aligned.aln")
-    os.remove("unaligned.fasta")
-    os.remove("unaligned.dnd")
-    return aln
+
+#Superslow for interaction: 10 seqs of 600 nucleotides takes 14s
+#def align(seqs, method="clustalw"):
+#    import os
+#    from Bio.Alphabet import generic_dna
+#    from Bio.Seq import Seq
+#    from Bio.SeqRecord import SeqRecord
+#    
+#    sr=[]
+#    for k in seqs.keys():
+#        sr.append(SeqRecord(Seq(seqs[k], generic_dna), id=(str)(k)))
+#    
+#    from Bio import SeqIO
+#    output=open("unaligned.fasta", "w")
+#    SeqIO.write(sr,output, "fasta")
+#    output.close()
+#
+#    import subprocess
+#    p=subprocess.Popen(["/usr/bin/env", "t_coffee","-quiet -method "+method+" -infile unaligned.fasta -outfile aligned.aln -output=fasta"], bufsize=-1, cwd=u'/Users/rodri/WebstormProjects/seqview/py_server')
+#    #p=subprocess.Popen(["/usr/bin/env", "t_coffee","-quiet -output "+method+" -infile mitDNAprimates.fasta -outfile aligned.aln"], bufsize=-1, cwd=u'/Users/rodri/WebstormProjects/seqview/py_server')
+#    #p.wait()
+#    p.communicate()
+#   
+#    lines=open("aligned.aln").readlines()
+#    aln={}
+#    k=""
+#    for l in lines:
+#        l=l.replace("\n","")
+#        if(l[0]=='>'):
+#            k=l.replace(">","").replace("  <unknown description>","")
+#            aln[k]=""
+#        else:
+#            aln[k]+=l
+#    #os.remove("aligned.aln")
+#    os.remove("unaligned.fasta")
+#    os.remove("unaligned.dnd")
+#    return aln
 
 #%%
 #import time
