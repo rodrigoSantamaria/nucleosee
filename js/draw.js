@@ -369,6 +369,9 @@ function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
         });
 
 
+
+        
+
         //gene labels
     dataLine.svg.append("g")
         .selectAll(".dl2.annotation.label")
