@@ -6,8 +6,7 @@ body {
 .login-panel {
     margin-top: 25%;
 }
-.div-loading
-{
+.div-loading {
     z-index: 1000;
     padding: 75px;
     position: absolute;
@@ -18,8 +17,7 @@ body {
     height: 100%;
     overflow:auto;
 }
-.div-loading-image
-{
+.div-loading-image {
     position:     absolute;
     top:          50%;
     left:         50%;
@@ -190,19 +188,10 @@ body {
     fill: #9F9;
     fill-opacity: 1;
 }
-
-.tooltip {
-    background: #eee;
-    box-shadow: 0 0 5px #999999;
-    color: #333;
-    display: none;
-    font-size: 11px;
-    left: 10px;
-    padding: 0px;
-    position: absolute;
-    text-align: center;
-    top: 10px;
-    width: 80px;
+.dl2.annotation.cracker{
+    fill: none;
+    stroke: #FFF;
+    stroke-width: 1px;
 }
 
 .dl2.line.bracket{

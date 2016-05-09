@@ -13,12 +13,12 @@ var DEBUG_GBV = true;
 
 var GVB_GLOBAL =
 {
-    filename: null,
+    filename: null,         // filename: name of file
+    chromosomes: null,      // chromosomes: array with the names of all chromosomes
+    track: null,            // track: name of selected chromosome
     ws: 30,                 // window size: discrete to real ratio
-    track: null,            // track: number of chromosome
     nb: 5,                  // num bins
-    maxSize: 400000,        // maximum number of normalized data to store
-    chromosomes: null
+    maxSize: 400000         // maximum number of normalized data to store
 };
 
 
@@ -28,15 +28,15 @@ function checkFile(file)
 {
     destroyAll(false);
 
-    var forceReload = false;
-    if($("#reload").is(':checked') )
-        forceReload = true;
-
-
     if(DEBUG_GBV) console.log("\n----- UPLOAD FILE -----");
     if(DEBUG_GBV) console.log("Name of file: "+file.name);
 
+
     GVB_GLOBAL.filename = file.name;
+
+    var forceReload = false;
+    if($("#reload").is(':checked') )
+        forceReload = true;
 
     // We try to communicate with the server, upload  file (if necessary)
     Server.sendFile(preprocessing, file, forceReload);
@@ -52,17 +52,16 @@ function preprocessing(chromosome)
     if(typeof(chromosome) === 'undefined')
     {
         GVB_GLOBAL.track = "None";
-        if (DEBUG_GBV) console.log("chromosome: "+GVB_GLOBAL.track+" (first chromosome found)");
+        if (DEBUG_GBV) console.log("chromosome: " + GVB_GLOBAL.track + " (first chromosome found)");
         Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, GVB_GLOBAL.ws, GVB_GLOBAL.nb, GVB_GLOBAL.maxSize);
     }
     else
     {
         GVB_GLOBAL.track = chromosome;
-        if (DEBUG_GBV) console.log("chromosome: "+GVB_GLOBAL.track);
+        if (DEBUG_GBV) console.log("chromosome: " + GVB_GLOBAL.track);
         Server.getTrack(drawingFirstDataLine, GVB_GLOBAL.track);
     }
 }
-
 
 
 // DRAWING: DATALINE 1
@@ -98,7 +97,6 @@ function drawingFirstDataLine(processedData, chromosome)
 
 
 
-
 // SEARCH POINTS
 ////////////////////////////////
 function searchPattern()
@@ -114,18 +112,13 @@ function searchPattern()
 }
 
 
-
-
-
-
-
 // DRAW POINTS ON DATALINE 1
 ////////////////////////////////
 function drawPoints(result)
 {
     // DATALINE 1: DRAW POINTS
     //----------------------------------
-    var chromosome  = GVB_GLOBAL.track;
+    var chromosome          = GVB_GLOBAL.track;
     var numNucleotidesDraw  = globalDL1.cv.dim.width; // because the scale is 1:1
     var points              = JSON.parse(result.points[chromosome]);
 
@@ -140,7 +133,7 @@ function drawPoints(result)
 
 
 
-
+     // TODO: mejorar esto...
      //GET SEQUENCES, MOTIFS, (ALIGNMENT), CONSENSUS
      //NOTE: alignment takes more than 1s if there's >50 sequences! (using the fastest method: kalign)
      var start = new Date().getTime();
@@ -148,7 +141,7 @@ function drawPoints(result)
          points[j]*=GVB_GLOBAL.ws;
      var response=Server.nucProfile("["+points+"]",result.sizePattern*GVB_GLOBAL.ws,globalSeq.track); //TODO: by now only on this chromosome
      var end = new Date().getTime();
-     console.log("Sequence analysis took: "+(end-start))
+     console.log("Sequence analysis took: "+(end-start));
      setSequences(response)
 }
 
@@ -157,17 +150,40 @@ function drawPoints(result)
 function getAllAnnotations(allPoints, sizePattern)
 {
     var chromosomes = GVB_GLOBAL.chromosomes;
+    var ws          = GVB_GLOBAL.ws;
 
-    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*GVB_GLOBAL.ws, "left", "True",
-                                chromosomes, GVB_GLOBAL.ws);
+    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "True",
+                                chromosomes, ws);
 }
 
 
 // GET ENRICHMENT
 ////////////////////////////////
-function getEnrichment(annotations)
+function getEnrichment(gis)
 {
-    Server.enrichmentGO(drawEnrichment, annotations, "fdr", 0.01)
+    /*
+        // Jonatan: esta parte habría que implementarla en Server.allAnnotationsGenes, para que devolviera
+        // también "annotations", propagándolo hacia dataLine_1_drawEnrichment().
+
+        //Will solve posterior annotation queries, but it's very time consuming (increases from 1 to 10
+        var gis=""//genes of interest
+        var annotations={}//for each position, the genes in it
+        for(var i=0;i<processedData.chromosomes.length;i++) {
+            var points=JSON.parse(result.points[processedData.chromosomes[i]]);
+            for( var j=0;j<points.length;j++)
+                points[j]*=ws;
+            console.log(points.length+" matches in track "+processedData.chromosomes[i]);
+            numMatches+=points.length
+            //annotations[processedData.chromosomes[i]]=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "False");
+            annotations[processedData.chromosomes[i]]=Server.annotationsGenes("[" + points + "]", "[\"any\"]", globalDL2.dim.width, "center", processedData.chromosomes[i], "False");//this here might be too burdening
+            gis+=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "True");
+        }
+        gis=gis.replace(/,$/, "");
+        setAnnotations(gis,annotations)
+    */
+
+
+    Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
 }
 
 
@@ -189,20 +205,23 @@ function createIconsChromosomes(chromosomes)
     $('#imagesChromosomes').empty();
     for(var i=0; i<chromosomes.length; i++)
     {
-        $('#imagesChromosomes').append('<img style="margin-top:15px;margin-right:5px" id="'+chromosomes[i]+'" class="image-chromosome" data-chromosome="'+chromosomes[i]+'" src="images/chromosome.png" height="24px" width="24px">');
+        $('#imagesChromosomes').append('<img style="margin-top:15px;margin-right:5px"'+
+            'id="'+chromosomes[i]+'" class="image-chromosome" data-chromosome="'+chromosomes[i]+'" '+
+            'src="images/chromosome.png" height="24px" width="24px">');
     }
 
     $(".image-chromosome").bind( "click", function()
     {
         var chromosomeImage = $(this).data('chromosome');
 
-        $(".image-chromosome").css("background-color", "");
-        $(this).css("background-color", "silver");
+        $(".image-chromosome").attr("src", "images/chromosome.png");
+        $(this).attr("src", "images/chromosome_selected.png");
 
         preprocessing(chromosomeImage);
     });
 
-    $("#"+chromosomes[0]).css("background-color", "silver");
+    $("#"+chromosomes[0]).attr("src", "images/chromosome_selected.png");
+
 }
 
 
@@ -222,7 +241,8 @@ function destroyAll(clear)
     // Empty all icons of chromosomes
     $("#imagesChromosomes").empty();
 
-    // Clear console
+
+    // Clear console and files configuration
     if(clear && DEBUG_GBV)
     {
         // Reset input files

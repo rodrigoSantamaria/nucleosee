@@ -124,7 +124,6 @@ function dataLine_1(track, fullLength, seqServ, startSeq, endSeq, maxSize, mean,
     globalSeq.mean          = mean;
     globalSeq.stdev         = stdev;
     globalSeq.scaleSeqServ  = 1;
-
     if(Math.floor(fullLength/maxSize) >= 1)
         globalSeq.scaleSeqServ = Math.floor(fullLength/maxSize);
 
@@ -156,7 +155,7 @@ function dataLine_1_drawPoints(points, sizePattern, numNucleotidesDraw)
     for(i=0; i<seqPoints.length;i++)
     {
         var dataPoint = Math.round(seqPoints[i]/globalDL1.cv.scaleSeqScreen);
-        dataPoints.push({pos: (globalDL1.cv.data)[dataPoint].pos, value: (globalDL1.cv.data)[dataPoint].value});
+        dataPoints.push({real_pos: seqPoints[i], pos: (globalDL1.cv.data)[dataPoint].pos, value: (globalDL1.cv.data)[dataPoint].value});
     }
 
 
@@ -166,8 +165,8 @@ function dataLine_1_drawPoints(points, sizePattern, numNucleotidesDraw)
         .offset([30, 0])// [top, left] to center the tip
         .html(function(d,i)
         {
-            dataLine_2(seqPoints[i], sizePattern, numNucleotidesDraw);
-            return "<strong>"+d3.format(",")(seqPoints[i]) + " :</strong> " + d3.format(".2f")(d.value);  // e.g. "307,770 : 0.79"
+            dataLine_2(d.real_pos, sizePattern, numNucleotidesDraw);
+            return "<strong>"+d3.format(",")(d.real_pos) + ":</strong> " + d3.format(".2f")(d.value); // e.g. "307,770 : 0.79"
         });
 
     // Calls tip
@@ -449,11 +448,23 @@ function dataLine_1_drawEnrichment(enrichment)
     var tip = d3.tip()
         .attr('class', 'dl1 goterm-tip')
         .offset([45, 0])
-        //.style("opacity",.8)
-        .attr("fill","blue")
         .html(function(d,i)
         {
-            return "p-value: "+ d3.format(".2e")(d.pval) +"<br>" + d.ngis+"/"+ d.ngo +" genes<br>";
+            var text="p-value: "+ d3.format(".2e")(d.pval) +"<br>" + d.ngis+"/"+ d.ngo +" genes"+"<br>";
+            /*if(fixed)
+             {
+             console.log("Fixed!");
+             for (var g in d.gis)
+             text += d.gis[g] + "<br>";
+             }*/
+            //TODO: highlight the gis in the track visible now (infrastructure ready on globalDL1.iannotations and enrichment.gis)
+            //Such infrastructure requires pre-load of every position annotations: quite expensive in time at the search
+            /*console.log("Related positions:")
+             for(var g in d.gis)ls
+
+             console.log(d.gis[g]+"\t"+globalDL1.iannotations[globalSeq.track][d.gis[g]]);*/
+            //This is asking now to the go terms annotations
+            return text;
         });
 
     globalDL1.cv.svg.call(tip);
@@ -481,7 +492,7 @@ function dataLine_1_drawEnrichment(enrichment)
                 yline++;
                 dx = dimAnnotation.x0 + width;
             }
-            dy[d.go_name]=dimAnnotation.y0+10*yline;
+            dy[d.go_name]=dimAnnotation.y0+globalDL1.cv.dim.height+25+10*yline;
             //console.log(d.go_name+" "+ dy[d.go_name]);
             return dx-width; }
     )
@@ -495,7 +506,7 @@ function dataLine_1_drawEnrichment(enrichment)
             return " "+d.go_name+" ·"})
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
-
+        //.on('click', function(){tip.fixed?fix.show(true):fix.show(false); tip.fixed=!tip.fixed;});
 }
 
 function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
@@ -549,7 +560,35 @@ function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
                 return "";
         });
 
-    //TODO: far below/above cracker?
+    //draw crackers if the annotation goes beyond screen limits
+    dataLine.cv.svg.append("g")
+        .selectAll(".dl2.annotation.cracker")
+        .data(annotations)
+        .enter().append("path")
+        .attr('class', 'dl2 annotation cracker')
+        .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
+        .attr("d", function(d){
+            var cw=3;//cracker width and height
+            var ch=10;
+            var x0=0; var y0=1;
+            if (d.start < startSeq)
+            {
+                x0+=5;
+                if(d.sense=="-")
+                    y0+=15;
+                return "M"+(x0+cw *.5)+","+y0+"L"+x0+","+(y0+ch*.5)+"L"+(x0+cw)+","+(y0+ch*.5)+"L"+x0+","+(y0+ch);
+            }
+            if (d.end > endSeq)
+            {
+                if (d.sense == "-")
+                    y0 += 15;
+                x0+=globalDL2.cv.dim.width-10;
+                return "M"+(x0+cw *.5)+","+y0+"L"+x0+","+(y0+ch*.5)+"L"+(x0+cw)+","+(y0+ch*.5)+"L"+x0+","+(y0+ch);
+            }
+            return "";
+        });
+
+
 
     //gene labels
     dataLine.cv.svg.append("g")
@@ -559,7 +598,7 @@ function drawAnnotationLine(dataLine, annotations, startSeq, endSeq)
         .attr('class', 'dl2 annotation label')
         .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
         .attr("x", function(d) {
-            return Math.max(0,(d.start-startSeq+6)*factor);
+            return Math.max(10,(d.start-startSeq+6)*factor);
         })
         .attr("y", function(d){   return d.sense=="+"?10:25})
         .text(function(d){
@@ -656,6 +695,9 @@ function dataLine_2(point, sizePattern, numNucleotides)
         console.log("tiene punto(s)");
         //console.log(annotations);
         var annotLine = drawAnnotationLine(globalDL2, annotations[point], startSeq, endSeq);
+        //NOTE: this if we compute annotations previously, in the moment of the search (might be time consuming)
+        //if(globalDL1.annotations[globalSeq.track].hasOwnProperty(point))
+        //    var annotLine = drawAnnotationLine(dataLine, globalDL1.annotations[globalSeq.track][point], startSeq, endSeq);
     }
     else
     {
@@ -663,7 +705,6 @@ function dataLine_2(point, sizePattern, numNucleotides)
         //console.log(annotations);
     }
 }
-
 
 
 /**
@@ -699,7 +740,6 @@ function drawBracket(nameSVG, classSVG, x0, y0, left, height, clean)
 }
 
 
-
 //nucleotide level
 var globalDL3 =
 {
@@ -729,7 +769,6 @@ var globalDL3 =
     motifConsensus: null,
     motifProfile: null
 };
-
 
 
 /**
@@ -1005,6 +1044,24 @@ function drawNucleotides(nameSVG, classSVG, start, point, wholeSeq, startWholeSe
     }
 }
 
+
+function setAnnotations(gis, annotations)
+{
+    globalDL1.gis=gis;                 //list of gene ids
+    if(annotations!=null)
+    {
+        globalDL1.annotations = annotations;//position -> element id (element can be a gene or other entity)
+        globalDL1.iannotations = {}       //gene id -> position
+        for (var p in annotations) {
+            globalDL1.iannotations[p] = {}
+            for (var e in annotations[p]) {
+                for (var i = 0; i < annotations[p][e].length; i++)
+                    if (annotations[p][e][i]["type"] == "gene")
+                        globalDL1.iannotations[p][annotations[p][e][i]["id"]] = e
+            }
+        }
+    }
+}
 
 
 

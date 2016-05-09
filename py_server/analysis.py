@@ -192,6 +192,10 @@ Preprocesa un fichero wig para su visualización
 path       ruta a los datos (formato wig, de momento sólo se toma el primer track)
 windowSize tamaño de la ventana para hacer la discretización (def 100)
 numBins    númer de valores discretos para la discretizacion (def 5)
+maxSize    maximum length of the returning array (to avoid bandwidth overload). Default 100K
+stdev      outlier clipping above this number of standard deviations from the mean. Default 3
+track      in the case of several tracks, which one to return. Default 'None' returns the first track on alphabetic order
+reload     if the file must be reloaded (True) or not, if a previous preprocessed version exists in pickle format (False). Default False
 retorna    objeto JSON con los siguientes campos:
                result   valores normalizados (sin discretizar) sampleados hasta maxSize
                fullLength  longitud total de los datos iniciales/normaliados
@@ -200,7 +204,7 @@ retorna    objeto JSON con los siguientes campos:
 """
 #%%
 @app.route("/preprocess")
-def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track="None"):
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", recharge="False"):
     import numpy as np
     global data
     global session
@@ -213,9 +217,11 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     filename=str(request.args.get("filename"))
     path=os.path.join(basePath,filename)
     track=request.args.get("track")
+    recharge=request.args.get("recharge")
     windowSize=int(request.args.get("windowSize"))
     numBins=int(request.args.get("numBins"))
     maxSize=int(request.args.get("maxSize"))
+    stdev=float(request.args.get("stdev"))
     picklePath=os.path.join(basePath,re.sub(r"\..*$", ".pic", filename))
     savePickle=False
     
@@ -230,7 +236,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     dataFASTA={}
     seqd={}
     
-    if os.path.isfile(picklePath):
+    if os.path.isfile(picklePath) and recharge=="False":
         print("Pickle exists!!!")
         f=open(picklePath)
         datap=pickle.load(f)
@@ -262,9 +268,11 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
             
             m[k]=np.mean(seq, dtype=float)
             sd[k]=np.std(seq, dtype=float)
-            upperlim=m[k]+3*sd[k]#avoid outliers? testing
+            upperlim=m[k]+stdev*sd[k]#avoid outliers? testing
             seq=np.clip(seq,0,upperlim)
         
+            m[k]=np.mean(seq, dtype=float)
+            sd[k]=np.std(seq, dtype=float)
             maximum[k]=np.max(seq)
             minimum[k]=np.min(seq)
             print('\\tstats in ',(time.clock()-t0), "s")
@@ -310,10 +318,12 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         f=open(picklePath, 'w')
         pickle.dump(datap,f)
         print("serialize data takes",(time.clock()-tpickle))
-        #NOTE: should removew the .wig here to avoid double memory space
+        #NOTE: should remove the .wig here to avoid double memory space?
 
     print('whole preprocess takes ',(time.clock()-t00),"s")
-    print(track)
+    print('returning track',track)
+    print('max values are',maximum)
+    
     return jsonify(seq=res[track], fullLength=len(genome[track]), maximum=(float)(maximum[track]), minimum=(float)(minimum[track]), mean=(float)(m[track]), stdev=(float)(sd[track]), dseq=dseq[track], chromosomes=sorted(genome.keys()))
 
 #%%preprocess(filename="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/dwtMini2.wig")
@@ -430,14 +440,13 @@ def nucProfile(positions=[], size=10, track="None"):
     seqs={}
     for p in pos:
         seqs[p]=data["fasta"][track][p:p+size].upper()
-        print seqs[p]
     c=ms.consensus(seqs.values())
     prof=ms.profile(seqs.values())
 
     #gibbs sampling for motif search
     if(len(seqs)>1):
         t0=time.clock()
-        for x in range(9,10,1): #for different k
+        for x in range(6,7,1): #for different k
             for i in range(1):
                 bm=ms.gibbsSampler(seqs.values(),x,1000)
                 print(i,")",x, bm["score"], bm["score"]/len(seqs))
@@ -547,5 +556,8 @@ if __name__ == '__main__':
     session["jpiriz"]={}    
     session["rodri"]={}    
     data={}
-    app.run(debug=True) 
+    #app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
+    
+    
     

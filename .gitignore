@@ -16,7 +16,6 @@ Thumbs.db
 
 # Project files
 ####################
-/other_files
 doubts.txt
 workspace.xml
 *.pyc

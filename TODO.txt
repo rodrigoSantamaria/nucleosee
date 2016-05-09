@@ -41,3 +41,6 @@
         decir un tiempo adicional de 6s, pasando de 14 a 20s de preprocesamiento. En organismos grandes es inasumible
         yo creo. También multiplica por el número de cromosomas el tiempo de la búsqueda. Para pombe con búsquedas
         SIN mutaciones no es un problema pues estmos hablando de 0.016s
+
+
+** Pongo TODOO con dos 'O' para que no me aparezca como tarea en el proyecto

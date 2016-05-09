@@ -27,7 +27,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
     }
     else
     {
-        console.log("Library Server already defined.");
+        console.log("Library \"Server\" already defined.");
     }
 
 
@@ -42,6 +42,14 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         var _loadingImage = null;
 
 
+        /**
+         * Connect with the server.
+         * @param DEBUG
+         * @param user
+         * @param password
+         * @param loadingImage
+         * @param serverPath
+         */
         Server.connect = function (DEBUG, user, password, loadingImage, serverPath)
         {
             serverPath     || ( serverPath = "http://127.0.0.1:5000/" );
@@ -79,13 +87,14 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         // NOTE: Remember REST Flask calls require enable CORS in the browser!!!
         Server.sendFile = function (callback, file, forceReload)
         {
-            var startTime=new Date();
+            var startTime = new Date();
 
-            // Show the image of "loading...".
+            // Show the image of "loading..."
             if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
 
             var _forceReload = "";
             if(forceReload) _forceReload = "True";
+            else            _forceReload = "False";
 
             var requestAJAX = $.ajax(
                 {
@@ -101,7 +110,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
                     if(!(result.response == "outdated version" || result.response == "not found"))
                     {
-                        // Hide the image of "loading...".
+                        // Hide the image of "loading..."
                         if(_loadingImage != null) { _loadingImage.css("display", "none"); }
 
                         if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
@@ -127,7 +136,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         $.when(requestAJAX2)
                             .done(function(result)
                             {
-                                // Hide the image of "loading...".
+                                // Hide the image of "loading..."
                                 if(_loadingImage != null) { _loadingImage.css("display", "none"); }
 
                                 if (_DEBUG) console.log("sendFile(): uploaded");
@@ -170,14 +179,19 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.preprocess = function (callback, filename, track, ws, nb, maxSize)
         {
+            // TODO: siempre es asi?
+            var stdev = 2;
+            var recharge = "False";
+
+
             var startTime = new Date();
 
-            // Show the image of "loading...".
+            // Show the image of "loading..."
             if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize,
+                    url: _serverPath+"/preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&stdev="+stdev+"&recharge="+recharge,
                     type: "GET",
                     datatype: "json"
                 });
@@ -195,7 +209,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.fullLength=result.fullLength;
                     response.chromosomes=result.chromosomes;
 
-                    // Hide the image of "loading...".
+                    // Hide the image of "loading..."
                     if(_loadingImage != null) { _loadingImage.css("display", "none"); }
 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
@@ -210,11 +224,16 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         };
 
 
+        /**
+         * Calls the REST service available to a data summary and characterization of a particular chromosome
+         * @param callback
+         * @param track
+         */
         Server.getTrack = function (callback, track)
         {
             var startTime = new Date();
 
-            // Show the image of "loading...".
+            // Show the image of "loading..."
             if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
 
             var requestAJAX = $.ajax(
@@ -237,7 +256,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.fullLength=result.fullLength;
                     response.chromosomes=result.chromosomes;
 
-                    // Hide the image of "loading...".
+                    // Hide the image of "loading..."
                     if(_loadingImage != null) { _loadingImage.css("display", "none"); }
 
                     if(_DEBUG) console.log("getTrack(): get track done...");
@@ -252,11 +271,17 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         };
 
 
+        /**
+         * Search this pattern in all the genome.
+         * @param callback
+         * @param pattern
+         * @param d
+         */
         Server.search = function (callback, pattern, d)
         {
             var startTime = new Date();
 
-            // Show the image of "loading...".
+            // Show the image of "loading..."
             if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
 
             if(_DEBUG) console.log("pattern is "+pattern);
@@ -269,18 +294,16 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
-
             $.when(requestAJAX)
                 .done(function(result)
                 {
                     if(result.response != "error")
                     {
-                        // Convert to array...
                         var response = [];
                         response.points = result.points; // points found in all chromosomes
                         response.sizePattern = result.sizePattern;
 
-                        // Hide the image of "loading...".
+                        // Hide the image of "loading..."
                         if(_loadingImage != null) { _loadingImage.css("display", "none"); }
 
                         if(_DEBUG) console.log("search(): search done...");
@@ -298,6 +321,141 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(_DEBUG) console.log("search(): search failed...");
                 });
         };
+
+
+        /**
+         * Get all genes of interest in all the genome.
+         * @param callback
+         * @param allPoints
+         * @param types
+         * @param window
+         * @param align
+         * @param onlyIDs
+         * @param chromosomes
+         * @param ws
+         * @param gis               it's not necessary!!
+         * @param numChromosome     it's not necessary!!
+         * @param startTime         it's not necessary!!
+         * @param numMatches        it's not necessary!!
+         */
+        Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs,
+                                               chromosomes, ws,
+                                               gis, numChromosome, startTime, numMatches)
+        {
+            // Initialize variables first
+            if(typeof(gis) === 'undefined')             gis = "";
+            if(typeof(numChromosome) === 'undefined')   numChromosome = 1;
+            if(typeof(startTime) === 'undefined')       startTime = new Date();
+            if(typeof(numMatches) === 'undefined')      numMatches = 1;
+
+
+            // Show the image of "loading..."
+            if(_loadingImage != null && gis == "") { _loadingImage.css("top", 0).show(); }
+
+
+            // Calculate points of this track and number of matches
+            var track  = chromosomes[numChromosome-1];
+            var points = JSON.parse(allPoints[track]);
+            for( var j=0; j<points.length; j++)
+                points[j]*=ws;
+            numMatches += points.length;
+            if(_DEBUG) console.log(points.length+" matches in track "+track);
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/annotations?user="+_user+"&password="+_password+
+                    "&positions=["+points+"]&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    if(gis != "" && result.response != "") gis += ",";
+                    gis += result.response;
+                    numChromosome++;
+
+                    // While the number of chromosomes is less than or equal, we continue to get more annotations
+                    if(numChromosome <= chromosomes.length)
+                    {
+                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "True",
+                            chromosomes, GVB_GLOBAL.ws,
+                            gis, numChromosome, (new Date()-startTime), numMatches);
+                    }
+                    else
+                    {
+                        // Hide the image of "loading..."
+                        if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+
+                        if(_DEBUG) console.log("Total number of matches: "+numMatches);
+                        if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations done...");
+                        if(_DEBUG) console.log("Time spent getting all annotations: "+ (new Date()-startTime)+"ms");
+
+                        callback(gis);
+                    }
+                })
+                .fail(function()
+                {
+                    if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations failed...");
+                });
+        };
+
+        /**
+         * Get enrichment in all the genome (with 'gis').
+         * @param callback
+         * @param gis
+         * @param correction  ('none', 'bonferroni', 'fdr', 'fwer')
+         * @param alpha
+         */
+        Server.enrichmentGO = function (callback, gis, correction, alpha)
+        {
+            var startTime = new Date();
+
+            // Show the image of "loading..."
+            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+
+
+            var arrayGis = gis;
+            arrayGis = arrayGis.split(',');
+            console.log("Number of gene annotations:"+arrayGis.length);
+
+            // Parse 'gis' to convert it to array: a,b,c,d => ["a","b","c","d"]
+            gis = "[\""+gis+"\"]";
+            gis = gis.replace(/,/g,"\",\"");  //replaces ',' by '","'
+
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/enrichmentGO?user="+_user+"&password="+_password+"&annotations="+gis+"&correction="+correction+"&alpha="+alpha,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var response = [];
+                    response = result.response;
+
+                    // Hide the image of "loading..."
+                    if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+
+                    if(_DEBUG) console.log("enrichmentGO(): enrichmentGO done...");
+                    if(_DEBUG) console.log("Time spent Enrichment analysis: "+ (new Date()-startTime)+"ms");
+
+                    callback(response);
+
+                })
+                .fail(function()
+                {
+                    if(_DEBUG) console.log("enrichmentGO(): enrichmentGO failed...");
+                });
+        };
+
+
+
+
 
 
         Server.annotationsGenes = function (points, types, window, align, track, onlyIDs)
@@ -322,117 +480,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     }
                 });
             return response;
-        };
-
-
-        Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs,
-                                               chromosomes, ws,
-                                               annotations, numChromosome, startTime, numMatches)
-        {
-            // Initialize variables first
-            if(typeof(annotations) === 'undefined')     annotations = "";
-            if(typeof(numChromosome) === 'undefined')   numChromosome = 1;
-            if(typeof(startTime) === 'undefined')       startTime = new Date();
-            if(typeof(numMatches) === 'undefined')      numMatches = 1;
-
-
-            // Show the image of "loading...".
-            if(_loadingImage != null && annotations == "") { _loadingImage.css("top", 0).show(); }
-
-
-            // Calculate track, points of this track and number of matches
-            var track  = chromosomes[numChromosome-1];
-            var points = JSON.parse(allPoints[track]);
-            for( var j=0;j<points.length;j++) points[j]*=ws;
-            numMatches += points.length;
-            if(_DEBUG) console.log(points.length+" matches in track "+track);
-
-            var requestAJAX = $.ajax(
-                {
-                    url: _serverPath+"/annotations?user="+_user+"&password="+_password+
-                    "&positions=["+points+"]&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs,
-                    type: "GET",
-                    datatype: "json"
-                });
-
-
-            $.when(requestAJAX)
-                .done(function(result)
-                {
-                    if(annotations != "" && result.response != "") annotations += ",";
-                    annotations += result.response;
-                    numChromosome++;
-
-                    // While the number of chromosomes is less than or equal, we continue to get more annotations
-                    if(numChromosome <= chromosomes.length)
-                    {
-                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "True",
-                            chromosomes, GVB_GLOBAL.ws,
-                            annotations, numChromosome, (new Date()-startTime), numMatches);
-                    }
-                    else
-                    {
-                        // Hide the image of "loading...".
-                        if(_loadingImage != null) { _loadingImage.css("display", "none"); }
-
-                        if(_DEBUG) console.log("Total number of matches: "+numMatches);
-                        if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations done...");
-                        if(_DEBUG) console.log("Time spent getting all annotations: "+ (new Date()-startTime)+"ms");
-
-                        callback(annotations);
-                    }
-                })
-                .fail(function()
-                {
-                    if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations failed...");
-                });
-        };
-
-
-        Server.enrichmentGO = function (callback, annotations, correction, alpha)
-        {
-            var startTime = new Date();
-
-            // Show the image of "loading...".
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
-
-
-            var arrayAnnotations = annotations;
-            arrayAnnotations = arrayAnnotations.split(',');
-            console.log("Number of gene annotations:"+arrayAnnotations.length);
-
-
-            annotations = "[\""+annotations+"\"]";
-            annotations = annotations.replace(/,/g,"\",\"");  //replaces ',' by '","'
-
-
-            var requestAJAX = $.ajax(
-                {
-                    url: _serverPath+"/enrichmentGO?user="+_user+"&password="+_password+"&annotations="+annotations+"&correction="+correction+"&alpha="+alpha,
-                    type: "GET",
-                    datatype: "json"
-                });
-
-            $.when(requestAJAX)
-                .done(function(result)
-                {
-                    // Convert to array...
-                    var response = [];
-                    response = result.response;
-
-                    // Hide the image of "loading...".
-                    if(_loadingImage != null) { _loadingImage.css("display", "none"); }
-
-                    if(_DEBUG) console.log("enrichmentGO(): enrichmentGO done...");
-                    if(_DEBUG) console.log("Time spent Enrichment analysis: "+ (new Date()-startTime)+"ms");
-
-                    callback(response);
-
-                })
-                .fail(function()
-                {
-                    if(_DEBUG) console.log("enrichmentGO(): enrichmentGO failed...");
-                });
         };
 
 
@@ -527,6 +574,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 });
             return response;
         };
+
+
+
+
+
 
         function removeLastSlash(url)
         {

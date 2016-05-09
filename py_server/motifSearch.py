@@ -693,5 +693,4 @@ def greedyMotifSearchV0(dna, k):
 #    return reduce(lambda a,b: '{0}{1}'.format(a,b), match)  #HIC SUNT DRACONES: más info sobre las funciones lambda: http://www.secnetix.de/olli/Python/lambda_functions.hawk
 #
 
-
     

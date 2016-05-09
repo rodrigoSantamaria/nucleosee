@@ -14,12 +14,12 @@ if (window.File && window.FileReader && window.FileList && window.Blob)
     if(DEBUG_GBV) console.log("Start all (with File APIs)...");
 
 
-    var listenerUploadFile = function(evt)
+    var listenerUploadFile = function(event)
     {
         switch(event.type)
         {
             case 'change':
-                var files = evt.target.files;   // FileList object
+                var files = event.target.files;   // FileList object
                 var file=files[0];              // By now, just one file
 
                 // NOTE: MD5 computation is just too slow for a large wig (5s for the whole pombe genome)

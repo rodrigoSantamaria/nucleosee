@@ -107,6 +107,7 @@
                 <div style="float:left;margin-top:4px;margin-left:30px;margin-right:5px;">
                     <input type="text" id="patternSearch">
                 </div>
+
                 <div style="float:left;margin-top:4px;margin-left:5px;margin-right:10px;">
                     <select id="dSearch">
                         <option value="0" selected="selected">0</option>
@@ -115,9 +116,11 @@
                         <option value="3">3</option>
                     </select>
                 </div>
+
                 <div style="float:left;margin-top:4px;margin-left:10px;margin-right:10px;">
                     <button type="button" onclick="searchPattern()">Search pattern</button>
                 </div>
+
             </div>
         </div>
 
@@ -256,7 +259,23 @@
                 var username = $('#username').val();
                 var password = $('#password').val();
 
-                if(Server.connect(true, username, password, "divLoading"))
+
+                //if(Server.connect(true, username, password, "divLoading", "http://prodiasv21.fis.usal.es:5000/"))
+                if(Server.connect(true, username, password, "divLoading", "http://127.0.0.1:5000/"))
+                {
+                    verifyConnection(true);
+                }
+                else
+                {
+                    verifyConnection(false);
+                }
+
+                return false;
+            });
+
+            function verifyConnection(done)
+            {
+                if(done)
                 {
                     $('.start-view').hide();
                     $('.core-view').show();
@@ -265,20 +284,19 @@
                 {
                     alert("The user or password is incorrect");
                 }
-
-                return false;
-            });
+            }
 
             $('#btLogout').click(function()
             {
                 $('.core-view').hide();
                 $('.start-view').show();
+                destroyAll(true);
 
                 return false;
             });
 
 
-            // TESTING (TODO: remove this)
+            // TESTING (TODO: only testing, remove this)
             ////////////////////////////////////////////////
                 //$('#patternSearch').val("aaaaabcba");
                 $('#patternSearch').val("a*5+abcba*2");
