@@ -10,7 +10,8 @@
   - DONE: Dejar el color interno de un punto al hacer mouseout (quitarlo solo al hacer un nuevo mousein)
   - DONE: Estilos de la web (sobre todoo de la parte de arriba)
   - DONE: Pantalla de login
-  - Poner en cada cromosoma el nombre y el número de ocurrencias
+  - TODOO: Poner en cada cromosoma el nombre y el número de ocurrencias
+  - TODOO: parrilla explicativa sobre DL1
 
 
   Backend

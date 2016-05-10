@@ -28,18 +28,22 @@ function checkFile(file)
 {
     destroyAll(false);
 
-    if(DEBUG_GBV) console.log("\n----- UPLOAD FILE -----");
-    if(DEBUG_GBV) console.log("Name of file: "+file.name);
+    // We ensure that there is a selected file
+    if(typeof(file) != 'undefined')
+    {
+        if (DEBUG_GBV) console.log("\n----- UPLOAD FILE -----");
+        if (DEBUG_GBV) console.log("Name of file: " + file.name);
 
 
-    GVB_GLOBAL.filename = file.name;
+        GVB_GLOBAL.filename = file.name;
 
-    var forceReload = false;
-    if($("#reload").is(':checked') )
-        forceReload = true;
+        var forceReload = false;
+        if ($("#reload").is(':checked'))
+            forceReload = true;
 
-    // We try to communicate with the server, upload  file (if necessary)
-    Server.sendFile(preprocessing, file, forceReload);
+        // We try to communicate with the server, upload  file (if necessary)
+        Server.sendFile(preprocessing, file, forceReload);
+    }
 }
 
 
@@ -125,24 +129,10 @@ function drawPoints(result)
     dataLine_1_drawPoints(points, result.sizePattern, numNucleotidesDraw);
 
 
-
     // ENRICHMENT
     //----------------------------------
     if (DEBUG_GBV) console.log("\n----- ENRICHMENT -----");
     getAllAnnotations(result.points, result.sizePattern);
-
-
-
-     // TODO: mejorar esto...
-     //GET SEQUENCES, MOTIFS, (ALIGNMENT), CONSENSUS
-     //NOTE: alignment takes more than 1s if there's >50 sequences! (using the fastest method: kalign)
-     var start = new Date().getTime();
-     for( var j=0;j<points.length;j++)
-         points[j]*=GVB_GLOBAL.ws;
-     var response=Server.nucProfile("["+points+"]",result.sizePattern*GVB_GLOBAL.ws,globalSeq.track); //TODO: by now only on this chromosome
-     var end = new Date().getTime();
-     console.log("Sequence analysis took: "+(end-start));
-     setSequences(response)
 }
 
 // GET ALL ANNOTATIONS
@@ -181,7 +171,6 @@ function getEnrichment(gis)
         gis=gis.replace(/,$/, "");
         setAnnotations(gis,annotations)
     */
-
 
     Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
 }

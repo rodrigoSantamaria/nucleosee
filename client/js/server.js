@@ -10,7 +10,7 @@
 // To try calls:
 /*
 curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET \
-"http://127.0.0.1:5000/testUpload?user=jpiriz&password=ninguna&filename=23479_h90_wlt_mean.wig&forceReload=false"
+"http://127.0.0.1:2750/testUpload?user=jpiriz&password=ninguna&filename=23479_h90_wlt_mean.wig&forceReload=false"
 */
 
 
@@ -50,9 +50,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param loadingImage
          * @param serverPath
          */
-        Server.connect = function (DEBUG, user, password, loadingImage, serverPath)
+        Server.connect = function (DEBUG, callback, user, password, loadingImage, serverPath)
         {
-            serverPath     || ( serverPath = "http://127.0.0.1:5000/" );
+            serverPath     || ( serverPath = "http://127.0.0.1:2750/" );
             loadingImage   || ( loadingImage = null );
 
 
@@ -72,9 +72,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             // TODO: si no puede conectar, que pare todo y lance un error
             if(user == "jpiriz")
-                return true;
+                callback(true);
             else
-                return false;
+                callback(false);
         };
 
 
@@ -346,7 +346,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             if(typeof(gis) === 'undefined')             gis = "";
             if(typeof(numChromosome) === 'undefined')   numChromosome = 1;
             if(typeof(startTime) === 'undefined')       startTime = new Date();
-            if(typeof(numMatches) === 'undefined')      numMatches = 1;
+            if(typeof(numMatches) === 'undefined')      numMatches = 0;
 
 
             // Show the image of "loading..."
@@ -418,7 +418,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var arrayGis = gis;
             arrayGis = arrayGis.split(',');
-            console.log("Number of gene annotations:"+arrayGis.length);
+            console.log("Number of gene annotations: "+arrayGis.length);
 
             // Parse 'gis' to convert it to array: a,b,c,d => ["a","b","c","d"]
             gis = "[\""+gis+"\"]";
@@ -458,19 +458,20 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 
 
+
+
         Server.annotationsGenes = function (points, types, window, align, track, onlyIDs)
         {
             var response = [];
             $.ajax(
                 {
-                    // TODO: comprobar que align con " funciona bien y si se puede quitar
                     url: _serverPath+"/annotations?user="+_user+"&password="+_password+"&positions=["+points+"]&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs,
                     type: "GET",
                     datatype:"json",
                     async: false,    // default: true
                     success: function(result)
                     {
-                        if(_DEBUG) console.log("annotationsGenes(): get annotations of genes done...");
+                        if(false) console.log("annotationsGenes(): get annotations of genes done...");
                         //console.log(result);
                         response = result.response;
                     },
@@ -574,6 +575,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 });
             return response;
         };
+
 
 
 

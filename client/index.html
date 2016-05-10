@@ -260,15 +260,8 @@
                 var password = $('#password').val();
 
 
-                //if(Server.connect(true, username, password, "divLoading", "http://prodiasv21.fis.usal.es:5000/"))
-                if(Server.connect(true, username, password, "divLoading", "http://127.0.0.1:5000/"))
-                {
-                    verifyConnection(true);
-                }
-                else
-                {
-                    verifyConnection(false);
-                }
+                //Server.connect(true, verifyConnection, username, password, "divLoading", "http://prodiasv21.fis.usal.es:2750/");
+                Server.connect(true, verifyConnection, username, password, "divLoading", "http://127.0.0.1:2750/");
 
                 return false;
             });

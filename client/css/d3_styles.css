@@ -98,6 +98,22 @@ body {
 
 }
 
+/* ONTOLOGY TERMS */
+.dl1.goterm {
+    font-family: sans-serif;
+    fill: darkred;
+}
+.dl1.goterm-tip{
+    font-family: sans-serif;
+    font-size: 10px;
+    color: black;
+    fill-opacity: .8;
+    background: #FEE;
+    border: 1px;
+    border-radius: 3px;
+    padding: 2px;
+    text-align: center;
+}
 
 
 /*--------------------------------------------*/
@@ -147,43 +163,16 @@ body {
 }
 
 
-
-
-/* ---------------------- NUEVO ---------------------- */
-
-
-/* ONTOLOGY TERMS */
-.dl1.goterm {
-    font-family: sans-serif;
-    fill: darkred;
-}
-
-.dl1.goterm-tip{
-    font-family: sans-serif;
-    font-size: 10px;
-    color: black;
-    fill-opacity: .8;
-    background: #FEE;
-    border: 1px;
-    border-radius: 3px;
-    padding: 2px;
-    text-align: center;
-}
-
-
-
 /* GENE ANNOTATIONS */
 .dl2.annotation{
     fill: #BFB;
     fill-opacity: 1;
 }
-
 .dl2.annotation.label{
     fill: black;
     font-family: sans-serif;
     font-size: 11px;
 }
-
 .dl2.annotation.arrow{
     fill: #9F9;
     fill-opacity: 1;
@@ -194,7 +183,8 @@ body {
     stroke-width: 1px;
 }
 
-.dl2.line.bracket{
+/* BRACKETS */
+.dl2.bracket{
     fill: none;
     stroke: black;
 }
@@ -202,18 +192,14 @@ body {
 
 
 /*--------------------------------------------*/
-/*           DATALINE 3                      */
+/*      NUCLEOTIDES (DATALINE 3)              */
 /*--------------------------------------------*/
 
-/* NUCLEOTIDE TEXT */
-.dl3.text {
-    font-family: "Courier New", "Courier", "Lucida Sans Typewriter";
-    font-size: 12px;
-}
 
-.dl3.consensus {
-    font-family: "Courier New", "Courier", "Lucida Sans Typewriter";
-    font-size: 12px;
+/* X AXIS */
+.dl3.axis.y.text {
+    font-family: sans-serif;
+    font-size: 9px;
 }
 
 /* SCALE TEXT */
@@ -222,15 +208,22 @@ body {
     font-size: 13px;
 }
 
+/* NUCLEOTIDE TEXT */
+.dl3.text {
+    font-family: "Courier New", "Courier", "Lucida Sans Typewriter";
+    font-size: 12px;
+}
+.dl3.consensus {
+    font-family: "Courier New", "Courier", "Lucida Sans Typewriter";
+    font-size: 12px;
+}
+
+/* BRACKETS */
 .dl3.bracket{
     fill: none;
     stroke: black;
 }
 
-.dl3.axis.y.text {
-    font-family: sans-serif;
-    font-size: 9px;
-}
 
 
-/*------------------------------------------------------*/
+
