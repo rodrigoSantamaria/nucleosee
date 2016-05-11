@@ -324,7 +324,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 
         /**
-         * Get all genes of interest in all the genome.
+         * Get genes of interest in all the genome.
          * @param callback
          * @param allPoints
          * @param types
@@ -454,132 +454,173 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         };
 
 
-
-
-
-
-
-
-        Server.annotationsGenes = function (points, types, window, align, track, onlyIDs)
+        /**
+         * Get genes of interest of a particular chromosome
+         * @param callback
+         * @param point
+         * @param types
+         * @param window
+         * @param align
+         * @param track
+         * @param onlyIDs
+         */
+        Server.annotationsGenes = function (callback, point, types, window, align, track, onlyIDs)
         {
-            var response = [];
-            $.ajax(
+            var startTime = new Date();
+
+            var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/annotations?user="+_user+"&password="+_password+"&positions=["+points+"]&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs,
+                    url: _serverPath+"/annotations?user="+_user+"&password="+_password+
+                                    "&positions=["+point+"]&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs,
                     type: "GET",
-                    datatype:"json",
-                    async: false,    // default: true
-                    success: function(result)
-                    {
-                        if(false) console.log("annotationsGenes(): get annotations of genes done...");
-                        //console.log(result);
-                        response = result.response;
-                    },
-                    error: function()
-                    {
-                        if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
-                    }
+                    datatype: "json"
                 });
-            return response;
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var annotations = result.response;
+
+                    if(false) console.log("annotationsGenes(): get of gene done...");
+                    if(false) console.log("Time spent annotationsGenes: "+ (new Date()-startTime)+"ms");
+
+                    if(annotations.hasOwnProperty(point)) // if object "annotations" has no the point, don't draw the line annotations
+                    {
+                        callback(annotations[point]);
+                    }
+                })
+                .fail(function()
+                {
+                    if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
+                });
         };
 
 
-        Server.getPartSeq = function (track, startSeq, endSeq)
+        /**
+         * Calls the REST service available to a summary and characterization of data (more reduced)
+         * @param callback
+         * @param track
+         * @param startSeq
+         * @param endSeq
+         * @param numNucleotides
+         * @param point
+         * @param sizePattern
+         */
+        Server.getPartSeq = function (callback, track, startSeq, endSeq, numNucleotides, point, sizePattern)
         {
-            var response = [];
-            $.ajax(
+            var startTime = new Date();
+
+            var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/getPartSeq?user="+_user+"&password="+_password+"&track="+track+"&start="+startSeq+"&end="+endSeq,
                     type: "GET",
-                    datatype: "json",
-                    async: false,    // default: true
-                    success: function(result)
-                    {
-                        response.partSeq = result.partSeq;
-                    },
-                    error: function()
-                    {
-                        if(_DEBUG) console.log("getPartSeq(): getPartSeq failed...");
-                    }
+                    datatype: "json"
                 });
-            return response;
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var response = [];
+                    response.partSeq = result.partSeq;
+
+                    if(false) console.log("getPartSeq(): get part of sequence...");
+                    if(false) console.log("Time spent getPartSeq: "+ (new Date()-startTime)+"ms");
+
+                    callback(response.partSeq, numNucleotides, point, sizePattern);
+                })
+                .fail(function()
+                {
+                    if(_DEBUG) console.log("getPartSeq(): getPartSeq failed...");
+                });
         };
 
 
         /**
          * Calls the REST service available to retrieve a sequence of nucleotides
-         * @param start
-         * @param end
+         * @param callback
          * @param track
+         * @param startSeq
+         * @param endSeq
+         * @param start
+         * @param point
          * @returns sequence for that interval
          */
-        Server.nucleotides = function (start,end,track)
+        Server.nucleotides = function (callback, track, startSeq, endSeq, start, point)
         {
-            var response=[];
-            $.ajax(
+            var startTime = new Date();
+
+            var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/nucleotides?user="+_user+"&password="+_password+"&start="+start+"&end="+end+"&track="+track,
+                    url: _serverPath+"/nucleotides?user="+_user+"&password="+_password+"&track="+track+"&start="+startSeq+"&end="+endSeq,
                     type: "GET",
-                    datatype:"json",
-                    async: false,    // default: true
-                    success: function(result)
-                    {
-                        if(_DEBUG) console.log("nucleotides(): done");
-                        response.seq=result.response; // this is only a sample, as it is too large to show as a whole and to send via REST
-                    },
-                    error: function()
-                    {
-                        if(_DEBUG) console.log("preprocress(): discretization failed...");
-                    }
+                    datatype: "json"
                 });
-            return response;
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var response = [];
+                    response.seq=result.response; // this is only a sample, as it is too large to show as a whole and to send via REST
+
+                    if(false) console.log("nucleotides(): get nucleotides done...");
+                    if(false) console.log("Time spent nucleotides: "+ (new Date()-startTime)+"ms");
+
+                    callback(start, point, response)
+                })
+                .fail(function()
+                {
+                    if(_DEBUG) console.log("nucleotides(): get nucleotides failed...");
+                });
         };
 
 
         /**
          * Calls the REST service available to retrieve a sequence of nucleotides
+         * @param callback
          * @param positions: array with numerical starting positions
          * @param size: length from the starting points
          * @param track: chromosome or track where the sequences must be taken from
-         * @returns sequence for that interval
          */
-        Server.nucProfile = function (positions,size,track)
+        Server.nucProfile = function (callback, track, positions, size)
         {
-            var response=[];
-            $.ajax(
+            var startTime = new Date();
+
+            var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/nucProfile?user="+_user+"&password="+_password+"&positions="+positions+"&size="+size+"&track="+track,
+                    url: _serverPath+"/nucProfile?user="+_user+"&password="+_password+"&track="+track+"&positions="+positions+"&size="+size,
                     type: "GET",
-                    datatype:"json",
-                    async: false,    // default: true
-                    success: function(result)
-                    {
-                        if(_DEBUG) console.log("nucProfile(): done");
-                        response.seqs=result.seqs;
-                        response.profile=result.profile;
-                        response.consensus=result.consensus;
-                        //The following three may be undefined if the number of positions is larger than 50-100
-                        response.alignment=result.alignment;
-                        response.aconsensus=result.aconsensus;
-                        response.aprofile=result.aprofile;
-                        //these ones are related to motif finding
-                        response.motifs=result.motifs;
-                        response.locations=result.locations;//motifs locations inside seqs
-                        response.motifConsensus=result.motifConsensus;
-                        response.motifProfile=result.motifProfile;
-                    },
-                    error: function()
-                    {
-                        if(_DEBUG) console.log("preprocress(): discretization failed...");
-                    }
+                    datatype: "json"
                 });
-            return response;
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var response = [];
+                    response.seqs      = result.seqs;
+                    response.profile   = result.profile;
+                    response.consensus = result.consensus;
+
+                    // The following three may be undefined if the number of positions is larger than 50-100
+                    response.alignment  = result.alignment;
+                    response.aconsensus = result.aconsensus;
+                    response.aprofile   = result.aprofile;
+
+                    // These ones are related to motif finding
+                    response.motifs         = result.motifs;
+                    response.locations      = result.locations;  // Motifs locations inside seqs
+                    response.motifConsensus = result.motifConsensus;
+                    response.motifProfile   = result.motifProfile;
+
+                    if(false) console.log("nucProfile(): done...");
+                    if(false) console.log("Time spent nucProfile: "+ (new Date()-startTime)+"ms");
+
+                    callback(response);
+                })
+                .fail(function()
+                {
+                    if(_DEBUG) console.log("nucProfile(): discretization failed...");
+                });
         };
-
-
-
-
-
 
 
         function removeLastSlash(url)

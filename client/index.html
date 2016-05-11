@@ -78,7 +78,7 @@
 
 
     <!-- CORE VIEW -->
-    <div class="core-view" style="display:none">
+    <div class="core-view" style="display:none;">
 
         <!-- FILE UPLOAD and SEARCH -->
         <div style="float:left;">
@@ -212,7 +212,6 @@
         // This part of the code is executed automatically when the page is ready
         $(window).ready(function()
         {
-
             // CHANGE PARAMS (WITH RELOAD)
             ////////////////////////////////////////////
             reloadParams(false);
@@ -272,6 +271,8 @@
                 {
                     $('.start-view').hide();
                     $('.core-view').show();
+
+                    $('body').css("background-color", "#ffffff");
                 }
                 else
                 {
@@ -281,6 +282,8 @@
 
             $('#btLogout').click(function()
             {
+                $('body').css("background-color", "#f8f8f8");
+
                 $('.core-view').hide();
                 $('.start-view').show();
                 destroyAll(true);

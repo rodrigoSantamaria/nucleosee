@@ -2,6 +2,9 @@
  ┌────────────────────────────────────────────────────────────┐
  │                          TODOO list                        │
  └────────────────────────────────────────────────────────────┘
+** Pongo TODOO con dos 'O' para que no me aparezca como tarea en el proyecto **
+
+
   Frontend
   - Permitir sobreimponer sobre DL1 una parrilla explicativa del binarizado, por ejemplo con franjas
   de colores alternos indicando los rangos de a,b,c,d,e, etc. y quizas tambien el tamaño de la ventana
@@ -11,7 +14,10 @@
   - DONE: Estilos de la web (sobre todoo de la parte de arriba)
   - DONE: Pantalla de login
   - TODOO: Poner en cada cromosoma el nombre y el número de ocurrencias
-  - TODOO: parrilla explicativa sobre DL1
+  - TODOO: Parrilla explicativa sobre DL1
+  - TODOO: Ajustar bien el "line_y0" de la dataLine2
+  - TODOO: Botón de prueba (no puede pasarse el nombre desde el cliente, fallo de seguridad. Tiene que saberse
+                            ya en el servidor y que al pulsarse, devuelva la información)
 
 
   Backend
@@ -43,5 +49,3 @@
         yo creo. También multiplica por el número de cromosomas el tiempo de la búsqueda. Para pombe con búsquedas
         SIN mutaciones no es un problema pues estmos hablando de 0.016s
 
-
-** Pongo TODOO con dos 'O' para que no me aparezca como tarea en el proyecto

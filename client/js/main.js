@@ -135,6 +135,7 @@ function drawPoints(result)
     getAllAnnotations(result.points, result.sizePattern);
 }
 
+
 // GET ALL ANNOTATIONS
 ////////////////////////////////
 function getAllAnnotations(allPoints, sizePattern)
@@ -201,21 +202,50 @@ function createIconsChromosomes(chromosomes)
 
     $(".image-chromosome").bind( "click", function()
     {
-        var chromosomeImage = $(this).data('chromosome');
+        var chromosomeName = $(this).data('chromosome');
 
         $(".image-chromosome").attr("src", "images/chromosome.png");
         $(this).attr("src", "images/chromosome_selected.png");
 
-        preprocessing(chromosomeImage);
+        preprocessing(chromosomeName);
     });
+
+    // Tooltip to display information chromosome
+    $(".image-chromosome").hover(
+        // Move the mouse within the image.
+        function()
+        {
+            var chromosomeName = $(this).data('chromosome');
+
+            var pName = $('<p class="chromosome-name"></p>').text(chromosomeName);
+
+            console.log(chromosomeName);
+            console.log(pName);
+
+            $('<p class="chromosome-tooltip"></p>')
+                .appendTo('body')
+                .append(pName)
+                .fadeIn('slow');
+        },
+        // Move the mouse away from the image
+        function()
+        {
+            $('.chromosome-tooltip').remove();
+        }
+    ).mousemove(
+        function(e)
+        {
+            var mouse_x0 = e.pageX + 5;
+            var mouse_y0 = e.pageY + 5;
+            $('.chromosome-tooltip').css({ top: mouse_y0, left: mouse_x0 })
+        }
+    );
+
 
     $("#"+chromosomes[0]).attr("src", "images/chromosome_selected.png");
 
 }
 
-
-// DESTROY ALL
-////////////////////////////////
 function destroyAll(clear)
 {
     // Empty all SVG images (of the array)
