@@ -10,7 +10,7 @@
 var user="jpiriz";
 var password="ninguna";
 
-var DEBUG_GBV = true;
+var DEBUG_GBV = false;
 
 /*
  ┌────────────────────────────────────────────────────────────┐

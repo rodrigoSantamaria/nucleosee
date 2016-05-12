@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "//anaconda/lib/python2.7/site-packages/spyderlib/spyder.py", line 2331, in main
+    mainwindow = run_spyder(app, options, args)
+  File "//anaconda/lib/python2.7/site-packages/spyderlib/spyder.py", line 2215, in run_spyder
+    main.setup()
+  File "//anaconda/lib/python2.7/site-packages/spyderlib/spyder.py", line 752, in setup
+    from spyderlib.plugins.inspector import ObjectInspector
+  File "//anaconda/lib/python2.7/site-packages/spyderlib/plugins/inspector.py", line 47, in <module>
+    from spyderlib.utils.inspector.sphinxify import (CSS_PATH, sphinxify,
+  File "//anaconda/lib/python2.7/site-packages/spyderlib/utils/inspector/sphinxify.py", line 28, in <module>
+    from docutils.utils import SystemMessage as SystemMessage
+  File "//anaconda/lib/python2.7/site-packages/docutils/utils/__init__.py", line 20, in <module>
+    import docutils.io
+  File "//anaconda/lib/python2.7/site-packages/docutils/io.py", line 8, in <module>
+    """
+KeyboardInterrupt

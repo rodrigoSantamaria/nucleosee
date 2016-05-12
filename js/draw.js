@@ -248,7 +248,7 @@ function drawPoints(points, sizePattern, numNucleotides)
 
     // Mouseover tip and drawing the corresponding line
     var tip = d3.tip()
-        .attr('class', 'dl1 point-tip')
+       // .attr('class', 'dl1 point-tip')
         .offset([30, 0])
         .html(function(d,i)
         {
@@ -273,7 +273,7 @@ function drawPoints(points, sizePattern, numNucleotides)
         .attr('class', 'dl1 point')
         .attr('cx', function(d) { return globalDL1.x(d.pos) })
         .attr('cy', function(d) { return globalDL1.y(d.value) })
-    .on('mouseover', tip.show)
+    .on('mouseover', function(d){  d.attr('class', 'dl1 point selected'); tip.show} )
     .on('mouseout', tip.hide);
 
     globalDL1.svg.selectAll(".search_label")

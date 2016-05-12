@@ -55,6 +55,13 @@
 .dl1.point:hover {
     fill: steelblue;
 }
+
+.dl1.point.pressed {
+    r:5px;
+    stroke:steelblue;
+    stroke-width:2px;
+    fill: darkred;
+}
 .dl1.point-tip {
     line-height: 1;
     padding: 2px;
@@ -173,7 +180,7 @@
     width: 80px;
 }
 
-.dl2.line.bracket{
+.dl2.bracket{
     fill: none;
     stroke: black;
 }

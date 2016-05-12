@@ -3,6 +3,8 @@
  │                          TODOO list                        │
  └────────────────────────────────────────────────────────────┘
 ** Pongo TODOO con dos 'O' para que no me aparezca como tarea en el proyecto **
+Creo que es mejor que directamenet usemos el soporte de issues que hay en github. He añadido varias con problemillas
+que he ido encontrando.
 
 
   Frontend
