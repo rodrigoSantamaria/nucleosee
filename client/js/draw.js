@@ -587,6 +587,7 @@ function drawNucleotides(start, point, nuc)
     var height      = globalDL3.cv.dim.height;
     var margin      = globalDL3.cv.margin;
     var GDL3Seqs    = globalDL3.sequences;
+    var letterWidth = getTextWidth("A", "12px Courier New");
 
 
     // First, we delete the image, if this exist
@@ -623,7 +624,6 @@ function drawNucleotides(start, point, nuc)
     start=Math.round(start);
     startWholeSeq=Math.round(startWholeSeq);
     wholeSeq=wholeSeq.toUpperCase();
-    var letterWidth = getTextWidth("A", "12px Courier New");
     var displace=Math.round(Math.max(0,start-point)); //if left bracket is below the first nucleotide of the seq we set to 0
     var numLetters=Math.floor(dimDL.width/letterWidth);
     var seq=GDL3Seqs.seqs[point];      //searched seq (do not confuse with wholeSeq)
