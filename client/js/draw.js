@@ -293,7 +293,7 @@ function dataLine_1_drawPoints(allPoints, tracks, track, sizePattern, numNucleot
     globalDL1.cv.svg.append("g")
         .attr("class", globalDL1.cv.classSVG+" search-label")
         .append("text")
-        .attr('x', 390)
+        .attr('x', 385)
         .attr('y', -2)
         .text("matches:");
 
@@ -307,7 +307,7 @@ function dataLine_1_drawPoints(allPoints, tracks, track, sizePattern, numNucleot
      .enter()
      .append("text")
      .attr("class", globalDL1.cv.classSVG+" search-label")
-     .attr('x', function(d,i){return 445+i*30;})
+     .attr('x', function(d,i){return 440+i*30;})
      .attr('y', -2)
      .style("font-weight", function (d, i) {
          if(tracks[i]==track) return "bold";

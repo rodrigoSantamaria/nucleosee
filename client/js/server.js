@@ -39,7 +39,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         var _user       = "";
         var _password   = "";
         var _DEBUG      = false;
-        var _loadingImage = null;
 
 
         /**
@@ -50,24 +49,15 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param loadingImage
          * @param serverPath
          */
-        Server.connect = function (DEBUG, callback, user, password, loadingImage, serverPath)
+        Server.connect = function (DEBUG, callback, user, password, serverPath)
         {
             serverPath     || ( serverPath = "http://127.0.0.1:2750/" );
-            loadingImage   || ( loadingImage = null );
 
 
             _serverPath     = removeLastSlash(serverPath);
             _user           = user;
             _password       = password;
             _DEBUG          = DEBUG;
-            if(loadingImage != null)
-            {
-                _loadingImage   = $('#'+loadingImage);
-            }
-            else
-            {
-                _loadingImage = null;
-            }
 
 
             // TODO: si no puede conectar, que pare todo y lance un error
@@ -90,7 +80,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+            $("#loadImg").show();
+            $("#loadImg")[0].style.visibility="visible";
+
 
             var _forceReload = "";
             if(forceReload) _forceReload = "True";
@@ -111,7 +103,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(!(result.response == "outdated version" || result.response == "not found"))
                     {
                         // Hide the image of "loading..."
-                        if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                        $("#loadImg")[0].style.visibility="hidden";
 
                         if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
 
@@ -137,7 +129,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                             .done(function(result)
                             {
                                 // Hide the image of "loading..."
-                                if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                                $("#loadImg")[0].style.visibility="hidden";
 
                                 if (_DEBUG) console.log("sendFile(): uploaded");
                                 if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
@@ -179,7 +171,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.preprocess = function (callback, filename, track, ws, nb, maxSize)
         {
-            // TODO: siempre es asi?
             var stdev = 2;
             var recharge = "False";
 
@@ -187,7 +178,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+            $("#loadImg").show();
+            $("#loadImg")[0].style.visibility="visible";
 
             var requestAJAX = $.ajax(
                 {
@@ -210,7 +202,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.chromosomes=result.chromosomes;
 
                     // Hide the image of "loading..."
-                    if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                    $("#loadImg")[0].style.visibility="hidden";
 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
@@ -234,7 +226,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+            $("#loadImg")[0].style.visibility="visible";
 
             var requestAJAX = $.ajax(
                 {
@@ -257,7 +249,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.chromosomes=result.chromosomes;
 
                     // Hide the image of "loading..."
-                    if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                    $("#loadImg")[0].style.visibility="hidden";
 
                     if(_DEBUG) console.log("getTrack(): get track done...");
                     if (_DEBUG) console.log("Time spent get track: " + (new Date() - startTime) + "ms");
@@ -267,6 +259,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .fail(function()
                 {
                     if(_DEBUG) console.log("getTrack(): get track failed...");
+                    $("#loadImg")[0].style.visibility="hidden";
                 });
         };
 
@@ -282,7 +275,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+            $("#searchImg").show();
+            $("#searchImg")[0].style.visibility="visible";
 
             if(_DEBUG) console.log("pattern is "+pattern);
             pattern = encodeURIComponent(pattern);  // it encodes the following characters: , / ? : @ & = + $ #
@@ -304,7 +298,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         response.sizePattern = result.sizePattern;
 
                         // Hide the image of "loading..."
-                        if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                        $("#searchImg")[0].style.visibility="hidden";
 
                         if(_DEBUG) console.log("search(): search done...");
                         if(_DEBUG) console.log("Time spent searching: "+ (new Date()-startTime)+"ms");
@@ -350,10 +344,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             if(typeof(numMatches) === 'undefined')      numMatches = 0;
 
 
-            // Show the image of "loading..."
-            //if(_loadingImage != null && gis == "") { _loadingImage.css("top", 0).show(); }
-
-
             // Calculate points of this track and number of matches
             var track  = chromosomes[numChromosome-1];
             var points = JSON.parse(allPoints[track]);
@@ -386,9 +376,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     }
                     else
                     {
-                        // Hide the image of "loading..."
-                        //if(_loadingImage != null) { _loadingImage.css("display", "none"); }
-
                         if(_DEBUG) console.log("Total number of matches: "+numMatches);
                         if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations done...");
                         if(_DEBUG) console.log("Time spent getting all annotations: "+ (new Date()-startTime)+"ms");
@@ -413,9 +400,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         {
             var startTime = new Date();
 
-            // Show the image of "loading..."
-            //if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
-
 
             var arrayGis = gis;
             arrayGis = arrayGis.split(',');
@@ -438,9 +422,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 {
                     var response = [];
                     response = result.response;
-
-                    // Hide the image of "loading..."
-                    //if(_loadingImage != null) { _loadingImage.css("display", "none"); }
 
                     if(_DEBUG) console.log("enrichmentGO(): enrichmentGO done...");
                     if(_DEBUG) console.log("Time spent Enrichment analysis: "+ (new Date()-startTime)+"ms");
@@ -636,10 +617,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         function javascript_abort(msg)
         {
             msg   || ( msg = 'This is not an error. This is just to abort javascript' );
-
-            // Hide the image of "loading...".
-            if(_loadingImage != null) { _loadingImage.css("display", "none"); }
-
             alert(msg);
 
             throw "ERROR GBV: "+msg;
