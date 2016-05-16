@@ -283,7 +283,6 @@ function dataLine_1_drawPoints(points, sizePattern, numNucleotidesDraw)
     $("."+globalDL1.cv.classSVG+".point").bind( "mouseover", function()
     {
         $("."+globalDL1.cv.classSVG+".point").attr('class', globalDL1.cv.classSVG+' point');
-        console.log("here");
         $(this).attr('class', globalDL1.cv.classSVG+' point pressed');
     });
 
@@ -465,6 +464,9 @@ function dataLine_2(partSeq, numNucleotides, point, sizePattern)
 
 function dataLine_2_drawAnnotationLine(annotations)
 {
+    if(false) console.log("\ndataLine_2_drawAnnotationLine(): there are annotations");
+
+
     var startSeq = globalDL2.startSeq;
     var endSeq = globalDL2.endSeq;
     var factor=globalDL2.cv.scaleSeqScreen*globalDL2.cv.scaleServScreen; // De momento queremos que el factor sea 1:1 siempre

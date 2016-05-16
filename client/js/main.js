@@ -219,9 +219,6 @@ function createIconsChromosomes(chromosomes)
 
             var pName = $('<p class="chromosome-name"></p>').text(chromosomeName);
 
-            console.log(chromosomeName);
-            console.log(pName);
-
             $('<p class="chromosome-tooltip"></p>')
                 .appendTo('body')
                 .append(pName)
