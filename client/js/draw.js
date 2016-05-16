@@ -40,7 +40,8 @@ var globalSeq =
     mean : null,
     stdev : null,
     ws : null,
-    scaleSeqServ : null
+    scaleSeqServ : null,
+    tracks : null
 };
 
 
@@ -209,8 +210,9 @@ function dataLine_1(track, fullLength, seqServ, startSeq, endSeq, maxSize, mean,
     if(DEBUG_GBV) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
 }
 
-function dataLine_1_drawPoints(points, sizePattern, numNucleotidesDraw)
+function dataLine_1_drawPoints(allPoints, tracks, track, sizePattern, numNucleotidesDraw)
 {
+    var points=JSON.parse(allPoints[track]);
     if(DEBUG_GBV) console.log("\ndataLine_1_drawPoints(): "+points.length+" points");
 
     // We calculate the points found in the sequence
@@ -260,7 +262,7 @@ function dataLine_1_drawPoints(points, sizePattern, numNucleotidesDraw)
     globalDL1.cv.svg.call(tip);
 
 
-    // Remove all points (previous) and occurrences label
+    // Remove all points (previous) and occurrences label TODO: cambiar a globalDL1.cv sin más?
     globalDL1.cv.svg.selectAll(".point")
         .remove();
     globalDL1.cv.svg.select(".search-label")
@@ -292,10 +294,38 @@ function dataLine_1_drawPoints(points, sizePattern, numNucleotidesDraw)
     globalDL1.cv.svg.append("g")
         .attr("class", globalDL1.cv.classSVG+" search-label")
         .append("text")
-        .attr('x', (globalDL1.cv.dim.width/2)-100)
-        .attr('y', 10)
-        .text(dataPoints.length+" matches");
+        .attr('x', 390)
+        .attr('y', -2)
+        .text("matches:");
 
+    /*var matches="matches: "
+    for(var i in tracks) {
+        var pp = JSON.parse(allPoints[tracks[i]]);
+        matches+=pp.length+"\t";
+    }
+    globalDL1.cv.svg.append("g")
+        .attr("class", globalDL1.cv.classSVG+" search-label")
+        .append("text")
+        .attr('x', 400)
+        .attr('y', -2)
+        .text(matches);*/
+
+     var matches=[]
+     for(var i in tracks) {
+     var pp = JSON.parse(allPoints[tracks[i]]);
+     matches.push(pp.length);
+         }
+     globalDL1.cv.svg.selectAll(".searchLabels")
+     .data(matches)
+     .enter()
+     .append("text")
+     .attr("class", globalDL1.cv.classSVG+" search-label")
+     .attr('x', function(d,i){return 445+i*30;})
+     .attr('y', -2)
+     .text(function(d){
+         console.log(d);
+         return d+""
+     });
 
     // Save information of dataLine1
     globalDL1.seqPoints = seqPoints;

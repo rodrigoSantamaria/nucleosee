@@ -124,9 +124,8 @@ function drawPoints(result)
     //----------------------------------
     var chromosome          = GVB_GLOBAL.track;
     var numNucleotidesDraw  = globalDL1.cv.dim.width; // because the scale is 1:1
-    var points              = JSON.parse(result.points[chromosome]);
 
-    dataLine_1_drawPoints(points, result.sizePattern, numNucleotidesDraw);
+    dataLine_1_drawPoints(result.points, GVB_GLOBAL.chromosomes, chromosome, result.sizePattern, numNucleotidesDraw);
 
 
     // ENRICHMENT
@@ -219,7 +218,7 @@ function createIconsChromosomes(chromosomes)
 
             var pName = $('<p class="chromosome-name"></p>').text(chromosomeName);
 
-            console.log(chromosomeName);
+            console.log("Chromosome name: ",chromosomeName);
             console.log(pName);
 
             $('<p class="chromosome-tooltip"></p>')
