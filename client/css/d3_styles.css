@@ -79,7 +79,9 @@ body {
 /* SCALE TEXT */
 .dl1.scale {
     font-family: sans-serif;
-    font-size: 13px;
+    font-size: 11px;
+    fill: #999;
+
 }
 
 /* LINE */
@@ -97,10 +99,16 @@ body {
     stroke-width:2px;
 }
 .dl1.point.pressed {
-    fill:steelblue;
+    stroke: steelblue;
+    r:5px;
+    fill: darkred;
+    stroke-width:2px;
 }
 .dl1.point:hover {
-    fill: steelblue;
+    stroke: steelblue;
+    r:5px;
+    fill: darkred;
+    stroke-width:2px;
 }
 .dl1.point-tip {
     line-height: 1;
@@ -166,7 +174,8 @@ body {
 /* SCALE TEXT */
 .dl2.scale {
     font-family: sans-serif;
-    font-size: 13px;
+    font-size: 11px;
+    fill: #999;
 }
 
 /* LINE */
@@ -224,7 +233,9 @@ body {
 /* SCALE TEXT */
 .dl3.scale {
     font-family: sans-serif;
-    font-size: 13px;
+    font-size: 11px;
+    fill: #999;
+
 }
 
 /* NUCLEOTIDE TEXT */

@@ -265,7 +265,7 @@ function dataLine_1_drawPoints(allPoints, tracks, track, sizePattern, numNucleot
     // Remove all points (previous) and occurrences label TODO: cambiar a globalDL1.cv sin más?
     globalDL1.cv.svg.selectAll(".point")
         .remove();
-    globalDL1.cv.svg.select(".search-label")
+    globalDL1.cv.svg.selectAll(".search-label")
         .remove();
 
 
@@ -297,18 +297,6 @@ function dataLine_1_drawPoints(allPoints, tracks, track, sizePattern, numNucleot
         .attr('y', -2)
         .text("matches:");
 
-    /*var matches="matches: "
-    for(var i in tracks) {
-        var pp = JSON.parse(allPoints[tracks[i]]);
-        matches+=pp.length+"\t";
-    }
-    globalDL1.cv.svg.append("g")
-        .attr("class", globalDL1.cv.classSVG+" search-label")
-        .append("text")
-        .attr('x', 400)
-        .attr('y', -2)
-        .text(matches);*/
-
      var matches=[]
      for(var i in tracks) {
      var pp = JSON.parse(allPoints[tracks[i]]);
@@ -321,8 +309,11 @@ function dataLine_1_drawPoints(allPoints, tracks, track, sizePattern, numNucleot
      .attr("class", globalDL1.cv.classSVG+" search-label")
      .attr('x', function(d,i){return 445+i*30;})
      .attr('y', -2)
+     .style("font-weight", function (d, i) {
+         if(tracks[i]==track) return "bold";
+         return "";
+     })
      .text(function(d){
-         console.log(d);
          return d+""
      });
 
@@ -477,7 +468,7 @@ function dataLine_2(partSeq, numNucleotides, point, sizePattern)
 
         // DRAWING BRACKETS
         var line_x0 = d3.event.layerX-globalDL2.cv.margin.left;
-        var line_y0 = d3.event.layerY-dimDL.height*2+30;
+        var line_y0 = d3.event.layerY-dimDL.height*2;
 
         // Determine the width of the brackets (note: approximate)
         var widthText = getTextWidth("A", "12px Courier New");
@@ -641,7 +632,7 @@ function drawNucleotides(start, point, nuc)
         .attr("class", classSVG+" scale")
         .append("text")
         .text(Math.round(letterWidth) + " : 1")
-        .attr("x", width-margin.left*2.5)
+        .attr("x", width-margin.left)
         .attr("y", margin.top-5);
 
 
@@ -948,7 +939,7 @@ function dataLine_core(DEBUG, globalDL,
         .attr("class", classSVG+" scale")
         .append("text")
         .text("1 : "+Math.round(scaleSeqScreen))
-        .attr("x", width-margin.left*2.5)
+        .attr("x", width-margin.left)
         .attr("y", margin.top*0.75);
 
 

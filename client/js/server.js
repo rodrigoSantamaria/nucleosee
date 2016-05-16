@@ -309,6 +309,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         if(_DEBUG) console.log("search(): search done...");
                         if(_DEBUG) console.log("Time spent searching: "+ (new Date()-startTime)+"ms");
 
+
                         callback(response);
                     }
                     else
@@ -350,7 +351,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 
             // Show the image of "loading..."
-            if(_loadingImage != null && gis == "") { _loadingImage.css("top", 0).show(); }
+            //if(_loadingImage != null && gis == "") { _loadingImage.css("top", 0).show(); }
 
 
             // Calculate points of this track and number of matches
@@ -386,7 +387,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     else
                     {
                         // Hide the image of "loading..."
-                        if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                        //if(_loadingImage != null) { _loadingImage.css("display", "none"); }
 
                         if(_DEBUG) console.log("Total number of matches: "+numMatches);
                         if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations done...");
@@ -413,7 +414,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+            //if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
 
 
             var arrayGis = gis;
@@ -439,7 +440,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response = result.response;
 
                     // Hide the image of "loading..."
-                    if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                    //if(_loadingImage != null) { _loadingImage.css("display", "none"); }
 
                     if(_DEBUG) console.log("enrichmentGO(): enrichmentGO done...");
                     if(_DEBUG) console.log("Time spent Enrichment analysis: "+ (new Date()-startTime)+"ms");

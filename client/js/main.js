@@ -120,7 +120,8 @@ function searchPattern()
 ////////////////////////////////
 function drawPoints(result)
 {
-    // DATALINE 1: DRAW POINTS
+
+        // DATALINE 1: DRAW POINTS
     //----------------------------------
     var chromosome          = GVB_GLOBAL.track;
     var numNucleotidesDraw  = globalDL1.cv.dim.width; // because the scale is 1:1
