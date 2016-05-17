@@ -347,7 +347,11 @@ function dataLine_1_drawEnrichment(enrichment)
     for(var k in enrichment)
     {
         if(enrichment[k].go_name != undefined)
-            goterms.push(enrichment[k]);
+            {
+            var e=enrichment[k];
+            e["go_id"]=k
+            goterms.push(e);
+            }
         else
             console.log("dataLine_1_drawEnrichment(): Error! => GO term "+k+" not found (possibly outdated OBO file?");
 
@@ -364,20 +368,6 @@ function dataLine_1_drawEnrichment(enrichment)
             var text = "p-value: "+ d3.format(".2e")(d.pval)+"<br>"+
                 d.ngis+"/"+ d.ngo +" genes"+"<br>";
             return text;
-
-            /*if(fixed)
-             {
-             console.log("Fixed!");
-             for (var g in d.gis)
-             text += d.gis[g] + "<br>";
-             }*/
-            //TODO: highlight the gis in the track visible now (infrastructure ready on globalDL1.iannotations and enrichment.gis)
-            //Such infrastructure requires pre-load of every position annotations: quite expensive in time at the search
-            /*console.log("Related positions:")
-             for(var g in d.gis)ls
-
-             console.log(d.gis[g]+"\t"+globalDL1.iannotations[globalSeq.track][d.gis[g]]);*/
-            //This is asking now to the go terms annotations
         });
 
     // Calls tip
@@ -431,9 +421,36 @@ function dataLine_1_drawEnrichment(enrichment)
             else
                 return " "+d.go_name;
         })
+        .on('click', function(d){
+            if(d3.select(this).classed("selected")==false)
+                globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm").classed("selected", false);
+            d3.select(this).classed("selected")?d3.select(this).classed("selected", false):d3.select(this).classed("selected", true);
+            //TODO: underline points
+            console.log(globalDL1.annotations[d["gis"][0]]);
+            var gis=[]
+            for(var i in d["gis"])
+                {
+                var annot=globalDL1.annotations[d["gis"][i]];
+                if (annot["chromosome"] == globalSeq.track)
+                    gis.push(annot["pos"]);
+                }
+            globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".gogene").remove();
+
+            if(d3.select(this).classed("selected")==true) {
+                globalDL1.cv.svg.selectAll("." + globalDL1.cv.classSVG + ".gogene")
+                    .data(gis)
+                    .enter()
+                    .append("path")
+                    .attr('class', globalDL1.cv.classSVG + ' gogene')
+                    .attr("d", function (d) {
+                            var pos = Math.round(d / globalDL1.cv.scaleSeqScreen);
+                            return "M" + (pos - 3) + ",100L" + (pos + 3) + ",100";
+                        }
+                    );
+            }
+        })
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
-    //.on('click', function(){tip.fixed?fix.show(true):fix.show(false); tip.fixed=!tip.fixed;});
 }
 
 
@@ -1069,14 +1086,14 @@ function saveSequences(response)
     globalDL3.sequences = sequences;
 }
 
-/*
+
 function setAnnotations(gis, annotations)
 {
     globalDL1.gis=gis;                 //list of gene ids
     if(annotations!=null)
     {
         globalDL1.annotations = annotations;//position -> element id (element can be a gene or other entity)
-        globalDL1.iannotations = {}       //gene id -> position
+    /*    globalDL1.iannotations = {}       //gene id -> position
         for (var p in annotations) {
             globalDL1.iannotations[p] = {}
             for (var e in annotations[p]) {
@@ -1084,10 +1101,11 @@ function setAnnotations(gis, annotations)
                     if (annotations[p][e][i]["type"] == "gene")
                         globalDL1.iannotations[p][annotations[p][e][i]["id"]] = e
             }
-        }
+        }*/
     }
+    return;
 }
-*/
+
 
 
 

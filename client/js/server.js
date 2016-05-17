@@ -328,21 +328,22 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param onlyIDs
          * @param chromosomes
          * @param ws
-         * @param gis               it's not necessary!!
+         * @param gis               it's not necessary!! sure?
+         * @param annotations       it's not necessary!! sure?
          * @param numChromosome     it's not necessary!!
          * @param startTime         it's not necessary!!
          * @param numMatches        it's not necessary!!
          */
         Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs,
                                                chromosomes, ws,
-                                               gis, numChromosome, startTime, numMatches)
+                                               gis, annotations, numChromosome, startTime, numMatches)
         {
             // Initialize variables first
             if(typeof(gis) === 'undefined')             gis = "";
+            if(typeof(annotations) === 'undefined')     annotations = {};
             if(typeof(numChromosome) === 'undefined')   numChromosome = 1;
             if(typeof(startTime) === 'undefined')       startTime = new Date();
             if(typeof(numMatches) === 'undefined')      numMatches = 0;
-
 
             // Calculate points of this track and number of matches
             var track  = chromosomes[numChromosome-1];
@@ -364,15 +365,31 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .done(function(result)
                 {
                     if(gis != "" && result.response != "") gis += ",";
-                    gis += result.response;
+                    if(onlyIDs=="True")
+                        gis += result.response;
+                    else
+                        {
+                        for(var key in result.response)
+                            for(var i in result.response[key]) {
+                                var rrki=result.response[key][i]
+                                gis += rrki["id"] + ",";
+                                annotations[rrki["id"]]={};
+                                annotations[rrki["id"]]["pos"]=key;
+                                annotations[rrki["id"]]["sense"]=rrki["sense"];
+                                annotations[rrki["id"]]["start"]=rrki["start"];
+                                annotations[rrki["id"]]["end"]=rrki["end"];
+                                annotations[rrki["id"]]["chromosome"]=track;
+                            }
+                        }
                     numChromosome++;
 
                     // While the number of chromosomes is less than or equal, we continue to get more annotations
                     if(numChromosome <= chromosomes.length)
                     {
-                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "True",
+                        //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "True",
+                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False",
                             chromosomes, GVB_GLOBAL.ws,
-                            gis, numChromosome, (new Date()-startTime), numMatches);
+                            gis, annotations, numChromosome, (new Date()-startTime), numMatches);
                     }
                     else
                     {
@@ -380,7 +397,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations done...");
                         if(_DEBUG) console.log("Time spent getting all annotations: "+ (new Date()-startTime)+"ms");
 
-                        callback(gis);
+                        callback(gis, annotations);
                     }
                 })
                 .fail(function()

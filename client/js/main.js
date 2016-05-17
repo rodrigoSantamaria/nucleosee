@@ -143,14 +143,14 @@ function getAllAnnotations(allPoints, sizePattern)
     var chromosomes = GVB_GLOBAL.chromosomes;
     var ws          = GVB_GLOBAL.ws;
 
-    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "True",
-                                chromosomes, ws);
+//    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "True", chromosomes, ws);
+    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "False", chromosomes, ws);
 }
 
 
 // GET ENRICHMENT
 ////////////////////////////////
-function getEnrichment(gis)
+function getEnrichment(gis, annotations)
 {
     /*
         // Jonatan: esta parte habría que implementarla en Server.allAnnotationsGenes, para que devolviera
@@ -173,6 +173,7 @@ function getEnrichment(gis)
         setAnnotations(gis,annotations)
     */
 
+    setAnnotations(gis, annotations);
     Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
 }
 
