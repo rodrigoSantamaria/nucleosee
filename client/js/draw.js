@@ -85,6 +85,8 @@ var globalDL1 =
 
     drawn : false,
 
+    annotations: {},
+
     seqPoints : null
 };
 
@@ -422,11 +424,12 @@ function dataLine_1_drawEnrichment(enrichment)
                 return " "+d.go_name;
         })
         .on('click', function(d){
+            //Underline the selected term
             if(d3.select(this).classed("selected")==false)
                 globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm").classed("selected", false);
             d3.select(this).classed("selected")?d3.select(this).classed("selected", false):d3.select(this).classed("selected", true);
-            //TODO: underline points
-            console.log(globalDL1.annotations[d["gis"][0]]);
+
+            //Underline positions with genes annotated with the selected term
             var gis=[]
             for(var i in d["gis"])
                 {
@@ -510,10 +513,6 @@ function dataLine_2_drawAnnotationLine(annotations)
     var factor=globalDL2.cv.scaleSeqScreen*globalDL2.cv.scaleServScreen; // De momento queremos que el factor sea 1:1 siempre
     var lineHeight = globalDL2.cv.dimAnnotation.lineHeight;
 
-    //console.log(annotations);
-    //console.log(factor);
-
-
     //gene line
     globalDL2.cv.svg.append("g")
         .selectAll(".dl2.annotation")
@@ -582,8 +581,46 @@ function dataLine_2_drawAnnotationLine(annotations)
             }
             return "";
         });
+    var genes=[];
+    for (var key in annotations)
+        {
+        if (annotations[key]["type"] == "gene")
+            {
+            var g=annotations[key]["id"];
+            genes.push(g);
+            }
+        }
+    Server.Gene2GO(setGOterms,genes);
 
+    // Mouseover tip and show the information of genes
+    var tip = d3.tip()
+        .attr('class', globalDL2.cv.classSVG+' annotation tip')
+        .html(function(d,i)
+        {
+            if(d["text"]==undefined) {
+                var text = "<b>position: </b>" + d["start"] + "-" + d["end"] + " (" + d["sense"] + ")"+
+                    "<br><b>type: </b>"+d["type"];
 
+                if (globalDL1.annotations[d["id"]] != undefined) {
+                    if (globalDL1.annotations[d["id"]]["goterms"] != undefined) {
+                        text += "<br><b>GO terms:</b>";
+                        for (var term in globalDL1.annotations[d["id"]]["goterms"])
+                            text += "<br>  " + globalDL1.annotations[d["id"]]["goterms"][term];
+                    }
+                }
+                d["text"]=text;
+            }
+
+            return d["text"];
+        })
+        .offset(function(d){
+            //TODO: not quite well positioned yet
+         //   return [((d["text"].match(/<br>/g) || []).length+1)*14+lineHeight+(d["sense"]=="-"?lineHeight:0), 20]})   // below
+            return [0,25]}) //above
+        ;
+
+    // Calls tip
+    globalDL2.cv.svg.call(tip);
 
     //gene labels
     globalDL2.cv.svg.append("g")
@@ -602,7 +639,9 @@ function dataLine_2_drawAnnotationLine(annotations)
                 if(d.type.indexOf("gene")>-1)
                     res=d.id;
             return res;
-        });
+        })
+        .on('mouseover', tip.show)
+        .on('mouseout', tip.hide);
 }
 
 
@@ -1086,11 +1125,21 @@ function saveSequences(response)
     globalDL3.sequences = sequences;
 }
 
+function setGOterms(genes, goterms)
+    {
+    for(var i in genes)
+        {
+        var gene=genes[i]
+        if (globalDL1.annotations[gene] == undefined)
+            globalDL1.annotations[gene] = {}
+        globalDL1.annotations[gene]["goterms"] = goterms[gene];
+        }
+    }
 
 function setAnnotations(gis, annotations)
 {
     globalDL1.gis=gis;                 //list of gene ids
-    if(annotations!=null)
+    if(annotations!=undefined)
     {
         globalDL1.annotations = annotations;//position -> element id (element can be a gene or other entity)
     /*    globalDL1.iannotations = {}       //gene id -> position

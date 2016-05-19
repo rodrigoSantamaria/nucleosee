@@ -217,6 +217,18 @@ body {
     stroke: #FFF;
     stroke-width: 1px;
 }
+.dl2.annotation.tip{
+    font-family: sans-serif;
+    font-size: 10px;
+    color: #666;
+    fill-opacity: .5;
+    background: #EFE;
+    border: 1px;
+    border-radius: 3px;
+    padding: 2px;
+    text-align: left;
+    vertical-aling: text-bottom;
+}
 
 /* BRACKETS */
 .dl2.bracket{

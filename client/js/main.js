@@ -152,27 +152,6 @@ function getAllAnnotations(allPoints, sizePattern)
 ////////////////////////////////
 function getEnrichment(gis, annotations)
 {
-    /*
-        // Jonatan: esta parte habría que implementarla en Server.allAnnotationsGenes, para que devolviera
-        // también "annotations", propagándolo hacia dataLine_1_drawEnrichment().
-
-        //Will solve posterior annotation queries, but it's very time consuming (increases from 1 to 10
-        var gis=""//genes of interest
-        var annotations={}//for each position, the genes in it
-        for(var i=0;i<processedData.chromosomes.length;i++) {
-            var points=JSON.parse(result.points[processedData.chromosomes[i]]);
-            for( var j=0;j<points.length;j++)
-                points[j]*=ws;
-            console.log(points.length+" matches in track "+processedData.chromosomes[i]);
-            numMatches+=points.length
-            //annotations[processedData.chromosomes[i]]=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "False");
-            annotations[processedData.chromosomes[i]]=Server.annotationsGenes("[" + points + "]", "[\"any\"]", globalDL2.dim.width, "center", processedData.chromosomes[i], "False");//this here might be too burdening
-            gis+=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "True");
-        }
-        gis=gis.replace(/,$/, "");
-        setAnnotations(gis,annotations)
-    */
-
     setAnnotations(gis, annotations);
     Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
 }

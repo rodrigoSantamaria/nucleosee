@@ -494,6 +494,51 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 });
         };
 
+        /**
+         * Get GO terms for a given list of gene ids
+         * @param callback
+         * @param genes list of genes
+         */
+        Server.Gene2GO = function (callback, genes)
+        {
+            var startTime = new Date();
+            var genes1 = "[\""+genes+"\"]";
+            genes1 = genes1.replace(/,/g,"\",\"");  //replaces ',' by '","'
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/annotationsGOA?user="+_user+"&password="+_password+
+                    "&genes="+genes1+"&types=[\"any\"]",
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var annotations = result.response;
+
+                    if(false) console.log("Gene2GO(): get of gene done...");
+                    if(false) console.log("Time spent annotationsGenes: "+ (new Date()-startTime)+"ms");
+                    var goterms={};
+                    for(var i in genes) {
+                        var g = genes[i];
+                        goterms[g] = [];
+                    }
+                    for (var key in annotations)
+                        {
+                        for(var i in annotations[key]["genes"])
+                            goterms[annotations[key]["genes"][i]].push(annotations[key]["name"]);
+                        }
+                    callback(genes, goterms);
+                    //return annotations;
+                })
+                .fail(function()
+                {
+                    if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
+                });
+        };
+
 
         /**
          * Calls the REST service available to a summary and characterization of data (more reduced)
@@ -644,3 +689,51 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 })(window);
 
+
+
+(function() {
+
+    // get a reference to the d3.selection prototype,
+    // and keep a reference to the old d3.selection.on
+    var d3_selectionPrototype = d3.selection.prototype,
+        d3_on = d3_selectionPrototype.on;
+
+    // our shims are organized by event:
+    // "desired-event": ["shimmed-event", wrapperFunction]
+    var shims = {
+        "mouseenter": ["mouseover", relatedTarget],
+        "mouseleave": ["mouseout", relatedTarget]
+    };
+
+    // rewrite the d3.selection.on function to shim the events with wrapped
+    // callbacks
+    d3_selectionPrototype.on = function(evt, callback, useCapture) {
+        var bits = evt.split("."),
+            type = bits.shift(),
+            shim = shims[type];
+        if (shim) {
+            evt = [shim[0], bits].join(".");
+            callback = shim[1].call(null, callback);
+            return d3_on.call(this, evt, callback, useCapture);
+        } else {
+            return d3_on.apply(this, arguments);
+        }
+    };
+
+    function relatedTarget(callback) {
+        return function() {
+            var related = d3.event.relatedTarget;
+            if (this === related || childOf(this, related)) {
+                return undefined;
+            }
+            return callback.apply(this, arguments);
+        };
+    }
+
+    function childOf(p, c) {
+        if (p === c) return false;
+        while (c && c !== p) c = c.parentNode;
+        return c === p;
+    }
+
+})();
