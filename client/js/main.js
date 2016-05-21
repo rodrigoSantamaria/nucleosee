@@ -120,13 +120,13 @@ function searchPattern()
 ////////////////////////////////
 function drawPoints(result)
 {
-    // DATALINE 1: DRAW POINTS
+
+        // DATALINE 1: DRAW POINTS
     //----------------------------------
     var chromosome          = GVB_GLOBAL.track;
     var numNucleotidesDraw  = globalDL1.cv.dim.width; // because the scale is 1:1
-    var points              = JSON.parse(result.points[chromosome]);
 
-    dataLine_1_drawPoints(points, result.sizePattern, numNucleotidesDraw);
+    dataLine_1_drawPoints(result.points, GVB_GLOBAL.chromosomes, chromosome, result.sizePattern, numNucleotidesDraw);
 
 
     // ENRICHMENT
@@ -143,36 +143,16 @@ function getAllAnnotations(allPoints, sizePattern)
     var chromosomes = GVB_GLOBAL.chromosomes;
     var ws          = GVB_GLOBAL.ws;
 
-    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "True",
-                                chromosomes, ws);
+//    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "True", chromosomes, ws);
+    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "False", chromosomes, ws);
 }
 
 
 // GET ENRICHMENT
 ////////////////////////////////
-function getEnrichment(gis)
+function getEnrichment(gis, annotations)
 {
-    /*
-        // Jonatan: esta parte habría que implementarla en Server.allAnnotationsGenes, para que devolviera
-        // también "annotations", propagándolo hacia dataLine_1_drawEnrichment().
-
-        //Will solve posterior annotation queries, but it's very time consuming (increases from 1 to 10
-        var gis=""//genes of interest
-        var annotations={}//for each position, the genes in it
-        for(var i=0;i<processedData.chromosomes.length;i++) {
-            var points=JSON.parse(result.points[processedData.chromosomes[i]]);
-            for( var j=0;j<points.length;j++)
-                points[j]*=ws;
-            console.log(points.length+" matches in track "+processedData.chromosomes[i]);
-            numMatches+=points.length
-            //annotations[processedData.chromosomes[i]]=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "False");
-            annotations[processedData.chromosomes[i]]=Server.annotationsGenes("[" + points + "]", "[\"any\"]", globalDL2.dim.width, "center", processedData.chromosomes[i], "False");//this here might be too burdening
-            gis+=Server.annotationsGenes("[" + points + "]", "[\"gene\"]", result.sizePattern*ws, "left", processedData.chromosomes[i], "True");
-        }
-        gis=gis.replace(/,$/, "");
-        setAnnotations(gis,annotations)
-    */
-
+    setAnnotations(gis, annotations);
     Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
 }
 

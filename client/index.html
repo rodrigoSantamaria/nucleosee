@@ -84,16 +84,19 @@
         <div style="float:left;">
             <!-- FILE UPLOAD -->
             <div style="margin-top:5px;">
-                <div style="float:left;margin-left: 30px;margin-right:10px;">
+                <div style="float:left;margin-left: 30px;margin-right:5px;">
                     <input type="file" id="files" name="files[]" multiple style="float:left"/>
                     <!--output id="list"></output-->
                     <script src="js/upload-file.js"></script>
                 </div>
-                <div style="float:left;margin-left:10px;margin-right:10px;">
+                <div style="float:left;margin-left:5px;margin-right:5px;">
                     <input type="checkbox" id="reload">Reload<br>
                 </div>
-                <div style="float:left;margin-left:10px;margin-right:10px;">
+                <div style="float:left;margin-left:5px;margin-right:5px;">
                     <button type="button" style="float:left" onclick="destroyAll(true)">Delete</button>
+                </div>
+                <div style="float:left;margin-left:5px;margin-right:0px;margin-top:0px">
+                    <img id="loadImg" src="images/loading.gif" style="display:inline;visibility:hidden"/>
                 </div>
             </div>
 
@@ -108,7 +111,7 @@
                     <input type="text" id="patternSearch">
                 </div>
 
-                <div style="float:left;margin-top:4px;margin-left:5px;margin-right:10px;">
+                <div style="float:left;margin-top:4px;margin-left:5px;margin-right:5px;">
                     <select id="dSearch">
                         <option value="0" selected="selected">0</option>
                         <option value="1">1</option>
@@ -117,8 +120,11 @@
                     </select>
                 </div>
 
-                <div style="float:left;margin-top:4px;margin-left:10px;margin-right:10px;">
+                <div style="float:left;margin-top:4px;margin-left:5px;margin-right:5px;">
                     <button type="button" onclick="searchPattern()">Search pattern</button>
+                </div>
+                <div style="float:left;margin-left:5px;margin-right:0px;margin-top:3px">
+                    <img id="searchImg" src="images/loading.gif" style="display:inline;visibility:hidden"/>
                 </div>
 
             </div>
@@ -142,10 +148,10 @@
 
 
 
-    <!-- IMAGE OF "LOADING..." -->
+    <!-- IMAGE OF "LOADING..." --
     <div class="div-loading" id="divLoading" style="display:none">
         <img class="div-loading-image" src="images/loading.gif"/>
-    </div>
+    </div>-->
 
 
     <!-- Modal -->
@@ -260,7 +266,8 @@
 
 
                 //Server.connect(true, verifyConnection, username, password, "divLoading", "http://prodiasv21.fis.usal.es:2750/");
-                Server.connect(true, verifyConnection, username, password, "divLoading", "http://127.0.0.1:2750/");
+                //Server.connect(true, verifyConnection, username, password, "divLoading", "http://127.0.0.1:2750/");
+                Server.connect(true, verifyConnection, username, password, "http://127.0.0.1:2750/");
 
                 return false;
             });

@@ -39,7 +39,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         var _user       = "";
         var _password   = "";
         var _DEBUG      = false;
-        var _loadingImage = null;
 
 
         /**
@@ -50,24 +49,15 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param loadingImage
          * @param serverPath
          */
-        Server.connect = function (DEBUG, callback, user, password, loadingImage, serverPath)
+        Server.connect = function (DEBUG, callback, user, password, serverPath)
         {
             serverPath     || ( serverPath = "http://127.0.0.1:2750/" );
-            loadingImage   || ( loadingImage = null );
 
 
             _serverPath     = removeLastSlash(serverPath);
             _user           = user;
             _password       = password;
             _DEBUG          = DEBUG;
-            if(loadingImage != null)
-            {
-                _loadingImage   = $('#'+loadingImage);
-            }
-            else
-            {
-                _loadingImage = null;
-            }
 
 
             // TODO: si no puede conectar, que pare todo y lance un error
@@ -90,7 +80,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+            $("#loadImg").show();
+            $("#loadImg")[0].style.visibility="visible";
+
 
             var _forceReload = "";
             if(forceReload) _forceReload = "True";
@@ -111,7 +103,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(!(result.response == "outdated version" || result.response == "not found"))
                     {
                         // Hide the image of "loading..."
-                        if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                        $("#loadImg")[0].style.visibility="hidden";
 
                         if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
 
@@ -137,7 +129,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                             .done(function(result)
                             {
                                 // Hide the image of "loading..."
-                                if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                                $("#loadImg")[0].style.visibility="hidden";
 
                                 if (_DEBUG) console.log("sendFile(): uploaded");
                                 if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
@@ -179,7 +171,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.preprocess = function (callback, filename, track, ws, nb, maxSize)
         {
-            // TODO: siempre es asi?
             var stdev = 2;
             var recharge = "False";
 
@@ -187,7 +178,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+            $("#loadImg").show();
+            $("#loadImg")[0].style.visibility="visible";
 
             var requestAJAX = $.ajax(
                 {
@@ -210,7 +202,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.chromosomes=result.chromosomes;
 
                     // Hide the image of "loading..."
-                    if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                    $("#loadImg")[0].style.visibility="hidden";
 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
@@ -234,7 +226,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+            $("#loadImg")[0].style.visibility="visible";
 
             var requestAJAX = $.ajax(
                 {
@@ -257,7 +249,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.chromosomes=result.chromosomes;
 
                     // Hide the image of "loading..."
-                    if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                    $("#loadImg")[0].style.visibility="hidden";
 
                     if(_DEBUG) console.log("getTrack(): get track done...");
                     if (_DEBUG) console.log("Time spent get track: " + (new Date() - startTime) + "ms");
@@ -267,6 +259,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .fail(function()
                 {
                     if(_DEBUG) console.log("getTrack(): get track failed...");
+                    $("#loadImg")[0].style.visibility="hidden";
                 });
         };
 
@@ -282,7 +275,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
+            $("#searchImg").show();
+            $("#searchImg")[0].style.visibility="visible";
 
             if(_DEBUG) console.log("pattern is "+pattern);
             pattern = encodeURIComponent(pattern);  // it encodes the following characters: , / ? : @ & = + $ #
@@ -304,10 +298,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         response.sizePattern = result.sizePattern;
 
                         // Hide the image of "loading..."
-                        if(_loadingImage != null) { _loadingImage.css("display", "none"); }
+                        $("#searchImg")[0].style.visibility="hidden";
 
                         if(_DEBUG) console.log("search(): search done...");
                         if(_DEBUG) console.log("Time spent searching: "+ (new Date()-startTime)+"ms");
+
 
                         callback(response);
                     }
@@ -333,25 +328,22 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param onlyIDs
          * @param chromosomes
          * @param ws
-         * @param gis               it's not necessary!!
+         * @param gis               it's not necessary!! sure?
+         * @param annotations       it's not necessary!! sure?
          * @param numChromosome     it's not necessary!!
          * @param startTime         it's not necessary!!
          * @param numMatches        it's not necessary!!
          */
         Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs,
                                                chromosomes, ws,
-                                               gis, numChromosome, startTime, numMatches)
+                                               gis, annotations, numChromosome, startTime, numMatches)
         {
             // Initialize variables first
             if(typeof(gis) === 'undefined')             gis = "";
+            if(typeof(annotations) === 'undefined')     annotations = {};
             if(typeof(numChromosome) === 'undefined')   numChromosome = 1;
             if(typeof(startTime) === 'undefined')       startTime = new Date();
             if(typeof(numMatches) === 'undefined')      numMatches = 0;
-
-
-            // Show the image of "loading..."
-            if(_loadingImage != null && gis == "") { _loadingImage.css("top", 0).show(); }
-
 
             // Calculate points of this track and number of matches
             var track  = chromosomes[numChromosome-1];
@@ -373,26 +365,39 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .done(function(result)
                 {
                     if(gis != "" && result.response != "") gis += ",";
-                    gis += result.response;
+                    if(onlyIDs=="True")
+                        gis += result.response;
+                    else
+                        {
+                        for(var key in result.response)
+                            for(var i in result.response[key]) {
+                                var rrki=result.response[key][i]
+                                gis += rrki["id"] + ",";
+                                annotations[rrki["id"]]={};
+                                annotations[rrki["id"]]["pos"]=key;
+                                annotations[rrki["id"]]["sense"]=rrki["sense"];
+                                annotations[rrki["id"]]["start"]=rrki["start"];
+                                annotations[rrki["id"]]["end"]=rrki["end"];
+                                annotations[rrki["id"]]["chromosome"]=track;
+                            }
+                        }
                     numChromosome++;
 
                     // While the number of chromosomes is less than or equal, we continue to get more annotations
                     if(numChromosome <= chromosomes.length)
                     {
-                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "True",
+                        //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "True",
+                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False",
                             chromosomes, GVB_GLOBAL.ws,
-                            gis, numChromosome, (new Date()-startTime), numMatches);
+                            gis, annotations, numChromosome, (new Date()-startTime), numMatches);
                     }
                     else
                     {
-                        // Hide the image of "loading..."
-                        if(_loadingImage != null) { _loadingImage.css("display", "none"); }
-
                         if(_DEBUG) console.log("Total number of matches: "+numMatches);
                         if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations done...");
                         if(_DEBUG) console.log("Time spent getting all annotations: "+ (new Date()-startTime)+"ms");
 
-                        callback(gis);
+                        callback(gis, annotations);
                     }
                 })
                 .fail(function()
@@ -411,9 +416,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         Server.enrichmentGO = function (callback, gis, correction, alpha)
         {
             var startTime = new Date();
-
-            // Show the image of "loading..."
-            if(_loadingImage != null) { _loadingImage.css("top", 0).show(); }
 
 
             var arrayGis = gis;
@@ -437,9 +439,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 {
                     var response = [];
                     response = result.response;
-
-                    // Hide the image of "loading..."
-                    if(_loadingImage != null) { _loadingImage.css("display", "none"); }
 
                     if(_DEBUG) console.log("enrichmentGO(): enrichmentGO done...");
                     if(_DEBUG) console.log("Time spent Enrichment analysis: "+ (new Date()-startTime)+"ms");
@@ -488,6 +487,51 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     {
                         callback(annotations[point]);
                     }
+                })
+                .fail(function()
+                {
+                    if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
+                });
+        };
+
+        /**
+         * Get GO terms for a given list of gene ids
+         * @param callback
+         * @param genes list of genes
+         */
+        Server.Gene2GO = function (callback, genes)
+        {
+            var startTime = new Date();
+            var genes1 = "[\""+genes+"\"]";
+            genes1 = genes1.replace(/,/g,"\",\"");  //replaces ',' by '","'
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/annotationsGOA?user="+_user+"&password="+_password+
+                    "&genes="+genes1+"&types=[\"any\"]",
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var annotations = result.response;
+
+                    if(false) console.log("Gene2GO(): get of gene done...");
+                    if(false) console.log("Time spent annotationsGenes: "+ (new Date()-startTime)+"ms");
+                    var goterms={};
+                    for(var i in genes) {
+                        var g = genes[i];
+                        goterms[g] = [];
+                    }
+                    for (var key in annotations)
+                        {
+                        for(var i in annotations[key]["genes"])
+                            goterms[annotations[key]["genes"][i]].push(annotations[key]["name"]);
+                        }
+                    callback(genes, goterms);
+                    //return annotations;
                 })
                 .fail(function()
                 {
@@ -635,10 +679,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         function javascript_abort(msg)
         {
             msg   || ( msg = 'This is not an error. This is just to abort javascript' );
-
-            // Hide the image of "loading...".
-            if(_loadingImage != null) { _loadingImage.css("display", "none"); }
-
             alert(msg);
 
             throw "ERROR GBV: "+msg;
@@ -649,3 +689,51 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 })(window);
 
+
+
+(function() {
+
+    // get a reference to the d3.selection prototype,
+    // and keep a reference to the old d3.selection.on
+    var d3_selectionPrototype = d3.selection.prototype,
+        d3_on = d3_selectionPrototype.on;
+
+    // our shims are organized by event:
+    // "desired-event": ["shimmed-event", wrapperFunction]
+    var shims = {
+        "mouseenter": ["mouseover", relatedTarget],
+        "mouseleave": ["mouseout", relatedTarget]
+    };
+
+    // rewrite the d3.selection.on function to shim the events with wrapped
+    // callbacks
+    d3_selectionPrototype.on = function(evt, callback, useCapture) {
+        var bits = evt.split("."),
+            type = bits.shift(),
+            shim = shims[type];
+        if (shim) {
+            evt = [shim[0], bits].join(".");
+            callback = shim[1].call(null, callback);
+            return d3_on.call(this, evt, callback, useCapture);
+        } else {
+            return d3_on.apply(this, arguments);
+        }
+    };
+
+    function relatedTarget(callback) {
+        return function() {
+            var related = d3.event.relatedTarget;
+            if (this === related || childOf(this, related)) {
+                return undefined;
+            }
+            return callback.apply(this, arguments);
+        };
+    }
+
+    function childOf(p, c) {
+        if (p === c) return false;
+        while (c && c !== p) c = c.parentNode;
+        return c === p;
+    }
+
+})();
