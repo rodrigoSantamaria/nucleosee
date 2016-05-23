@@ -24,8 +24,14 @@ var GVB_GLOBAL =
 
 // CHECK FILE (AND UPLOAD FILE)
 ////////////////////////////////////////////
+
 function checkFile(file)
 {
+    /**
+     * @typedef {Object} file
+     * @property name
+     */
+
     destroyAll(false);
 
     // We ensure that there is a selected file
@@ -72,6 +78,16 @@ function preprocessing(chromosome)
 ////////////////////////////////
 function drawingFirstDataLine(processedData, chromosome)
 {
+    /**
+     * @typedef {Object} processedData
+     * @property seq
+     * @property mean
+     * @property stdev
+     * @property dseq
+     * @property fullLength
+     * @property chromosomes
+     */
+
     // We create icons chromosomes and bind the click event
     GVB_GLOBAL.chromosomes = processedData.chromosomes;
     if(chromosome == "None")
@@ -95,7 +111,7 @@ function drawingFirstDataLine(processedData, chromosome)
     //----------------------------------
     if(DEBUG_GBV) console.log("\n----- DRAWING: DATALINE 1 ("+GVB_GLOBAL.track+")-----");
     if(DEBUG_GBV) console.log("Length of seqServer:"+seqServer.length+" (full length seq="+fullLength+")");
-    dataLine_1(GVB_GLOBAL.track, fullLength, seqServer, 0, fullLength, GVB_GLOBAL.maxSize, mean, stdev, GVB_GLOBAL.ws);
+    dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength, seqServer, 0, fullLength, GVB_GLOBAL.maxSize, mean, stdev, GVB_GLOBAL.ws);
 }
 
 
@@ -120,13 +136,15 @@ function searchPattern()
 ////////////////////////////////
 function drawPoints(result)
 {
+    /**
+     * @typedef {Object} result
+     * @property points
+     * @property sizePattern
+     */
 
-        // DATALINE 1: DRAW POINTS
+    // DATALINE 1: DRAW POINTS
     //----------------------------------
-    var chromosome          = GVB_GLOBAL.track;
-    var numNucleotidesDraw  = globalDL1.cv.dim.width; // because the scale is 1:1
-
-    dataLine_1_drawPoints(result.points, GVB_GLOBAL.chromosomes, chromosome, result.sizePattern, numNucleotidesDraw);
+    dataLine_1_drawPoints(result.points, result.sizePattern);
 
 
     // ENRICHMENT
@@ -143,7 +161,8 @@ function getAllAnnotations(allPoints, sizePattern)
     var chromosomes = GVB_GLOBAL.chromosomes;
     var ws          = GVB_GLOBAL.ws;
 
-//    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "True", chromosomes, ws);
+
+    //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "True", chromosomes, ws);
     Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "False", chromosomes, ws);
 }
 
@@ -153,6 +172,7 @@ function getAllAnnotations(allPoints, sizePattern)
 function getEnrichment(gis, annotations)
 {
     setAnnotations(gis, annotations);
+
     Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
 }
 
@@ -168,30 +188,33 @@ function drawEnrichment(enrichment)
 
 
 
-
-
 function createIconsChromosomes(chromosomes)
 {
-    $('#imagesChromosomes').empty();
+    var $imagesChromosomes = $('#imagesChromosomes');
+    var $imageChromosome = $('#image-chromosome');
+
+    $imagesChromosomes.empty();
     for(var i=0; i<chromosomes.length; i++)
     {
-        $('#imagesChromosomes').append('<img style="margin-top:15px;margin-right:5px"'+
+        $imagesChromosomes.append('<img style="margin-top:15px;margin-right:5px"'+
             'id="'+chromosomes[i]+'" class="image-chromosome" data-chromosome="'+chromosomes[i]+'" '+
             'src="images/chromosome.png" height="24px" width="24px">');
     }
 
-    $(".image-chromosome").bind( "click", function()
+    $imagesChromosomes.bind( "click", function()
     {
         var chromosomeName = $(this).data('chromosome');
 
-        $(".image-chromosome").attr("src", "images/chromosome.png");
+        $imageChromosome.attr("src", "images/chromosome.png");
         $(this).attr("src", "images/chromosome_selected.png");
 
         preprocessing(chromosomeName);
     });
 
+
     // Tooltip to display information chromosome
-    $(".image-chromosome").hover(
+    //noinspection JSUnresolvedFunction
+    $imageChromosome.hover(
         // Move the mouse within the image.
         function()
         {
@@ -239,7 +262,7 @@ function destroyAll(clear)
 
 
     // Clear console and files configuration
-    if(clear && DEBUG_GBV)
+    if(DEBUG_GBV && clear)
     {
         // Reset input files
         $("#files").val('');

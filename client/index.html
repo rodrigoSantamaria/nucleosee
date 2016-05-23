@@ -32,7 +32,7 @@
     <script src="js/libs/jquery-1.11.3.min.js"></script>
     <script src="js/libs/d3-3.5.6.min.js"></script>
     <script src="js/libs/d3-tip-0.6.7.js"></script>
-    <script src="js/libs/md5.js"></script>
+    <!--script src="js/libs/md5.js"></script-->
 
     <script src="js/main.js"></script>
     <script src="js/server.js"></script>
@@ -80,25 +80,32 @@
     <!-- CORE VIEW -->
     <div class="core-view" style="display:none;">
 
-        <!-- FILE UPLOAD and SEARCH -->
         <div style="float:left;">
+
             <!-- FILE UPLOAD -->
             <div style="margin-top:5px;">
+
                 <div style="float:left;margin-left: 30px;margin-right:5px;">
                     <input type="file" id="files" name="files[]" multiple style="float:left"/>
                     <!--output id="list"></output-->
                     <script src="js/upload-file.js"></script>
                 </div>
+
                 <div style="float:left;margin-left:5px;margin-right:5px;">
-                    <input type="checkbox" id="reload">Reload<br>
+                    <input type="checkbox" id="reload" title="">Reload<br>
                 </div>
+
                 <div style="float:left;margin-left:5px;margin-right:5px;">
                     <button type="button" style="float:left" onclick="destroyAll(true)">Delete</button>
                 </div>
-                <div style="float:left;margin-left:5px;margin-right:0px;margin-top:0px">
-                    <img id="loadImg" src="images/loading.gif" style="display:inline;visibility:hidden"/>
+
+                <!-- ICON OF "LOADING..." -->
+                <div style="float:left;margin-left:5px;">
+                    <img id="imgLoadingFile" src="images/loading.gif" style="visibility:hidden"/>
                 </div>
+
             </div>
+
 
             <!-- SEARCH -->
             <div>
@@ -108,11 +115,11 @@
                 </div-->
 
                 <div style="float:left;margin-top:4px;margin-left:30px;margin-right:5px;">
-                    <input type="text" id="patternSearch">
+                    <input type="text" id="patternSearch" title="">
                 </div>
 
                 <div style="float:left;margin-top:4px;margin-left:5px;margin-right:5px;">
-                    <select id="dSearch">
+                    <select id="dSearch" title="">
                         <option value="0" selected="selected">0</option>
                         <option value="1">1</option>
                         <option value="2">2</option>
@@ -123,18 +130,20 @@
                 <div style="float:left;margin-top:4px;margin-left:5px;margin-right:5px;">
                     <button type="button" onclick="searchPattern()">Search pattern</button>
                 </div>
-                <div style="float:left;margin-left:5px;margin-right:0px;margin-top:3px">
-                    <img id="searchImg" src="images/loading.gif" style="display:inline;visibility:hidden"/>
+
+                <!-- ICON OF "LOADING..." -->
+                <div style="float:left;margin-top:4px;margin-left:5px;">
+                    <img id="imgLoadingSearch" src="images/loading.gif" style="visibility:hidden"/>
                 </div>
 
             </div>
         </div>
 
         <!-- CHROMOSOME ICONS -->
-        <div style="float:left;margin-left:20px;" id="imagesChromosomes"></div>
+        <div style="float:left;margin-left:25px;" id="imagesChromosomes"></div>
 
         <!-- LOGOUT -->
-        <div style="float:right;margin-left:10px;margin-right:100px;margin-top:5px;;">
+        <div style="float:right;margin-left:10px;margin-right:100px;margin-top:5px;">
             <button type="button" id="btLogout">Logout</button>
         </div>
 
@@ -145,13 +154,6 @@
         <div id="lineSeq3"></div>
 
     </div>
-
-
-
-    <!-- IMAGE OF "LOADING..." --
-    <div class="div-loading" id="divLoading" style="display:none">
-        <img class="div-loading-image" src="images/loading.gif"/>
-    </div>-->
 
 
     <!-- Modal -->
@@ -242,6 +244,7 @@
                 var IParamNB        = $('#paramNB');
                 var IParamMaxSize   = $('#paramMaxSize');
 
+
                 if(saveParams)
                 {
                     GVB_GLOBAL.ws       = IParamWS.val();
@@ -265,13 +268,13 @@
                 var password = $('#password').val();
 
 
-                //Server.connect(true, verifyConnection, username, password, "divLoading", "http://prodiasv21.fis.usal.es:2750/");
-                //Server.connect(true, verifyConnection, username, password, "divLoading", "http://127.0.0.1:2750/");
+                //Server.connect(true, verifyConnection, username, password, "http://prodiasv21.fis.usal.es:2750/");
                 Server.connect(true, verifyConnection, username, password, "http://127.0.0.1:2750/");
 
                 return false;
             });
 
+            $('body').css("background-color", "#f8f8f8");
             function verifyConnection(done)
             {
                 if(done)
@@ -302,8 +305,8 @@
             // TESTING (TODO: only testing, remove this)
             ////////////////////////////////////////////////
                 //$('#patternSearch').val("aaaaabcba");
-                $('#patternSearch').val("a*5+abcba*2");
-                //$('#patternSearch').val("a*5+abcba"); // esta es la buena con enrichment
+                //$('#patternSearch').val("a*5+abcba*2");
+                $('#patternSearch').val("a*5+abcba"); // esta es la buena con enrichment
                 $('#username').val("jpiriz");
                 $('#password').val("alguna");
                 $('#btLogin').click();
