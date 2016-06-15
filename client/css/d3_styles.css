@@ -148,6 +148,10 @@ body {
     stroke:darkred;
 }
 
+.dl1.band {
+    fill: #ffc477;
+    fill-opacity: 0.1;
+}
 
 
 /*--------------------------------------------*/
