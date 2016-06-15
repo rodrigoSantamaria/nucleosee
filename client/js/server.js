@@ -35,18 +35,18 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
     {
         var Server = {};
 
+        var _DEBUG      = false;
         var _serverPath = "";
         var _user       = "";
         var _password   = "";
-        var _DEBUG      = false;
 
 
         /**
          * Connect with the server.
          * @param DEBUG
+         * @param callback
          * @param user
          * @param password
-         * @param loadingImage
          * @param serverPath
          */
         Server.connect = function (DEBUG, callback, user, password, serverPath)
@@ -60,7 +60,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             _DEBUG          = DEBUG;
 
 
-            // TODO: si no puede conectar, que pare todo y lance un error
+            // Here you should check the credentials...
             if(user == "jpiriz")
                 callback(true);
             else
@@ -80,8 +80,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            $("#loadImg").show();
-            $("#loadImg")[0].style.visibility="visible";
+            showImageLoading("imgLoadingFile", true);
 
 
             var _forceReload = "";
@@ -95,6 +94,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property response
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
@@ -103,7 +107,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(!(result.response == "outdated version" || result.response == "not found"))
                     {
                         // Hide the image of "loading..."
-                        $("#loadImg")[0].style.visibility="hidden";
+                        showImageLoading("imgLoadingFile", false);
+
 
                         if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
 
@@ -125,11 +130,12 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                                 contentType: false  // tell jQuery not to set contentType
                             });
 
+                        //noinspection JSUnresolvedFunction
                         $.when(requestAJAX2)
-                            .done(function(result)
+                            .done(function()
                             {
                                 // Hide the image of "loading..."
-                                $("#loadImg")[0].style.visibility="hidden";
+                                showImageLoading("imgLoadingFile", false);
 
                                 if (_DEBUG) console.log("sendFile(): uploaded");
                                 if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
@@ -178,8 +184,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            $("#loadImg").show();
-            $("#loadImg")[0].style.visibility="visible";
+            showImageLoading("imgLoadingFile", true);
 
             var requestAJAX = $.ajax(
                 {
@@ -188,6 +193,18 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property seq
+             * @property maximum
+             * @property minimum
+             * @property mean
+             * @property stdev
+             * @property dseq
+             * @property fullLength
+             * @property chromosomes
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
@@ -203,7 +220,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.bins=result.bins;
 
                     // Hide the image of "loading..."
-                    $("#loadImg")[0].style.visibility="hidden";
+                    showImageLoading("imgLoadingFile", false);
 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
@@ -221,13 +238,14 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * Calls the REST service available to a data summary and characterization of a particular chromosome
          * @param callback
          * @param track
+         *
          */
         Server.getTrack = function (callback, track)
         {
             var startTime = new Date();
 
             // Show the image of "loading..."
-            $("#loadImg")[0].style.visibility="visible";
+            showImageLoading("imgLoadingFile", true);
 
             var requestAJAX = $.ajax(
                 {
@@ -236,6 +254,17 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property seq
+             * @property maximum
+             * @property mean
+             * @property stdev
+             * @property dseq
+             * @property fullLength
+             * @property chromosomes
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
@@ -250,17 +279,16 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.chromosomes=result.chromosomes;
 
                     // Hide the image of "loading..."
-                    $("#loadImg")[0].style.visibility="hidden";
+                    showImageLoading("imgLoadingFile", false);
 
                     if(_DEBUG) console.log("getTrack(): get track done...");
-                    if (_DEBUG) console.log("Time spent get track: " + (new Date() - startTime) + "ms");
+                    if(_DEBUG) console.log("Time spent get track: " + (new Date() - startTime) + "ms");
 
                     callback(response, track);
                 })
                 .fail(function()
                 {
                     if(_DEBUG) console.log("getTrack(): get track failed...");
-                    $("#loadImg")[0].style.visibility="hidden";
                 });
         };
 
@@ -276,8 +304,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            $("#searchImg").show();
-            $("#searchImg")[0].style.visibility="visible";
+            showImageLoading("imgLoadingFile", true);
+
 
             if(_DEBUG) console.log("pattern is "+pattern);
             pattern = encodeURIComponent(pattern);  // it encodes the following characters: , / ? : @ & = + $ #
@@ -289,6 +317,13 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property points
+             * @property sizePattern
+             * @property msg
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
@@ -299,11 +334,10 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         response.sizePattern = result.sizePattern;
 
                         // Hide the image of "loading..."
-                        $("#searchImg")[0].style.visibility="hidden";
+                        showImageLoading("imgLoadingFile", false);
 
                         if(_DEBUG) console.log("search(): search done...");
                         if(_DEBUG) console.log("Time spent searching: "+ (new Date()-startTime)+"ms");
-
 
                         callback(response);
                     }
@@ -338,8 +372,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param startTime         it's not necessary!!
          * @param numMatches        it's not necessary!!
          */
-        Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs,
-                                               chromosomes, ws,
+        Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs, chromosomes, ws,
                                                gis, annotations, numChromosome, startTime, numMatches)
         {
             // Initialize variables first
@@ -355,7 +388,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             for( var j=0; j<points.length; j++)
                 points[j]*=ws;
             numMatches += points.length;
-            if(_DEBUG) console.log(points.length+" matches in track "+track);
+            if(_DEBUG) console.log(points.length+" matches in track: "+track);
 
             var requestAJAX = $.ajax(
                 {
@@ -365,35 +398,55 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property response
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
+                    numChromosome++;
                     if(gis != "" && result.response != "") gis += ",";
+
                     if(onlyIDs=="True")
                         gis += result.response;
                     else
+                    {
+                        var response = result.response;
+                        for (var key in response)
                         {
-                        for(var key in result.response)
-                            for(var i in result.response[key]) {
-                                var rrki=result.response[key][i]
-                                gis += rrki["id"] + ",";
-                                annotations[rrki["id"]]={};
-                                annotations[rrki["id"]]["pos"]=key;
-                                annotations[rrki["id"]]["sense"]=rrki["sense"];
-                                annotations[rrki["id"]]["start"]=rrki["start"];
-                                annotations[rrki["id"]]["end"]=rrki["end"];
-                                annotations[rrki["id"]]["chromosome"]=track;
+                            // for...in loops over all enumerable properties
+                            // (which is not the same as "all array elements"!)
+                            if(response.hasOwnProperty(key))
+                            {
+                                var rrk = result.response[key];
+                                for (var i in rrk)
+                                {
+                                    if(rrk.hasOwnProperty(i))
+                                    {
+                                        var rrki = result.response[key][i];
+                                        gis += rrki["id"];
+                                        annotations[rrki["id"]] = {};
+                                        annotations[rrki["id"]]["pos"] = key;
+                                        annotations[rrki["id"]]["sense"] = rrki["sense"];
+                                        annotations[rrki["id"]]["start"] = rrki["start"];
+                                        annotations[rrki["id"]]["end"] = rrki["end"];
+                                        annotations[rrki["id"]]["chromosome"] = track;
+                                    }
+                                }
                             }
                         }
-                    numChromosome++;
+                    }
 
                     // While the number of chromosomes is less than or equal, we continue to get more annotations
                     if(numChromosome <= chromosomes.length)
                     {
                         //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "True",
-                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False",
-                            chromosomes, GVB_GLOBAL.ws,
-                            gis, annotations, numChromosome, (new Date()-startTime), numMatches);
+                        //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False", chromosomes, GVB_GLOBAL.ws,
+                        //                            gis, annotations, numChromosome, (new Date()-startTime), numMatches);
+                        Server.allAnnotationsGenes(getEnrichment, allPoints, types, window, align, onlyIDs, chromosomes, ws,
+                                                    gis, annotations, numChromosome, (new Date()-startTime), numMatches);
                     }
                     else
                     {
@@ -409,6 +462,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations failed...");
                 });
         };
+
 
         /**
          * Get enrichment in all the genome (with 'gis').
@@ -438,11 +492,15 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property response
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
-                    var response = [];
-                    response = result.response;
+                    var response = result.response;
 
                     if(_DEBUG) console.log("enrichmentGO(): enrichmentGO done...");
                     if(_DEBUG) console.log("Time spent Enrichment analysis: "+ (new Date()-startTime)+"ms");
@@ -469,7 +527,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.annotationsGenes = function (callback, point, types, window, align, track, onlyIDs)
         {
-            var startTime = new Date();
+            // var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
@@ -479,13 +537,18 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property response
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
                     var annotations = result.response;
 
-                    if(false) console.log("annotationsGenes(): get of gene done...");
-                    if(false) console.log("Time spent annotationsGenes: "+ (new Date()-startTime)+"ms");
+                    // console.log("annotationsGenes(): get of gene done...");
+                    // console.log("Time spent annotationsGenes: "+ (new Date()-startTime)+"ms");
 
                     if(annotations.hasOwnProperty(point)) // if object "annotations" has no the point, don't draw the line annotations
                     {
@@ -497,6 +560,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
                 });
         };
+
 
         /**
          * Get GO terms for a given list of gene ids
@@ -556,7 +620,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.getPartSeq = function (callback, track, startSeq, endSeq, numNucleotides, point, sizePattern)
         {
-            var startTime = new Date();
+            // var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
@@ -565,14 +629,19 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property partSeq
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
                     var response = [];
                     response.partSeq = result.partSeq;
 
-                    if(false) console.log("getPartSeq(): get part of sequence...");
-                    if(false) console.log("Time spent getPartSeq: "+ (new Date()-startTime)+"ms");
+                    //console.log("getPartSeq(): get part of sequence...");
+                    //console.log("Time spent getPartSeq: " + (new Date() - startTime) + "ms");
 
                     callback(response.partSeq, numNucleotides, point, sizePattern);
                 })
@@ -595,7 +664,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.nucleotides = function (callback, track, startSeq, endSeq, start, point)
         {
-            var startTime = new Date();
+            // var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
@@ -604,14 +673,19 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property response
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
                     var response = [];
                     response.seq=result.response; // this is only a sample, as it is too large to show as a whole and to send via REST
 
-                    if(false) console.log("nucleotides(): get nucleotides done...");
-                    if(false) console.log("Time spent nucleotides: "+ (new Date()-startTime)+"ms");
+                    // console.log("nucleotides(): get nucleotides done...");
+                    // console.log("Time spent nucleotides: "+ (new Date()-startTime)+"ms");
 
                     callback(start, point, response)
                 })
@@ -631,7 +705,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.nucProfile = function (callback, track, positions, size)
         {
-            var startTime = new Date();
+            // var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
@@ -640,6 +714,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     datatype: "json"
                 });
 
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property seqs
+             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
@@ -659,8 +738,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.motifConsensus = result.motifConsensus;
                     response.motifProfile   = result.motifProfile;
 
-                    if(false) console.log("nucProfile(): done...");
-                    if(false) console.log("Time spent nucProfile: "+ (new Date()-startTime)+"ms");
+                    // console.log("nucProfile(): done...");
+                    // console.log("Time spent nucProfile: "+ (new Date()-startTime)+"ms");
 
                     callback(response);
                 })
@@ -670,6 +749,20 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 });
         };
 
+
+        function showImageLoading(idImageLoading, isVisible)
+        {
+            var imageLoading = $("#"+idImageLoading);
+
+            if(isVisible)
+            {
+                imageLoading.css('visibility', 'visible');
+            }
+            else
+            {
+                imageLoading.css('visibility', 'hidden');
+            }
+        }
 
         function removeLastSlash(url)
         {
@@ -684,6 +777,10 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         {
             msg   || ( msg = 'This is not an error. This is just to abort javascript' );
             alert(msg);
+
+            // Hide all images of "loading..."
+            showImageLoading("imgLoadingFile", true);
+            showImageLoading("imgLoadingFile", true);
 
             throw "ERROR GBV: "+msg;
         }
