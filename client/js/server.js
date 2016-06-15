@@ -200,6 +200,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.dseq=result.dseq;
                     response.fullLength=result.fullLength;
                     response.chromosomes=result.chromosomes;
+                    response.bins=result.bins;
 
                     // Hide the image of "loading..."
                     $("#loadImg")[0].style.visibility="hidden";
@@ -309,11 +310,14 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     else
                     {
                         if(_DEBUG) console.log("search(): "+result.msg);
+                        $("#searchImg")[0].style.visibility="hidden";
+                        alert("Error: "+result.msg);
                     }
                 })
                 .fail(function()
                 {
                     if(_DEBUG) console.log("search(): search failed...");
+                    $("#searchImg")[0].style.visibility="hidden";
                 });
         };
 

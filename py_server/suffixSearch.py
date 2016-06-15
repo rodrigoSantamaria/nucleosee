@@ -175,9 +175,8 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
              if(r-i>=0):
                  cr[cont]=(r, text[(r-i):(r+len(pattern)-i)],0)
                  if((r+len(pattern)-i)>=len(text)):
-                     cr[cont]["text"]+=text[:(len(text)-r-len(pattern)-i+1)]
+                     cr[cont]["text"]+=text[:(len(pattern)-(len(text)-r)-i+1)]
              else:
-                 #cr[cont]=(r, text[len(text)+r-i:]+text[:r+len(seed)], 0)
                  cr[cont]=(r, text[len(text)+r-i:]+text[:len(pattern)+r-i], 0)
              cont+=1
         print("matrix reconstruction takes", (time.clock()-t0), "s and has",len(cr)," candidates")

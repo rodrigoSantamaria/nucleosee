@@ -74,9 +74,13 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
 #%% ------------------ DISCRETIZATION -------------------
 """Given a numerical sequence seq, this method binarizes based on the average 
 and standard deviations on windows of size windowSize. Binarzation is done
-in categories a to z (z the larger), as many as detailed by numBins"""
+in categories a to z (z the larger), as many as detailed by numBins
+
+Percentile - if true, percentiles are used based in numBins, instead of just
+   a division of the range between min and maximum (default true)"""
+
 #NOTE: maybe a good idea to optimize this method is to use numerical bins instead of letters
-def discretize(seq, windowSize, minimo, maximo, numBins=5):
+def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True):
     import numpy as np
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
     alphabet=alphabetTotal[:numBins]   
@@ -86,9 +90,26 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5):
     sseq=helpers.rolling_window(seq,windowSize)
     #sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
     mseq=np.mean(sseq, axis=1, keepdims=True)
-    for im in mseq:
-        dseq.append(alphabet[(int)(factor*(im-minimo))])
-    return dseq 
+    
+    if(percentile==True):
+        mseq=np.array(mseq);
+        pers=[0]
+        for i in range(1,numBins+1):
+            p=np.percentile(mseq,(100.0/numBins)*i)
+            print("percentile",(100.0/numBins)*i,"=",p)
+            pers.append(p)
+        bins=pers
+        digseq=np.digitize(mseq,pers)
+        for s in digseq:
+           # print(s)
+            dseq.append(alphabet[min(s-1,len(alphabet)-1)])           
+    else:
+        for im in mseq:
+            dseq.append(alphabet[(int)(factor*(im-minimo))])
+        bins=[]
+        for i in range(numBins):
+            bins.append(factor*i)
+    return {'dseq':dseq, 'bins':bins} 
     
 #0.20s faster for 5M    
 #def discretize(seq, windowSize, minimo, maximo, numBins=5):
@@ -208,6 +229,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     import numpy as np
     global data
     global session
+
     
     t00=time.clock()
     #0) read
@@ -217,7 +239,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     filename=str(request.args.get("filename"))
     path=os.path.join(basePath,filename)
     track=request.args.get("track")
-    recharge=request.args.get("recharge")
+    forceReload=request.args.get("recharge")
     windowSize=int(request.args.get("windowSize"))
     numBins=int(request.args.get("numBins"))
     maxSize=int(request.args.get("maxSize"))
@@ -230,14 +252,15 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     maximum={}
     minimum={}
     dseq={}#discretized (alphanumeric) sequence
+    bins={}#thresholds for the binaries
     res={}#reduced sequence
     t={} #burrows-wheeler transform
     dataGFF={}
     dataFASTA={}
     seqd={}
     
-    if os.path.isfile(picklePath) and recharge=="False":
-        print("Pickle exists!!!")
+    if os.path.isfile(picklePath) and forceReload=="False":
+        print("Pickle exists!!!, recharge=", forceReload)
         f=open(picklePath)
         datap=pickle.load(f)
         genome=datap["seq"]
@@ -247,6 +270,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         minimum=datap["minimum"]
         m=datap["mean"]
         sd=datap["stdev"]
+        bins=datap["bins"]
     else:
         genome=readWig(path)
         savePickle=True
@@ -265,7 +289,11 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         if(savePickle):
             #1) normalize 
             t0=time.clock()
-            
+
+            #T) testing quantile normalization
+#            per=np.percentile(seq, np.linspace(0,100,1000))
+#            seq=np.digitize(seq,per)
+  
             m[k]=np.mean(seq, dtype=float)
             sd[k]=np.std(seq, dtype=float)
             upperlim=m[k]+stdev*sd[k]#avoid outliers? testing
@@ -280,7 +308,9 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         
             #2) discretize
             t0=time.clock()
-            dseq[k]=discretize(seq, windowSize, minimum[k], maximum[k], numBins)
+            tmp=discretize(seq, windowSize, minimum[k], maximum[k], numBins)
+            dseq[k]=tmp["dseq"]
+            bins[k]=tmp["bins"]
             print('\\tdiscretize in',(time.clock()-t0),' s')
         
             t0=time.clock()
@@ -306,14 +336,14 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     
     data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
           "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF, "res":res,
-          "go":dataGO, "goa":dataGOA, "fasta":dataFASTA}
+          "go":dataGO, "goa":dataGOA, "fasta":dataFASTA, "bins":bins}
     session[user]=data
     
     if(savePickle):
         tpickle=time.clock()
         print("pickle path:", picklePath)
         datap={"seq":seqd, "dseq":dseq, "bwt":t, "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd}
+          "mean":m, "stdev":sd, "bins":bins}
     
         f=open(picklePath, 'w')
         pickle.dump(datap,f)
@@ -324,7 +354,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     print('returning track',track)
     print('max values are',maximum)
     
-    return jsonify(seq=res[track], fullLength=len(genome[track]), maximum=(float)(maximum[track]), minimum=(float)(minimum[track]), mean=(float)(m[track]), stdev=(float)(sd[track]), dseq=dseq[track], chromosomes=sorted(genome.keys()))
+    return jsonify(seq=res[track], fullLength=len(genome[track]), maximum=(float)(maximum[track]), minimum=(float)(minimum[track]), mean=(float)(m[track]), stdev=(float)(sd[track]), dseq=dseq[track], bins=bins[track], chromosomes=sorted(genome.keys()))
 
 #%%preprocess(filename="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/dwtMini2.wig")
 
@@ -338,7 +368,7 @@ def getTrack(track="None"):
         track=data["res"].keys()[0]
 
     print("returning chromosome",track)
-    return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], chromosomes=sorted(data["res"].keys()))
+    return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], binds=data["bins"][track], chromosomes=sorted(data["res"].keys()))
 
 #%% -------------- SEARCHES -----------
 
@@ -363,11 +393,15 @@ def search(pattern="", d=0):
     for k in data["seq"].keys():
         t=data["bwt"][k]
         if(False in [x in t["firstOccurrence"] for x in set(pattern)]):
-            return jsonify(response="{}: There are characters in pattern that do not correspond to the sequence characters: {}".format(k, t["firstOccurrence"].keys()))
+            return jsonify(response="error", msg="{}: There are characters in pattern that do not correspond to the sequence characters: {}".format(k, t["firstOccurrence"].keys()))
         else:
             t0=time.clock()
-            search[k]=(str)(ss.bwMatchingV8("".join(data["dseq"][k]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d))
-            print("Search ",k,"takes",(time.clock()-t0))
+            search[k]=(ss.bwMatchingV8("".join(data["dseq"][k]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d))
+            print(len("".join(data["dseq"][k])))
+            print("Search ",k,"takes",(time.clock()-t0), "and finds",len(search[k]), "occurences")
+            if(len(search[k])>10000):
+                return jsonify(response="error", msg="Too many occurrences, please narrow your search", points={}, sizePattern=len(pattern))
+            search[k]=(str)(search[k])
 #    return jsonify(points=(str)(match), sizePattern=len(pattern))
     print("Search finished in ",(time.clock()-t00))
     data["search"]=search
@@ -472,12 +506,12 @@ def nucProfile(positions=[], size=10, track="None"):
  
 #%%
 @app.route("/annotationsGOA")
-#annotations is the result of calling annotations
+#annotations is a list of gene IDs? TODO: reshaping
 #types by now is any. Maybe in the future we divide in BP,MF,CC
-def annotationsGOA(annotations={}, types=["any"]):
+def annotationsGOA(genes=[], types=["any"]):
     global data
     
-    a=eval(request.args.get("annotations"))
+    a=eval(request.args.get("genes"))
     print('annotation size: ',len(a))
     agon=ann.annotateGOnames(a, data["goa"], data["go"])
     return jsonify(response=agon)

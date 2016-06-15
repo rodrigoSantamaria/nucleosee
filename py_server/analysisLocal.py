@@ -12,22 +12,83 @@ asigna un valor alfanumérico (de entre numBins valores) dependiendo del valor
 de im respecto a m/sd
 Por ejemplo, si seq=[0,0,34,22] y windowSize=2 y numBins=5 --> [a,d]
 """
-def discretize(seq=[0,0,0], windowSize=2,numBins=5):
+def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True):
     import numpy as np
+    #import sys
+    #sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
+    import helpers
+    
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
     alphabet=alphabetTotal[:numBins]   
     dseq=[]
-    maximo=max(seq)
-    minimo=min(seq)
-    for i in range(0, len(seq)-windowSize+1,windowSize):
-        im=np.mean(seq[i:i+windowSize])
-        dseq.append(alphabet[(int)(np.round((numBins-1)*(im-minimo)/(maximo-minimo)))])
-    print len(dseq)
-    return dseq
-      
+    
+    sseq=helpers.rolling_window(seq,windowSize)
+    #sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
+    mseq=np.mean(sseq, axis=1, keepdims=True)
+    
+    if(percentile==True):
+        mseq=np.array(mseq);
+        pers=[0]
+        for i in range(1,numBins+1):
+            p=np.percentile(mseq,(100.0/numBins)*i)
+            print("percentile",(100.0/numBins)*i,"=",p)
+            pers.append(p)
+        digseq=np.digitize(mseq,pers)
+        for s in digseq:
+           # print(s)
+            dseq.append(alphabet[min(s-1,len(alphabet)-1)])           
+    else:
+        factor=(numBins-1.0)/float(maximo-minimo)
+        for im in mseq:
+            dseq.append(alphabet[(int)(factor*(im-minimo))])
+    return dseq 
 
 #%% READ WIG
 def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig"):
+    import numpy
+    import time
+    import re
+    
+    t0=time.clock()
+    f=open(path)
+    seq=f.readlines()
+    print ((time.clock()-t0),' s in reading') 
+    t0=time.clock()
+    chsize=[]
+    cont=0
+    for i in range(len(seq)):
+        s=seq[i]
+        if s[0]=='t' and i>0:#new chromosome
+         chsize.append(cont-1)
+         cont=0
+        else:
+            cont=cont+1
+    chsize.append(cont-1)
+    print((time.clock()-t0),' s in computing sizes')
+    t0=time.clock()
+    ch={}
+    cont=0
+    name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont+1])))
+    ch[name]=[]
+    print("name is ", name)
+    for i in chsize:
+        print(i)
+        cont=cont+2
+        #chi=numpy.array(seq[cont:cont+i-1],float)
+        chi=numpy.array(seq[cont:cont+i-1], dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+        ch[name].append(chi)
+        cont=cont+i
+        if(cont<len(seq)):
+            name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
+            print("name is ", name)
+            ch[name]=[]
+    for k in ch.keys():
+        ch[k]=ch[k][0]
+    print ((time.clock()-t0),' s in formatting')
+    
+    return ch
+ #%%
+def readWig0(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig"):
     import numpy
     import time
     t0=time.clock()
@@ -63,9 +124,9 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     return ch
 #%%
 
-path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/quique/23479_h90_wlt_mean.wig"
+#path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/quique/23479_h90_wlt_mean.wig"
 #tal=readWig(path)
-tal=preprocess(path, track="chromosome3")
+#tal=preprocess(path, track="chromosome3")
 #
 ##%%
 #t0=time.clock()
@@ -83,7 +144,135 @@ tal=preprocess(path, track="chromosome3")
 #seq[seq.level.apply(lambda x: "track" in (str)(x))] 
 #print '{} s in searching tracks with pandas'.format(time.clock()-t0) 
 #%%
-def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0):
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", recharge="False"):
+    import numpy as np
+    import time
+
+    import sys
+    sys.path.append("/Users/rodri/WebstormProjects/seqview/py_server")
+    import suffixSearch as ss
+    import helpers
+    
+    t00=time.clock()
+    #0) read
+    print('reading...')
+    t0=time.clock()
+#    basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+#    filename=str(request.args.get("filename"))
+#    path=os.path.join(basePath,filename)
+#    track=request.args.get("track")
+#    forceReload=request.args.get("recharge")
+#    windowSize=int(request.args.get("windowSize"))
+#    numBins=int(request.args.get("numBins"))
+#    maxSize=int(request.args.get("maxSize"))
+#    stdev=float(request.args.get("stdev"))
+#    picklePath=os.path.join(basePath,re.sub(r"\..*$", ".pic", filename))
+#    savePickle=False
+    recharge=bool(recharge)
+    path=filename
+    
+    m={}
+    sd={}
+    maximum={}
+    minimum={}
+    dseq={}#discretized (alphanumeric) sequence
+    res={}#reduced sequence
+    t={} #burrows-wheeler transform
+    dataGFF={}
+    dataFASTA={}
+    seqd={}
+    
+#    if os.path.isfile(picklePath) and forceReload=="False":
+#        print("Pickle exists!!!, recharge=", forceReload)
+#        f=open(picklePath)
+#        datap=pickle.load(f)
+#        genome=datap["seq"]
+#        t=datap["bwt"]
+#        dseq=datap["dseq"]
+#        maximum=datap["maximum"]
+#        minimum=datap["minimum"]
+#        m=datap["mean"]
+#        sd=datap["stdev"]
+#    else:
+    genome=readWig(path)
+    savePickle=True
+
+    if track=="None":
+        track=sorted(genome.keys())[0]
+    
+    print("load wig takes",(time.clock()-t0))
+   
+    #for each separate chromosome: TODO: include ds and bwt into pickle!
+    for k in genome.keys():
+        tk=time.clock()
+        seq=genome[k]
+        print("ch", k, "with length", len(seq))
+        if(savePickle):
+            #1) normalize 
+            t0=time.clock()
+            
+            m[k]=np.mean(seq, dtype=float)
+            sd[k]=np.std(seq, dtype=float)
+            upperlim=m[k]+stdev*sd[k]#avoid outliers? testing
+            seq=np.clip(seq,0,upperlim)
+        
+            m[k]=np.mean(seq, dtype=float)
+            sd[k]=np.std(seq, dtype=float)
+            maximum[k]=np.max(seq)
+            minimum[k]=np.min(seq)
+            print('\\tstats in ',(time.clock()-t0), "s")
+        
+        
+            #2) discretize
+            t0=time.clock()
+            dseq[k]=discretize(seq, windowSize, minimum[k], maximum[k], numBins)
+            print('\\tdiscretize in',(time.clock()-t0),' s')
+        
+            t0=time.clock()
+            t[k]=ss.bwt(''.join(dseq[k])+"$")
+            print('\tbwt in ',(time.clock()-t0),'s')
+    
+        t0=time.clock()
+        res[k]=list(np.mean(helpers.rolling_window(seq, max(1,len(seq)/maxSize)),-1, dtype=float)) #maybe round?  
+        print('\tsampling in',(time.clock()-t0),'s')
+    
+        t0=time.clock()
+        #dataGFF[k]=ann.gff(helpers.gffPath(ch=k))
+        #dataFASTA[k]=ann.fasta(k)
+        print('\ttime in annotations (GFF and FASTA):',(time.clock()-t0),'s')
+        seqd[k]=seq
+        print("processing",k,"takes",(time.clock()-tk))
+        
+    #3) annotations
+    t0=time.clock()
+    #dataGO=ann.go()
+    #dataGOA=ann.goa()
+    print("done! ... GO annotations takes",(time.clock()-t0))
+    
+    #data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
+    #      "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF, "res":res,
+    #      "go":dataGO, "goa":dataGOA, "fasta":dataFASTA}
+    #session[user]=data
+    savePickle=False
+    if(savePickle):
+        tpickle=time.clock()
+        print("pickle path:", picklePath)
+        datap={"seq":seqd, "dseq":dseq, "bwt":t, "maximum":maximum, "minimum":minimum,
+          "mean":m, "stdev":sd}
+    
+        f=open(picklePath, 'w')
+        pickle.dump(datap,f)
+        print("serialize data takes",(time.clock()-tpickle))
+        #NOTE: should remove the .wig here to avoid double memory space?
+
+    print('whole preprocess takes ',(time.clock()-t00),"s")
+    print('returning track',track)
+    print('max values are',maximum)
+    
+#    return {"seq":res[track], "fullLength":len(genome[track]), "maximum":(float)(maximum[track]), "minimum":(float)(minimum[track]), "mean":(float)(m[track]), "stdev":(float)(sd[track]), "dseq":dseq[track], "chromosomes":sorted(genome.keys())}
+    return {"seq":res, "bwt":t, "dseq":dseq, "chromosomes":sorted(genome.keys())}
+#%%
+def preprocess0(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, track=0):
 #    global data
 #    global session
     import numpy as np
@@ -121,7 +310,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     #windowSize=int(request.args.get("windowSize"))
     #numBins=int(request.args.get("numBins"))
     #maxSize=int(request.args.get("maxSize"))
-    dseq=discretize(seq, windowSize, numBins)
+    dseq=discretize(seq, windowSize, minimum, maximum, numBins, True)
     print 'done! in {}s'.format((time.clock()-t0))
     print 'bwt...'
     t0=time.clock()

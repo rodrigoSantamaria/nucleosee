@@ -124,16 +124,19 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
 #    print "{}\t{}, {}".format(x["id"],x["type"],x["start"])
 #    
 #%%
+#em is just a list of gene ids
+#dataGOA is a table with GOA data as retrieved by goa()
+#discard is a list of GO terms you don't want to see (basically the level 0's)    
 def annotateGO(em, dataGOA, discard=['GO:0003674','GO:0005575','GO:0008150']):
     ego={}
     for x in dataGOA:
         if((x["go_id"] in discard) ==False):
-            for y in em.iterkeys():
-                if(len(em[y])>0 and em[y][0]["id"]==x["gene_id"]):
+            for g in em:
+                if(g==x["gene_id"]):
                     #print "{} -> {}({})".format(x["gene_id"], x["go_id"], x["go_type"])
                     if(x["go_id"] in ego.keys()):
                         ego[x["go_id"]].add(x["gene_id"])
-                    else :
+                    else:
                         ego[x["go_id"]]=set()
                         ego[x["go_id"]].add(x["gene_id"])
     return ego

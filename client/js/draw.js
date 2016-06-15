@@ -186,7 +186,7 @@ var globalDL3 =
 //-------------------------------------------------------------
 
 
-function dataLine_1(track, fullLength, seqServ, startSeq, endSeq, maxSize, mean, stdev, ws)
+function dataLine_1(track, fullLength, seqServ, startSeq, endSeq, maxSize, mean, stdev, ws, bins)
 {
     var startTime = new Date();
 
@@ -196,6 +196,7 @@ function dataLine_1(track, fullLength, seqServ, startSeq, endSeq, maxSize, mean,
     globalSeq.seqServ       = seqServ;
     globalSeq.mean          = mean;
     globalSeq.stdev         = stdev;
+    globalSeq.bins          = bins;
     globalSeq.scaleSeqServ  = 1;
     if(Math.floor(fullLength/maxSize) >= 1)
         globalSeq.scaleSeqServ = Math.floor(fullLength/maxSize);
@@ -206,6 +207,7 @@ function dataLine_1(track, fullLength, seqServ, startSeq, endSeq, maxSize, mean,
         globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
 
 
+    drawGrid(globalSeq.bins);
     // We confirm that we have finished
     globalDL1.drawn = true;
 
@@ -1154,6 +1156,25 @@ function setAnnotations(gis, annotations)
     }
     return;
 }
+
+/** DRAW GRID
+ * For datalines 1 and 2 in case the option to see how bands are determined is selected
+ * @param bands bands (bins, percentiles or whatever that determines the discretization
+ */
+function drawGrid(bands)
+    {
+/*    dimDL.graphHeight*[max]
+    globalDL1.cv.svg.selectAll("bands")
+        .data(bands)
+        .enter()
+        .append("rect")
+        .attr('class', 'dl1 band')
+        .attr("x", function(d)
+            {  return d; })
+        .attr("y", 0)
+        .attr("width", dimDL.graphWidth)
+        .attr("height", function(d,i){return bands;})*/
+        }
 
 
 
