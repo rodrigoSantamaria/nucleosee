@@ -134,10 +134,16 @@ body {
 }
 
 .dl1.band {
-    fill: #ffc477;
-    fill-opacity: 0.1;
+    stroke: #ffc477;
+    stroke-opacity: 0.3;
+    fill-opacity: 0.3;
 }
 
+.dl1.band.letter {
+    fill:black;
+    font-family: sans-serif;
+    font-size: 11px;
+}
 
 /*--------------------------------------------*/
 /*           DATALINE 2                      */

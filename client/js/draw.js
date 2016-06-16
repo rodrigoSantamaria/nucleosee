@@ -129,6 +129,7 @@ var globalDL2 =
         bracketHeight: 40
     },
 
+    drawn: false,
     startSeq : null,
     endSeq : null
 };
@@ -187,7 +188,7 @@ var globalDL3 =
 //-------------------------------------------------------------
 
 
-function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize, mean, stdev, ws, bins)
+function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize, mean, stdev, max, ws, bins)
 {
     var startTime = new Date();
 
@@ -197,6 +198,7 @@ function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize
     globalSeq.seqServ       = seqServ;
     globalSeq.mean          = mean;
     globalSeq.stdev         = stdev;
+    globalSeq.max           = max;
     globalSeq.bins          = bins;
     globalSeq.ws            = ws;
     globalSeq.scaleSeqServ  = 1;
@@ -208,8 +210,9 @@ function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize
     dataLine_core(false, globalDL1,
         globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
 
+    if ($("#grid").is(':checked'))
+        drawGrid(globalSeq.bins);
 
-    drawGrid(globalSeq.bins);
     // We confirm that we have finished
     globalDL1.drawn = true;
 
@@ -485,6 +488,8 @@ function dataLine_2(partSeq, numNucleotides, point, sizePattern)
         point, sizePattern);
 
 
+    // We confirm that we have finished
+    globalDL2.drawn = true;
 
     // DRAWING ANNOTATIONS
     //-------------------------------------------------
@@ -906,9 +911,10 @@ function dataLine_core(DEBUG, globalDL,
 
     // Calculate 'y minimum' and 'y maximum'
     var ymin = 0;
-    var ymax = mean+(3*stdev);
+    /*var ymax = mean+(3*stdev);
     if(mean-(3*stdev) > 0)
-        ymin = mean-3*stdev;
+        ymin = mean-3*stdev;*/
+    var ymax=globalSeq.max;
 
 
     // Create the array
@@ -1161,21 +1167,129 @@ for(var i in genes)
  * For datalines 1 and 2 in case the option to see how bands are determined is selected
  * @param bands bands (bins, percentiles or whatever that determines the discretization
  */
-function drawGrid(bands)
-    {
-/*    dimDL.graphHeight*[max]
+function drawGrid() {
+    if ($("#grid").is(':checked') == false) {
+        globalDL1.cv.svg.selectAll(".dl1.band").remove();
+        globalDL1.cv.svg.selectAll(".dl1.band.letter").remove();
+        if (globalDL2.drawn)
+            globalDL2.cv.svg.selectAll(".dl1.band").remove();
+        globalDL2.cv.svg.selectAll(".dl1.band.letter").remove();
+
+        return;
+    }
+
+    var bands = globalSeq.bins;
+    var y0 = 0;
+    var margin = globalDL1.cv.margin;
+    var scale = (dimDL.graphHeight - margin.top - margin.bottom) / (bands[bands.length - 1] - bands[0])
+
+    var bw = []
+    for (var i = bands.length - 1; i >= 1; i--) {
+        var top;
+        if (i == bands.length - 1)
+            top = globalSeq.max;
+        else
+            top = bands[i];
+        bw.push(scale * (top - bands[i - 1]));
+    }
+
+    //1) BANDS IN LINE 1
+
     globalDL1.cv.svg.selectAll("bands")
-        .data(bands)
+        .data(bw)
         .enter()
         .append("rect")
         .attr('class', 'dl1 band')
-        .attr("x", function(d)
-            {  return d; })
-        .attr("y", 0)
-        .attr("width", dimDL.graphWidth)
-        .attr("height", function(d,i){return bands;})*/
-        }
+        .attr("x", 0)
+        .attr("y", function (d, i) {
+            if (i < bands.length - 1) {
+                y0 += d;
+                return y0 - d;
+            }
+            else
+                return 0;
+        })
+        .attr("fill", function (d, i) {
+            if (i % 2 == 0)
+                return "#ffc477";
+            else
+                return "white";
+        })
+        .attr("width", dimDL.graphWidth - margin.right - margin.left)
+        .attr("height", function (d) {
+            return d;
+        });
 
+    y0 = 0;
+    var code = 97 + bw.length;
+
+    // Draw occurrences label
+    globalDL1.cv.svg.selectAll("band_letters")
+        .data(bw)
+        .enter()
+        .append("text")
+        .attr('class', 'dl1 band letter')
+        .attr('x', 10)
+        .attr("y", function (d, i) {
+            y0 += d;
+            return y0 - d + 10;
+        })
+        .text(function (d, i) {
+            code -= 1;
+            return String.fromCharCode(code);
+        });
+
+
+    //2) BANDS IN LINE 2
+    if (globalDL2.drawn) {
+        y0=0;
+        globalDL2.cv.svg.selectAll("bands")
+            .data(bw)
+            .enter()
+            .append("rect")
+            .attr('class', 'dl1 band')
+            .attr("x", 0)
+            .attr("y", function (d, i) {
+                if (i < bands.length - 1) {
+                    y0 += d;
+                    return y0 - d;
+                }
+                else
+                    return 0;
+            })
+            .attr("fill", function (d, i) {
+                if (i % 2 == 0)
+                    return "#ffc477";
+                else
+                    return "white";
+            })
+            .attr("width", dimDL.graphWidth - margin.right - margin.left)
+            .attr("height", function (d) {
+                return d;
+            });
+
+        y0 = 0;
+        var code = 97 + bw.length;
+
+        // Draw occurrences label
+        globalDL2.cv.svg.selectAll("band_letters")
+            .data(bw)
+            .enter()
+            .append("text")
+            .attr('class', 'dl1 band letter')
+            .attr('x', 10)
+            .attr("y", function (d, i) {
+                y0 += d;
+                return y0 - d + 10;
+            })
+            .text(function (d, i) {
+                code -= 1;
+                return String.fromCharCode(code);
+            });
+
+
+        }
+    }
 
 
 
