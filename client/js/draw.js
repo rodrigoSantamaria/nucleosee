@@ -1165,15 +1165,16 @@ for(var i in genes)
 
 /** DRAW GRID
  * For datalines 1 and 2 in case the option to see how bands are determined is selected
- * @param bands bands (bins, percentiles or whatever that determines the discretization
  */
 function drawGrid() {
     if ($("#grid").is(':checked') == false) {
         globalDL1.cv.svg.selectAll(".dl1.band").remove();
         globalDL1.cv.svg.selectAll(".dl1.band.letter").remove();
         if (globalDL2.drawn)
+            {
             globalDL2.cv.svg.selectAll(".dl1.band").remove();
-        globalDL2.cv.svg.selectAll(".dl1.band.letter").remove();
+            globalDL2.cv.svg.selectAll(".dl1.band.letter").remove();
+            }
 
         return;
     }
@@ -1289,6 +1290,15 @@ function drawGrid() {
 
 
         }
+    }
+
+/**
+ * Draws help messages close to each visual element
+ * TODO
+ */
+function drawHelp()
+    {
+
     }
 
 

@@ -304,7 +304,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var startTime = new Date();
 
             // Show the image of "loading..."
-            showImageLoading("imgLoadingFile", true);
+            showImageLoading("imgLoadingSearch", true);
 
 
             if(_DEBUG) console.log("pattern is "+pattern);
@@ -334,7 +334,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         response.sizePattern = result.sizePattern;
 
                         // Hide the image of "loading..."
-                        showImageLoading("imgLoadingFile", false);
+                        showImageLoading("imgLoadingSearch", false);
 
                         if(_DEBUG) console.log("search(): search done...");
                         if(_DEBUG) console.log("Time spent searching: "+ (new Date()-startTime)+"ms");
@@ -426,7 +426,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                                     if(rrk.hasOwnProperty(i))
                                     {
                                         var rrki = result.response[key][i];
-                                        gis += rrki["id"];
+                                        gis += rrki["id"]+",";
                                         annotations[rrki["id"]] = {};
                                         annotations[rrki["id"]]["pos"] = key;
                                         annotations[rrki["id"]]["sense"] = rrki["sense"];
@@ -443,10 +443,10 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(numChromosome <= chromosomes.length)
                     {
                         //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "True",
-                        //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False", chromosomes, GVB_GLOBAL.ws,
-                        //                            gis, annotations, numChromosome, (new Date()-startTime), numMatches);
-                        Server.allAnnotationsGenes(getEnrichment, allPoints, types, window, align, onlyIDs, chromosomes, ws,
+                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False", chromosomes, GVB_GLOBAL.ws,
                                                     gis, annotations, numChromosome, (new Date()-startTime), numMatches);
+                        //Server.allAnnotationsGenes(getEnrichment, allPoints, types, window, align, onlyIDs, chromosomes, ws,
+                        //                            gis, annotations, numChromosome, (new Date()-startTime), numMatches);
                     }
                     else
                     {
@@ -779,8 +779,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             alert(msg);
 
             // Hide all images of "loading..."
-            showImageLoading("imgLoadingFile", true);
-            showImageLoading("imgLoadingFile", true);
+            showImageLoading("imgLoadingFile", false);
+            showImageLoading("imgLoadingSearch", false);
 
             throw "ERROR GBV: "+msg;
         }
