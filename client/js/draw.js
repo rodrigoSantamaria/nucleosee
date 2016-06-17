@@ -658,8 +658,8 @@ function dataLine_2_drawAnnotationLine(annotations)
                     res=d.id;
             return res;
         })
-        //.on('mouseover', tip.show)
-        //.on('mouseout', tip.hide);
+        .on('mouseover', tip.show)
+        .on('mouseout', tip.hide);
 }
 
 
