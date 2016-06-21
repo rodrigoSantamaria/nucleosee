@@ -86,6 +86,7 @@ var globalDL1 =
 
     drawn : false,
     seqPoints : null,
+    pointTip : null,
 
     gis : null,
     annotations : {}
@@ -240,12 +241,15 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
     for(i=0; i<seqPoints.length;i++)
     {
         var dataPoint = Math.round(seqPoints[i]/globalDL1.cv.scaleSeqScreen);
-        dataPoints.push({real_pos: seqPoints[i], pos: (globalDL1.cv.data)[dataPoint].pos, value: (globalDL1.cv.data)[dataPoint].value});
+        if(dataPoint>=globalDL1.cv.data.length)
+            console.log("Out of bounds!: "+dataPoint+", "+seqPoints[i]);
+        else
+            dataPoints.push({real_pos: seqPoints[i], pos: (globalDL1.cv.data)[dataPoint].pos, value: (globalDL1.cv.data)[dataPoint].value, selected: false});
     }
 
 
     // Mouseover tip and drawing the corresponding line
-    var tip = d3.tip()
+    globalDL1.pointTip = d3.tip()
         .attr('class', globalDL1.cv.classSVG+' point-tip')
         .offset([30, 0]) // [top, left] to center the tip
         .html(function(d)
@@ -268,36 +272,17 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
             return "<strong>"+d3.format(",")(point) + ":</strong> " + d3.format(".2f")(d.value); // e.g. "307,770 : 0.79"
         });
 
-        // Calls tip
-    globalDL1.cv.svg.call(tip);
+    // Calls tip
+    globalDL1.cv.svg.call(globalDL1.pointTip);
 
 
-    // Remove all points (previous) and occurrences label
-    globalDL1.cv.svg.selectAll(".point")
-        .remove();
+    // Remove all occurrences label
     globalDL1.cv.svg.selectAll(".search-label")
         .remove();
 
 
-    // Create all new points
-    globalDL1.cv.svg.selectAll(".data")
-        .data(dataPoints)
-        .enter()
-        .append("circle")
-        .attr('class', globalDL1.cv.classSVG+' point')
-        .attr('cx', function(d) { return globalDL1.cv.xScale(d.pos); })
-        .attr('cy', function(d) { return globalDL1.cv.yScale(d.value); })
-        .on('mouseover', tip.show)
-        .on('mouseout', tip.hide);
-
-
-    // Keep colored the selected point
-    $("."+globalDL1.cv.classSVG+".point").bind( "mouseover", function()
-    {
-        $("."+globalDL1.cv.classSVG+".point").attr('class', globalDL1.cv.classSVG+' point');
-        $(this).attr('class', globalDL1.cv.classSVG+' point pressed');
-    });
-
+    //Draw the points
+    drawPoints(dataPoints, globalDL1.pointTip);
 
     // Draw occurrences label
     globalDL1.cv.svg.append("g")
@@ -340,10 +325,40 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
 
 }
 
+
+function drawPoints(dataPoints)
+    {
+    globalDL1.cv.svg.selectAll(".point").remove();
+
+
+    // Create all new points
+    globalDL1.cv.svg.selectAll(".data")
+        .data(dataPoints)
+        .enter()
+        .append("circle")
+        .attr('class', globalDL1.cv.classSVG+' point')
+        .attr('cx', function(d) { return globalDL1.cv.xScale(d.pos); })
+        .attr('cy', function(d) { return globalDL1.cv.yScale(d.value); })
+        .attr('r', function(d) {return d.selected?3:2;})
+        .attr('stroke-width', function(d) {return d.selected?2:1;})
+        .on('mouseover', globalDL1.pointTip.show)
+        .on('mouseout', globalDL1.pointTip.hide);
+
+
+    // Keep colored the selected point
+    $("."+globalDL1.cv.classSVG+".point").bind( "mouseover", function()
+    {
+        $("."+globalDL1.cv.classSVG+".point").attr('class', globalDL1.cv.classSVG+' point');
+        $(this).attr('class', globalDL1.cv.classSVG+' point pressed');
+    });
+    }
+
 function dataLine_1_drawEnrichment(enrichment)
 {
     // Remove all goterm (previous)
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm")
+        .remove();
+    globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm-tip")
         .remove();
 
 
@@ -353,7 +368,7 @@ function dataLine_1_drawEnrichment(enrichment)
         .clamp(true)
         .rangeRound([6, 14]); // min and max letter size
 
-    // We create a array with goterms
+    // We create an array with goterms
     var goterms = [];
     for(var k in enrichment)
     {
@@ -376,11 +391,22 @@ function dataLine_1_drawEnrichment(enrichment)
     // Mouseover tip and show the information of goterm
     var tip = d3.tip()
         .attr('class', globalDL1.cv.classSVG+' goterm-tip')
-        .offset([45, 0])   // [top, left] to center the tip
+        //.offset([45, 0])   // [top, left] to center the tip
+        .offset([60, 0])   // [top, left] to center the tip
         .html(function(d,i)
         {
             var text = "p-value: "+ d3.format(".2e")(d.pval)+"<br>"+
                 d.ngis+"/"+ d.ngo +" genes"+"<br>";
+            if(d["gis"].length>0) {
+                var names=[];
+                for (var j in d["gis"])
+                    names.push(globalDL1.annotations[d["gis"][j]]["name"]);
+                names.sort();
+                text += "[ ";
+                for(var j in names)
+                    text+=names[j]+" "
+                text+="]";
+                }
             return text;
         });
 
@@ -450,6 +476,32 @@ function dataLine_1_drawEnrichment(enrichment)
                 if (annot["chromosome"] == globalSeq.track)
                     gis.push(annot["pos"]);
                 }
+
+            //globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".point").remove();
+            //globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".point.pressed").remove();
+            var dataPoints=globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".point").data();
+            if(d3.select(this).classed("selected")==true)
+                {
+                for (var i in dataPoints)
+                    {
+                    dataPoints[i].selected = false;
+                    for (var j in gis)
+                        {
+                        if (gis[j] > dataPoints[i]["real_pos"] - 50 && gis[j] < dataPoints[i]["real_pos"] + 50)
+                            dataPoints[i].selected = true;
+                        }
+                    }
+                }
+            else
+                {
+                for(var i in dataPoints)
+                    dataPoints[i].selected=false;
+                }
+
+
+            drawPoints(dataPoints);
+
+            /*
             globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".gogene").remove();
 
             if(d3.select(this).classed("selected")==true) {
@@ -463,7 +515,8 @@ function dataLine_1_drawEnrichment(enrichment)
                             return "M" + (pos - 3) + ",100L" + (pos + 3) + ",100";
                         }
                     );
-            }
+
+            }*/
         })
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
@@ -616,7 +669,7 @@ function dataLine_2_drawAnnotationLine(annotations)
         .html(function(d,i)
         {
             if(d["text"]==undefined) {
-                var text = "<b>position: </b>" + d["start"] + "-" + d["end"] + " (" + d["sense"] + ")"+
+                var text = "<b>id: </b>" + d["id"]+"<br><b>position: </b>" + d["start"] + "-" + d["end"] + " (" + d["sense"] + ")"+
                     "<br><b>type: </b>"+d["type"];
 
                 if (globalDL1.annotations[d["id"]] != undefined) {
@@ -632,8 +685,6 @@ function dataLine_2_drawAnnotationLine(annotations)
             return d["text"];
         })
         .offset(function(d){
-            //TODO: not quite well positioned yet
-         //   return [((d["text"].match(/<br>/g) || []).length+1)*14+lineHeight+(d["sense"]=="-"?lineHeight:0), 20]})   // below
             return [0,25]}) //above
         ;
 
@@ -655,7 +706,7 @@ function dataLine_2_drawAnnotationLine(annotations)
             res="";
             if(d.end>startSeq)
                 if(d.type.indexOf("gene")>-1)
-                    res=d.id;
+                    res=d.name;
             return res;
         })
         .on('mouseover', tip.show)
@@ -1144,7 +1195,7 @@ function saveSequences(response)
 
 function setAnnotations(gis, annotations)
 {
-    globalDL1.gis = gis;  // list of gene ids
+    globalDL1.gis = gis;  // list of gene ids (NOTE: just a string, might contain duplicates, by now unused)
     if (!$.isEmptyObject(annotations))
     {
         globalDL1.annotations = annotations;
@@ -1191,7 +1242,7 @@ function drawGrid() {
             top = globalSeq.max;
         else
             top = bands[i];
-        bw.push(scale * (top - bands[i - 1]));
+        bw.push(Math.max(0,scale * (top - bands[i - 1])));
     }
 
     //1) BANDS IN LINE 1

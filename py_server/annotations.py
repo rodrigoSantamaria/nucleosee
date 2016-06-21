@@ -22,9 +22,10 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
     reader.fieldnames=["chromosome", "source", "type", "start", "end", "xx", "sense", "xx", "id"]
 
     import numpy as np
+    import re
 
 
-    data=np.empty(tam,dtype=[("chromosome", "a2"),("type", "a40"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a200")])
+    data=np.empty(tam,dtype=[("chromosome", "a2"),("type", "a40"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a50"), ("name", "a50")])
     for i in range(skip):
         next(reader)
     for i in range(tam):
@@ -34,7 +35,10 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
         data[i]["chromosome"]=row["chromosome"]
         data[i]["type"]=row["type"]
         data[i]["sense"]=row["sense"]
-        data[i]["id"]=row["id"]
+        gid=re.sub("gene:", "", re.sub(";Name.*","",re.sub(".*ID=", "", row["id"])))
+        data[i]["id"]=gid
+        name=re.sub(";.*","",re.sub(".*ID=.*;Name=", "", row["id"]))
+        data[i]["name"]=name
     return data
 
 #%%  Loads the gene ontology into a dic where keys are go_ids and values are just go names by now
@@ -90,7 +94,7 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
         data2=dataGFF[selected(dataGFF["type"])]
     em={} #enriched (i.e. detailed) matches, including for each the thigs found at GFF
     interval=ws*0.5
-    import re
+    
     for x in mm:
         if(align=="left"):
             s1=x
@@ -104,11 +108,7 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
         if(len(sel)>0):     
             em[x]=[]
             for s in sel:
-                gid=s["id"]
-                gid=re.sub(".*ID=", "", gid)
-                gid=re.sub(";.*$", "", gid)
-                gid=re.sub("^.*:", "", gid)
-                em[x].append({"type":s["type"], "id":gid, "start":s["start"], "end":s["end"], "sense":s["sense"]})
+                m[x].append({"type":s["type"], "id":s["id"], "name":s["name"], "start":s["start"], "end":s["end"], "sense":s["sense"]})
     return em    
 #%%
 #import time

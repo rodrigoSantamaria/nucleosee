@@ -290,9 +290,6 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
             #1) normalize 
             t0=time.clock()
 
-            #T) testing quantile normalization
-#            per=np.percentile(seq, np.linspace(0,100,1000))
-#            seq=np.digitize(seq,per)
   
             m[k]=np.mean(seq, dtype=float)
             sd[k]=np.std(seq, dtype=float)
@@ -308,7 +305,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         
             #2) discretize
             t0=time.clock()
-            tmp=discretize(seq, windowSize, minimum[k], maximum[k], numBins)
+            tmp=discretize(seq, windowSize, minimum[k], maximum[k], numBins, percentile=True)
             dseq[k]=tmp["dseq"]
             bins[k]=tmp["bins"]
             print('\\tdiscretize in',(time.clock()-t0),' s')
@@ -368,7 +365,7 @@ def getTrack(track="None"):
         track=data["res"].keys()[0]
 
     print("returning chromosome",track)
-    return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], binds=data["bins"][track], chromosomes=sorted(data["res"].keys()))
+    return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], bins=data["bins"][track], chromosomes=sorted(data["res"].keys()))
 
 #%% -------------- SEARCHES -----------
 
@@ -437,6 +434,7 @@ def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs=
     align=str(request.args.get("align"))
     
     res=ann.annotate(pos, data["gff"][track], types, window, align)
+    print("Annotations over", types)
     print("Annotations take",(time.clock()-t0),"s")
     print(res.keys())
     if(onlyIDs=="True"):

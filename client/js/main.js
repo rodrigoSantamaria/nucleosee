@@ -128,14 +128,14 @@ function searchPattern()
         var d           = $('#dSearch').val();
 
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
-        Server.search(drawPoints, pattern,d);
+        Server.search(drawSearch, pattern,d);
     }
 }
 
 
 // DRAW POINTS ON DATALINE 1
 ////////////////////////////////
-function drawPoints(result)
+function drawSearch(result)
 {
     /**
      * @typedef {Object} result
@@ -189,33 +189,29 @@ function drawEnrichment(enrichment)
 
 
 
+
 function createIconsChromosomes(chromosomes)
 {
-    var $imagesChromosomes = $('#imagesChromosomes');
-    var $imageChromosome = $('#image-chromosome');
-
-    $imagesChromosomes.empty();
+    $('#imagesChromosomes').empty();
     for(var i=0; i<chromosomes.length; i++)
     {
-        $imagesChromosomes.append('<img style="margin-top:15px;margin-right:5px"'+
+        $('#imagesChromosomes').append('<img style="margin-top:15px;margin-right:5px"'+
             'id="'+chromosomes[i]+'" class="image-chromosome" data-chromosome="'+chromosomes[i]+'" '+
             'src="images/chromosome.png" height="24px" width="24px">');
     }
 
-    $imagesChromosomes.bind( "click", function()
+    $(".image-chromosome").bind( "click", function()
     {
         var chromosomeName = $(this).data('chromosome');
 
-        $imageChromosome.attr("src", "images/chromosome.png");
+        $(".image-chromosome").attr("src", "images/chromosome.png");
         $(this).attr("src", "images/chromosome_selected.png");
 
         preprocessing(chromosomeName);
     });
 
-
     // Tooltip to display information chromosome
-    //noinspection JSUnresolvedFunction
-    $imageChromosome.hover(
+    $(".image-chromosome").hover(
         // Move the mouse within the image.
         function()
         {

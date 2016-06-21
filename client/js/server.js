@@ -177,7 +177,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.preprocess = function (callback, filename, track, ws, nb, maxSize)
         {
-            var stdev = 2;
+            var stdev = 3;
             var recharge = "False";
 
 
@@ -276,6 +276,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.stdev=result.stdev;
                     response.dseq=result.dseq;
                     response.fullLength=result.fullLength;
+                    response.bins=result.bins;
                     response.chromosomes=result.chromosomes;
 
                     // Hide the image of "loading..."
@@ -393,7 +394,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/annotations?user="+_user+"&password="+_password+
-                    "&positions=["+points+"]&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs,
+                    "&positions=["+points+"]&types="+types+"&window="+window+"&align="+align+"&track="+track+"&onlyIDs="+onlyIDs,
                     type: "GET",
                     datatype: "json"
                 });
@@ -410,7 +411,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(gis != "" && result.response != "") gis += ",";
 
                     if(onlyIDs=="True")
-                        gis += result.response;
+                        gis += result.response+",";
                     else
                     {
                         var response = result.response;
@@ -429,6 +430,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                                         gis += rrki["id"]+",";
                                         annotations[rrki["id"]] = {};
                                         annotations[rrki["id"]]["pos"] = key;
+                                        annotations[rrki["id"]]["name"] = rrki["name"];
                                         annotations[rrki["id"]]["sense"] = rrki["sense"];
                                         annotations[rrki["id"]]["start"] = rrki["start"];
                                         annotations[rrki["id"]]["end"] = rrki["end"];

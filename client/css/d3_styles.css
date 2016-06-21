@@ -76,10 +76,8 @@ body {
 
 /* POINTS */
 .dl1.point {
-    r:3px;
     fill:white;
     stroke:darkred;
-    stroke-width:2px;
 }
 .dl1.point.pressed {
     stroke: steelblue;
