@@ -365,7 +365,9 @@ def getTrack(track="None"):
         track=data["res"].keys()[0]
 
     print("returning chromosome",track)
-    return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], bins=data["bins"][track], chromosomes=sorted(data["res"].keys()))
+    if("search" in data.keys() == False):
+        d["search"]={"points":{}, "sizePattern":0}
+    return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], bins=data["bins"][track], chromosomes=sorted(data["res"].keys()), search=data["search"])
 
 #%% -------------- SEARCHES -----------
 
@@ -399,9 +401,8 @@ def search(pattern="", d=0):
             if(len(search[k])>10000):
                 return jsonify(response="error", msg="Too many occurrences, please narrow your search", points={}, sizePattern=len(pattern))
             search[k]=(str)(search[k])
-#    return jsonify(points=(str)(match), sizePattern=len(pattern))
+    data["search"]={'points':search, 'sizePattern':len(pattern)}
     print("Search finished in ",(time.clock()-t00))
-    data["search"]=search
     return jsonify(points=search, sizePattern=len(pattern))
 
 
@@ -434,9 +435,8 @@ def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs=
     align=str(request.args.get("align"))
     
     res=ann.annotate(pos, data["gff"][track], types, window, align)
-    print("Annotations over", types)
     print("Annotations take",(time.clock()-t0),"s")
-    print(res.keys())
+    print("Sent back at",time.gmtime())
     if(onlyIDs=="True"):
         ids=[]
         for k in res.keys():
@@ -564,8 +564,6 @@ def load_passport():
     #TODO: check password and so on.
     if user in session.keys():
         data=session[user]
-        print(len(data))
-        print(data.keys())
 
 #@app.after_request
 #def serialize_passport(response):

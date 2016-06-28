@@ -91,7 +91,7 @@
                     <script src="js/upload-file.js"></script>
                 </div>
 
-                <div style="float:left;margin-left:5px;margin-right:5px;">
+                <div style="    float:left;margin-left:5px;margin-right:5px;">
                     <input type="checkbox" id="reload" title="">Reload<br>
                 </div>
 
@@ -128,11 +128,11 @@
                 </div>
 
                 <div style="float:left;margin-left:5px;margin-right:5px;margin-top:4px">
-                    <input type="checkbox" id="grid" title="" onClick="drawGrid()">Grid<br>
+                    <input type="button" id="showSearchOptions" value="Options" title="Search options"><br>
                 </div>
 
                 <div style="float:left;margin-top:4px;margin-left:5px;margin-right:5px;">
-                    <button type="button" onclick="searchPattern()">Search pattern</button>
+                    <button type="button" onclick="searchPattern()">Search</button>
                 </div>
 
                 <!-- ICON OF "LOADING..." -->
@@ -211,6 +211,74 @@
 
 
 
+
+    <!-- Modal -->
+    <div class="modal fade" id="searchOptions" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <!-- Modal: header -->
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h3 class="modal-title">Search options</h3>
+                </div>
+
+                <!-- Modal: body -->
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-sm-3 col-sm-offset-1">
+                        <label title="Draw the binning areas for the underlying discretization"><input type="checkbox" id="paramGrid">Draw Grid<br></label>
+                    </div>
+                    <div class="col-sm-3">
+                        <label title="If unchecked, only 1-letter distance mutations are considered if d>0"><input type="checkbox" id="paramMutations" checked>Soft mutations<br></label>
+                    </div>
+                    <div class="col-sm-3">
+                        <label title="Annotations are considered only if they partially/totally include a pattern-matched area"><input type="checkbox" id="paramIntersect">Hard intersect<br></label>
+                    </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-3 col-sm-offset-1">
+                            <label title="If checked, only searches coincident with the corresponding genomic annotations will be considered"><input type="checkbox" id="paramGeo" >Restriction to:<br></label>
+                        </div>
+                        <div class="col-sm-3">
+                            <select>
+                                <option value="gene">Genes</option>
+                                <option value="exon">Exons</option>
+                                <option value="utr">UTRs</option>
+                                <option value="ncrna">ncRNA genes</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top:10px;">
+                        <div class="col-sm-7 col-sm-offset-1">
+                            <label class="control-label" for="paramNB">More</label>
+                        </div>
+                        <div class="col-sm-3">
+                            <input class="form-control" type="text" id="paramNB">
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top:10px;">
+                        <div class="col-sm-7 col-sm-offset-1">
+                            <label class="control-label" for="paramMaxSize">Maximum number of normalized data</label>
+                        </div>
+                        <div class="col-sm-3">
+                            <input class="form-control" type="text" id="paramMaxSize">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal: footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="button" id="btConfigSearchSave" class="btn btn-primary">Save</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
@@ -262,6 +330,19 @@
 
                 $('#modalConfigParams').modal('hide');
             }
+
+            // CHANGE SEARCH PARAMS
+            /////////////////////////////////////////////
+            $('#showSearchOptions').click(function()
+            {
+                //if($(this).is(":checked"))
+                //{
+                    //reloadParams(false);
+                    $('#searchOptions').modal();
+                    //$('#modalConfigParams').modal();
+                //}
+            });
+
 
 
             // LOGIN and LOGOUT

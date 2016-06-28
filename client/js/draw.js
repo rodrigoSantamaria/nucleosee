@@ -582,6 +582,7 @@ function dataLine_2_drawAnnotationLine(annotations)
     var lineHeight = globalDL2.cv.dimAnnotation.lineHeight;
 
     //gene line
+    /*
     globalDL2.cv.svg.append("g")
         .selectAll(".dl2.annotation")
         .data(annotations)
@@ -589,15 +590,41 @@ function dataLine_2_drawAnnotationLine(annotations)
         .attr('class', 'dl2 annotation')
         .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
         .attr("x", function(d)
-        {  return Math.max(0,(d.start-startSeq)*factor) })
-        .attr("y", function(d){  var y=0; y=d.sense=="+"?0:15; y+=(d.type=="gene" || d.type=="transcript")?5:0; return y;})
-        .attr("width", function(d){return Math.max(0,Math.min(globalDL2.cv.dim.width-Math.max(0,(d.start-startSeq)*factor), Math.max(0,d.end-Math.max(startSeq, d.start)*factor)))})
+        {  return Math.max(0,(d.s-startSeq)*factor) })
+        .attr("y", function(d){  var y=0; y=d.ss=="+"?0:15; y+=(d.t=="gene" || d.t=="transcript")?5:0; return y;})
+        .attr("width", function(d){return Math.max(0,Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)*factor), Math.max(0,d.e-Math.max(startSeq, d.s)*factor)))})
         .attr("height", function(d){
             var h=lineHeight;
-            if (d.type=="gene" || d.type=="transcript")
+            if (d.t=="gene" || d.t=="transcript")
                 h=lineHeight*.25;
             return h});
+*/
+    globalDL2.cv.svg.append("g")
+        .selectAll(".dl2.annotation")
+        .data(annotations)
+        .enter().append("rect")
+        .attr('class', 'dl2 annotation')
+        .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
+        .attr("x", function(d)
+        {  return Math.max(0,(d.s-startSeq)*factor) })
+        .attr("y", function(d){  var y=0; y=d.ss=="+"?0:15; y+=(d.t=="gene" || d.t=="transcript")?5:0; return y;})
+        .attr("width", function(d)
+            {
+            return Math.max(0,Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)*factor)+1, Math.max(0,d.e-Math.max(startSeq, d.s)*factor)+1))
+            })
+        .attr("fill", function(d) {
+            if (d.t.indexOf("RNA") >= 0)    return "#ffccff";
+            if (d.t.indexOf("UTR") < 0)    return "#bbffbb";
+            return "#ddffdd";
+            })
 
+        .attr("height", function(d){
+            var h=0;
+            if (d.t=="gene")
+                h=lineHeight*.25;
+            else if(d.t.indexOf("gene")>=0 || d.t=="CDS" || d.t.indexOf("UTR")>=0)
+                h=lineHeight;
+            return h});
     //gene arrow
     globalDL2.cv.svg.append("g")
         .selectAll(".dl2.annotation.arrow")
@@ -605,18 +632,23 @@ function dataLine_2_drawAnnotationLine(annotations)
         .enter().append("polygon")
         .attr('class', 'dl2 annotation arrow')
         .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
+        .attr("fill", function(d) {
+            if (d.t.indexOf("RNA") >= 0)    return "#ffccff";
+            return "#ddffdd";
+        })
+
         .attr("points", function(d){
-            var y0=d.sense=="+"?0:15;
-            var x0=Math.max(0,(d.start-startSeq)*factor);
-            if(d.sense=="+")
-                x0+=Math.min(globalDL2.cv.dim.width-Math.max(0,(d.start-startSeq)*factor), Math.max(0,d.end-Math.max(startSeq, d.start)*factor));
-            if(d.sense=="+")
+            var y0=d.ss=="+"?0:15;
+            var x0=Math.max(0,(d.s-startSeq)*factor);
+            if(d.ss=="+")
+                x0+=Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)*factor), Math.max(0,d.e-Math.max(startSeq, d.s)*factor));
+            if(d.ss=="+")
                 path=x0+","+y0+ " " +x0+", "+(y0+lineHeight)+" "+(x0+lineHeight *.5)+","+(y0+lineHeight *.5);
             else
                 path=x0+","+y0+ " " +x0+", "+(y0+lineHeight)+" "+(x0-lineHeight *.5)+","+(y0+lineHeight *.5);
-            if(d.end<startSeq || d.start>startSeq+globalDL2.cv.dim.width)
+            if(d.e<startSeq || d.s>startSeq+globalDL2.cv.dim.width)
                 return "";
-            if(d.type.indexOf("gene")>-1)
+            if(d.t.indexOf("gene")>-1)
                 return path;
             else
                 return "";
@@ -633,16 +665,16 @@ function dataLine_2_drawAnnotationLine(annotations)
             var cw=3;//cracker width and height
             var ch=10;
             var x0=0; var y0=1;
-            if (d.start < startSeq)
+            if (d.s < startSeq)
             {
                 x0+=5;
-                if(d.sense=="-")
+                if(d.ss=="-")
                     y0+=15;
                 return "M"+(x0+cw *.5)+","+y0+"L"+x0+","+(y0+ch*.5)+"L"+(x0+cw)+","+(y0+ch*.5)+"L"+x0+","+(y0+ch);
             }
-            if (d.end > endSeq)
+            if (d.e > endSeq)
             {
-                if (d.sense == "-")
+                if (d.ss == "-")
                     y0 += 15;
                 x0+=globalDL2.cv.dim.width-10;
                 return "M"+(x0+cw *.5)+","+y0+"L"+x0+","+(y0+ch*.5)+"L"+(x0+cw)+","+(y0+ch*.5)+"L"+x0+","+(y0+ch);
@@ -652,7 +684,7 @@ function dataLine_2_drawAnnotationLine(annotations)
     var genes=[];
     for (var key in annotations)
         {
-        if (annotations[key]["type"] == "gene")
+        if (annotations[key]["t"] == "gene")
             {
             var g=annotations[key]["id"];
             genes.push(g);
@@ -669,14 +701,17 @@ function dataLine_2_drawAnnotationLine(annotations)
         .html(function(d,i)
         {
             if(d["text"]==undefined) {
-                var text = "<b>id: </b>" + d["id"]+"<br><b>position: </b>" + d["start"] + "-" + d["end"] + " (" + d["sense"] + ")"+
-                    "<br><b>type: </b>"+d["type"];
+                var text = "<b>id: </b>" + d["id"]+"<br><b>position: </b>" + d["s"] + "-" + d["e"] + " (" + d["ss"] + ")"+
+                    "<br><b>type: </b>"+d["t"];
 
                 if (globalDL1.annotations[d["id"]] != undefined) {
                     if (globalDL1.annotations[d["id"]]["goterms"] != undefined) {
                         text += "<br><b>GO terms:</b>";
-                        for (var term in globalDL1.annotations[d["id"]]["goterms"])
-                            text += "<br>  " + globalDL1.annotations[d["id"]]["goterms"][term];
+                        for (var term in globalDL1.annotations[d["id"]]["goterms"]) {
+                            var goterm = globalDL1.annotations[d["id"]]["goterms"][term];
+                            if (goterm != undefined & goterm.length > 40)    goterm = goterm.substring(0, 40) + "...";
+                            text += "<br>  " + goterm;
+                            }
                     }
                 }
                 d["text"]=text;
@@ -699,14 +734,14 @@ function dataLine_2_drawAnnotationLine(annotations)
         .attr('class', 'dl2 annotation label')
         .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
         .attr("x", function(d) {
-            return Math.max(10,(d.start-startSeq+6)*factor);
+            return Math.max(10,(d.s-startSeq+6)*factor);
         })
-        .attr("y", function(d){   return d.sense=="+"?10:25})
+        .attr("y", function(d){   return d.ss=="+"?10:25})
         .text(function(d){
             res="";
-            if(d.end>startSeq)
-                if(d.type.indexOf("gene")>-1)
-                    res=d.name;
+            if(d.e>startSeq)
+                if(d.t.indexOf("gene")>-1)
+                    res=d.n;
             return res;
         })
         .on('mouseover', tip.show)

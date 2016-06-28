@@ -278,6 +278,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.fullLength=result.fullLength;
                     response.bins=result.bins;
                     response.chromosomes=result.chromosomes;
+                    response.search=result.search;
 
                     // Hide the image of "loading..."
                     showImageLoading("imgLoadingFile", false);
@@ -407,6 +408,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             $.when(requestAJAX)
                 .done(function(result)
                 {
+                    var startClient=new Date()
+                    console.log("Received at: "+startClient);
                     numChromosome++;
                     if(gis != "" && result.response != "") gis += ",";
 
@@ -430,25 +433,26 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                                         gis += rrki["id"]+",";
                                         annotations[rrki["id"]] = {};
                                         annotations[rrki["id"]]["pos"] = key;
-                                        annotations[rrki["id"]]["name"] = rrki["name"];
-                                        annotations[rrki["id"]]["sense"] = rrki["sense"];
-                                        annotations[rrki["id"]]["start"] = rrki["start"];
-                                        annotations[rrki["id"]]["end"] = rrki["end"];
+                                        annotations[rrki["id"]]["name"] = rrki["n"];
+                                        annotations[rrki["id"]]["sense"] = rrki["ss"];
+                                        annotations[rrki["id"]]["start"] = rrki["s"];
+                                        annotations[rrki["id"]]["end"] = rrki["e"];
                                         annotations[rrki["id"]]["chromosome"] = track;
                                     }
                                 }
                             }
                         }
                     }
+                    console.log("Time spent in data processing "+(new Date()-startClient)+"ms")
 
                     // While the number of chromosomes is less than or equal, we continue to get more annotations
                     if(numChromosome <= chromosomes.length)
                     {
-                        //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "True",
+
+                        var startWS=new Date()
                         Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False", chromosomes, GVB_GLOBAL.ws,
                                                     gis, annotations, numChromosome, (new Date()-startTime), numMatches);
-                        //Server.allAnnotationsGenes(getEnrichment, allPoints, types, window, align, onlyIDs, chromosomes, ws,
-                        //                            gis, annotations, numChromosome, (new Date()-startTime), numMatches);
+                        console.log("Time spent getting annotations: "+ (new Date()-startWS)+"ms");
                     }
                     else
                     {
@@ -477,10 +481,18 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         {
             var startTime = new Date();
 
-
-            var arrayGis = gis;
-            arrayGis = arrayGis.split(',');
-            console.log("Number of gene annotations: "+arrayGis.length);
+            //Not sure if this duplicate removal for sending is really healping or not (seems not)
+            var arrayGis0 = gis;
+            arrayGis0 = arrayGis0.split(',');
+            var arrayGis=[]
+            for(var i in arrayGis0)
+                {
+                if(arrayGis.indexOf(arrayGis0[i])<0)
+                    arrayGis.push(arrayGis0[i]);
+                }
+            console.log("Number of gene annotations: "+arrayGis0.length+", of which unique: "+arrayGis.length);
+            gis=arrayGis.join(",");
+            //
 
             // Parse 'gis' to convert it to array: a,b,c,d => ["a","b","c","d"]
             gis = "[\""+gis+"\"]";

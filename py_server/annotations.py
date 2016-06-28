@@ -102,13 +102,13 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
         else:
             e1=x+interval
             s1=x-interval
-        #sel=data2[(data2["start"]<s1) & (data2["end"]>e1)] #search window fully inside the annotated interval
         #sel=data2[(data2["start"]<s1) & (data2["end"]>e1)] #annotated interval fully inside the search window
         sel=data2[((data2["end"]>s1) & (data2["end"]<e1)) | ((data2["start"]>s1) & (data2["start"]<e1)) | ((data2["start"]<s1) & (data2["end"]>e1))] #intersecting (more time expensive and not sure it makes a difference)
         if(len(sel)>0):     
             em[x]=[]
             for s in sel:
-                m[x].append({"type":s["type"], "id":s["id"], "name":s["name"], "start":s["start"], "end":s["end"], "sense":s["sense"]})
+                em[x].append({"t":s["type"], "id":s["id"], "n":s["name"], "s":s["start"], "e":s["end"], "ss":s["sense"]})
+                #em[x].append({"type":s["type"], "id":s["id"], "name":s["name"], "start":s["start"], "end":s["end"], "sense":s["sense"]})
     return em    
 #%%
 #import time

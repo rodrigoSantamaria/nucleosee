@@ -10,6 +10,7 @@
 
 var DEBUG_GBV = true;
 
+var globalTime;
 
 var GVB_GLOBAL =
 {
@@ -113,6 +114,12 @@ function drawingFirstDataLine(processedData, chromosome)
     if(DEBUG_GBV) console.log("Length of seqServer:"+seqServer.length+" (full length seq="+fullLength+")");
 
     dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength, seqServer, 0, fullLength, GVB_GLOBAL.maxSize, mean, stdev, processedData.max, GVB_GLOBAL.ws, processedData.bins);
+
+    if(processedData.hasOwnProperty("search") && processedData.search.points.hasOwnProperty(chromosome))
+        {
+        console.log("There's a search!")
+        drawSearch(processedData.search);
+        }
 }
 
 
@@ -162,6 +169,7 @@ function getAllAnnotations(allPoints, sizePattern)
     var chromosomes = GVB_GLOBAL.chromosomes;
     var ws          = GVB_GLOBAL.ws;
 
+    globalTime=new Date();
 
     //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "True", chromosomes, ws);
     Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "False", chromosomes, ws);
@@ -172,6 +180,7 @@ function getAllAnnotations(allPoints, sizePattern)
 ////////////////////////////////
 function getEnrichment(gis, annotations)
 {
+    console.log("REAL TIME IN ANNOTATIONS: "+(new Date()-globalTime));
     setAnnotations(gis, annotations);
 
     Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
