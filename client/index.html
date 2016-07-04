@@ -86,18 +86,18 @@
             <div style="margin-top:5px;">
 
                 <div style="float:left;margin-left: 30px;margin-right:5px;">
-                    <input type="file" id="files" name="files[]" multiple style="float:left"/>
+                    <input type="file" id="files" name="files[]" multiple style="float:left" title="Select any .wig file"/>
                     <!--output id="list"></output-->
                     <script src="js/upload-file.js"></script>
                 </div>
 
                 <div style="    float:left;margin-left:5px;margin-right:5px;">
-                    <input type="checkbox" id="reload" title="">Reload<br>
+                    <input type="checkbox" id="reload" title="Check if you want to recompute bins instead of using the previouly computed ones, if available.">Reload<br>
                 </div>
 
-                <div style="float:left;margin-left:5px;margin-right:5px;">
+                <!--<div style="float:left;margin-left:5px;margin-right:5px;">
                     <button type="button" style="float:left" onclick="destroyAll(true)">Delete</button>
-                </div>
+                </div>-->
 
                 <!-- ICON OF "LOADING..." -->
                 <div style="float:left;margin-left:5px;">
@@ -115,11 +115,11 @@
                 </div-->
 
                 <div style="float:left;margin-top:4px;margin-left:30px;margin-right:5px;">
-                    <input type="text" id="patternSearch" title="">
+                    <input type="text" id="patternSearch" title="pattern to search, according to the window and number of bins">
                 </div>
 
                 <div style="float:left;margin-top:4px;margin-left:5px;margin-right:5px;">
-                    <select id="dSearch" title="">
+                    <select id="dSearch" title="# of permitted 'point mutations' from the original pattern">
                         <option value="0" selected="selected">0</option>
                         <option value="1">1</option>
                         <option value="2">2</option>
@@ -128,7 +128,7 @@
                 </div>
 
                 <div style="float:left;margin-left:5px;margin-right:5px;margin-top:4px">
-                    <input type="button" id="showSearchOptions" value="Options" title="Search options"><br>
+                    <input type="button" id="showSearchOptions" value="Options" title="Search options" class="options"><br>
                 </div>
 
                 <div style="float:left;margin-top:4px;margin-left:5px;margin-right:5px;">
@@ -175,28 +175,28 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-sm-7 col-sm-offset-1">
-                            <label class="control-label" for="paramWS">Window size</label>
+                            <label class="control-label" for="paramWS" title="Number of positions to use for each bin. E.g. with a size of 30, each letter correspond to the percentile interval corresponding to the average level of 30 nucleotides">Window size</label>
                         </div>
-                        <div class="col-sm-3">
+                        <div class="col-sm-2">
                             <input class="form-control" type="text" id="paramWS">
                         </div>
                     </div>
                     <div class="row" style="padding-top:10px;">
                         <div class="col-sm-7 col-sm-offset-1">
-                            <label class="control-label" for="paramNB">Number of bins</label>
+                            <label class="control-label" for="paramNB" title="Number of percentile bins into which the quantitative levels will be divided. E .g. 5 bins will use percentiles 0,20,40,60,80,100 to set bins a,b,c,d,e respectively">Number of bins</label>
                         </div>
-                        <div class="col-sm-3">
+                        <div class="col-sm-2">
                             <input class="form-control" type="text" id="paramNB">
                         </div>
                     </div>
-                    <div class="row" style="padding-top:10px;">
+                   <!-- <div class="row" style="padding-top:10px;">
                         <div class="col-sm-7 col-sm-offset-1">
                             <label class="control-label" for="paramMaxSize">Maximum number of normalized data</label>
                         </div>
                         <div class="col-sm-3">
                             <input class="form-control" type="text" id="paramMaxSize">
                         </div>
-                    </div>
+                    </div>-->
                 </div>
 
                 <!-- Modal: footer -->
@@ -232,9 +232,9 @@
                     <div class="col-sm-3">
                         <label title="If unchecked, only 1-letter distance mutations are considered if d>0"><input type="checkbox" id="paramMutations" checked>Soft mutations<br></label>
                     </div>
-                    <div class="col-sm-3">
+                    <!--<div class="col-sm-3">
                         <label title="Annotations are considered only if they partially/totally include a pattern-matched area"><input type="checkbox" id="paramIntersect">Hard intersect<br></label>
-                    </div>
+                    </div>-->
                     </div>
 
                     <div class="row">
@@ -242,28 +242,14 @@
                             <label title="If checked, only searches coincident with the corresponding genomic annotations will be considered"><input type="checkbox" id="paramGeo" >Restriction to:<br></label>
                         </div>
                         <div class="col-sm-3">
-                            <select>
+                            <select id="geo_type">
                                 <option value="gene">Genes</option>
                                 <option value="exon">Exons</option>
-                                <option value="utr">UTRs</option>
-                                <option value="ncrna">ncRNA genes</option>
+                                <option value="five_prime_UTR">5' UTRs</option>
+                                <option value="three_prime_UTR">3' UTRs</option>
+                                <option value="RNA_gene">RNA genes</option>
+                                <option value="intergenic">Intergenic regions</option>
                             </select>
-                        </div>
-                    </div>
-                    <div class="row" style="padding-top:10px;">
-                        <div class="col-sm-7 col-sm-offset-1">
-                            <label class="control-label" for="paramNB">More</label>
-                        </div>
-                        <div class="col-sm-3">
-                            <input class="form-control" type="text" id="paramNB">
-                        </div>
-                    </div>
-                    <div class="row" style="padding-top:10px;">
-                        <div class="col-sm-7 col-sm-offset-1">
-                            <label class="control-label" for="paramMaxSize">Maximum number of normalized data</label>
-                        </div>
-                        <div class="col-sm-3">
-                            <input class="form-control" type="text" id="paramMaxSize">
                         </div>
                     </div>
                 </div>
@@ -305,6 +291,20 @@
                 }
             });
 
+            $('#btConfigSearchSave').click(function()
+            {
+                GVB_GLOBAL.softMutations       = paramMutations.checked;
+                GVB_GLOBAL.geo       = paramGeo.checked;
+                GVB_GLOBAL.grid  = paramGrid.checked;
+                //if(paramIntersect.checked)
+                //    GVB_GLOBAL.intersect  = "hard";
+                //else
+                //    GVB_GLOBAL.intersect  = "soft";
+                $('#searchOptions').modal('hide');
+
+                drawGrid();
+            });
+
             $('#btConfigParamsSave').click(function()
             {
                 reloadParams(true);
@@ -314,19 +314,19 @@
             {
                 var IParamWS        = $('#paramWS');
                 var IParamNB        = $('#paramNB');
-                var IParamMaxSize   = $('#paramMaxSize');
+                //var IParamMaxSize   = $('#paramMaxSize');
 
 
                 if(saveParams)
                 {
                     GVB_GLOBAL.ws       = IParamWS.val();
                     GVB_GLOBAL.nb       = IParamNB.val();
-                    GVB_GLOBAL.maxSize  = IParamMaxSize.val();
+//                    GVB_GLOBAL.maxSize  = IParamMaxSize.val();
                 }
 
                 IParamWS.val(GVB_GLOBAL.ws);
                 IParamNB.val(GVB_GLOBAL.nb);
-                IParamMaxSize.val(GVB_GLOBAL.maxSize);
+               // IParamMaxSize.val(GVB_GLOBAL.maxSize);
 
                 $('#modalConfigParams').modal('hide');
             }

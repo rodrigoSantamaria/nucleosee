@@ -19,7 +19,11 @@ var GVB_GLOBAL =
     track: null,            // track: name of selected chromosome
     ws: 30,                 // window size: discrete to real ratio
     nb: 5,                  // num bins
-    maxSize: 400000         // maximum number of normalized data to store
+    maxSize: 400000,        // maximum number of normalized data to store
+    intersect: "soft",   // If true Hard instersects are considered (whole inclusion of pattern in genomic annotation for enrichment, etc.)
+    geo: false,            // True if some genomic information (genes, UTRs, etc.) is used to filter out pattern matches
+    softMutations: false,   // if true soft mutations (only 1-distance switch) is allowed to the patterns. E.g. "b" may change to "c" or "a" but not to "d" or "e".
+    grid : false           // if true, a grid to show percentile regions is shown on both lane 1 and 2
 };
 
 
@@ -134,8 +138,16 @@ function searchPattern()
         var pattern     = $('#patternSearch').val();
         var d           = $('#dSearch').val();
 
+        var geo="none"; //can be gene, 5' UTR, 3' UTR, ncRNA gene, exons or intergene regions (neither gene neither intergene include pseudogenes or ncRNA genes)
+        if(GVB_GLOBAL.geo)
+            {
+            var e = document.getElementById("geo_type");
+            geo = e.options[e.selectedIndex].value;
+            }
+
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
-        Server.search(drawSearch, pattern,d);
+//        Server.search(drawSearch, pattern,d, geo, GVB_GLOBAL.intersect);
+        Server.search(drawSearch, pattern,d, geo, "soft");
     }
 }
 
@@ -172,7 +184,8 @@ function getAllAnnotations(allPoints, sizePattern)
     globalTime=new Date();
 
     //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "True", chromosomes, ws);
-    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "False", chromosomes, ws);
+    //Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "False", chromosomes, ws, GVB_GLOBAL.intersect);
+    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "False", chromosomes, ws, "soft");
 }
 
 

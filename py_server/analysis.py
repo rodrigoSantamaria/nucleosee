@@ -24,120 +24,7 @@ import re
     
 
     
-# --------------------- INTERNAL METHODS -----------------
-#%% -----------  READ WIG --------------
-def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig"):
-    import numpy
-    t0=time.clock()
-    f=open(path)
-    seq=f.readlines()
-    print ((time.clock()-t0),' s in reading') 
-    t0=time.clock()
-    chsize=[]
-    cont=0
-    for i in range(len(seq)):
-        s=seq[i]
-        if s[0]=='t' and i>0:#new chromosome
-         chsize.append(cont-1)
-         cont=0
-        else:
-            cont=cont+1
-    chsize.append(cont-1)
-    print((time.clock()-t0),' s in computing sizes')
-    t0=time.clock()
-    ch={}
-    cont=0
-    name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont+1])))
-    ch[name]=[]
-    print("name is ", name)
-    for i in chsize:
-        print(i)
-        cont=cont+2
-        #chi=numpy.array(seq[cont:cont+i-1],float)
-        chi=numpy.array(seq[cont:cont+i-1], dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
-        ch[name].append(chi)
-        cont=cont+i
-        if(cont<len(seq)):
-            name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
-            print("name is ", name)
-            ch[name]=[]
-    for k in ch.keys():
-        ch[k]=ch[k][0]
-    print ((time.clock()-t0),' s in formatting')
-    
-    return ch
-    
-#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/dwtMini2.wig")
-#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/23479_h90_wlt_mean.wig")
-#seq=tal["chromosome1"][0]
-#np.mean(seq)
-#%% ------------------ DISCRETIZATION -------------------
-"""Given a numerical sequence seq, this method binarizes based on the average 
-and standard deviations on windows of size windowSize. Binarzation is done
-in categories a to z (z the larger), as many as detailed by numBins
 
-Percentile - if true, percentiles are used based in numBins, instead of just
-   a division of the range between min and maximum (default true)"""
-
-#NOTE: maybe a good idea to optimize this method is to use numerical bins instead of letters
-def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True):
-    import numpy as np
-    alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
-    alphabet=alphabetTotal[:numBins]   
-    dseq=[]
-    factor=(numBins-1.0)/float(maximo-minimo)
-    
-    sseq=helpers.rolling_window(seq,windowSize)
-    #sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
-    mseq=np.mean(sseq, axis=1, keepdims=True)
-    
-    if(percentile==True):
-        mseq=np.array(mseq);
-        pers=[0]
-        for i in range(1,numBins+1):
-            p=np.percentile(mseq,(100.0/numBins)*i)
-            print("percentile",(100.0/numBins)*i,"=",p)
-            pers.append(p)
-        bins=pers
-        digseq=np.digitize(mseq,pers)
-        for s in digseq:
-           # print(s)
-            dseq.append(alphabet[min(s-1,len(alphabet)-1)])           
-    else:
-        for im in mseq:
-            dseq.append(alphabet[(int)(factor*(im-minimo))])
-        bins=[]
-        for i in range(numBins):
-            bins.append(factor*i)
-    return {'dseq':dseq, 'bins':bins} 
-    
-#0.20s faster for 5M    
-#def discretize(seq, windowSize, minimo, maximo, numBins=5):
-#    import numpy as np
-#    #alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
-#    #alphabet=alphabetTotal[:numBins]   
-#    #alphabet=np.arange(numBins)
-#    factor=(numBins-1.0)/float(maximo-minimo)
-#    
-#    sseq=helpers.rolling_window(seq,windowSize)
-#    mseq=np.mean(sseq, axis=1, keepdims=True)
-#    dseq=np.empty(len(mseq),dtype=int)
-#    #for im in mseq:
-#    for i in xrange(len(mseq)):
-#        #dseq.append(alphabet[(int)(factor*(im-minimo))])
-#        #dseq.append((int)(factor*(im-minimo)))
-#        dseq[i]=factor*(mseq[i]-minimo)
-#    return dseq 
-#%%
-#import time
-#import numpy as np
-#t0=time.clock()   
-#tal=discretize(seq,30, np.min(seq), np.max(seq))
-#print '{}'.format((time.clock()-t0))
-##%%
-#t0=time.clock()   
-#tal0=discretize0(seq,30, np.min(seq), np.max(seq))
-#print '{}'.format((time.clock()-t0))
 
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
@@ -272,7 +159,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         sd=datap["stdev"]
         bins=datap["bins"]
     else:
-        genome=readWig(path)
+        genome=helpers.readWig(path)
         savePickle=True
 
 
@@ -305,7 +192,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         
             #2) discretize
             t0=time.clock()
-            tmp=discretize(seq, windowSize, minimum[k], maximum[k], numBins, percentile=True)
+            tmp=helpers.discretize(seq, windowSize, minimum[k], maximum[k], numBins, percentile=True)
             dseq[k]=tmp["dseq"]
             bins[k]=tmp["bins"]
             print('\\tdiscretize in',(time.clock()-t0),' s')
@@ -333,14 +220,14 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     
     data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
           "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF, "res":res,
-          "go":dataGO, "goa":dataGOA, "fasta":dataFASTA, "bins":bins}
+          "go":dataGO, "goa":dataGOA, "fasta":dataFASTA, "bins":bins, "windowSize":windowSize}
     session[user]=data
     
     if(savePickle):
         tpickle=time.clock()
         print("pickle path:", picklePath)
         datap={"seq":seqd, "dseq":dseq, "bwt":t, "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd, "bins":bins}
+          "mean":m, "stdev":sd, "bins":bins, "windowSize":windowSize}
     
         f=open(picklePath, 'w')
         pickle.dump(datap,f)
@@ -376,10 +263,11 @@ Busca un determinado texto con una búsqueda en el array de sufijos creado
 De momento estamos usando variables globales (!) para el texto y la estructura BWT
 pattern    patrón de búsqueda
 d          nº de mutaciones permitidas
+geo        si distinto de "none", filtra las búsquedas que no esten en la zona genomica indicada ("gene", "exon", "utr", "ncRNA gene")
 retorna    las posiciones dentro de dseq donde aparece el patrón
 """
 @app.route("/search")
-def search(pattern="", d=0):
+def search(pattern="", d=0, geo="none", intersect="soft"):
     global data
     
     t00=time.clock()
@@ -387,6 +275,8 @@ def search(pattern="", d=0):
     d=int(request.args.get("d"))
     pattern=str(request.args.get("pattern"))
     pattern=helpers.convertString(pattern)
+    geo=str(request.args.get("geo"))
+    intersect=str(request.args.get("intersect"))
 
     search={}
     for k in data["seq"].keys():
@@ -401,8 +291,49 @@ def search(pattern="", d=0):
             if(len(search[k])>10000):
                 return jsonify(response="error", msg="Too many occurrences, please narrow your search", points={}, sizePattern=len(pattern))
             search[k]=(str)(search[k])
-    data["search"]={'points':search, 'sizePattern':len(pattern)}
     print("Search finished in ",(time.clock()-t00))
+    
+    
+    print("INTERSECT SEARCH is",intersect)
+
+    #geo filtering
+    if(geo!="none"):
+        if(geo!="intergenic"):
+            for k in data["seq"].keys():
+                sk=eval(search[k])
+                ws=data["windowSize"]
+                
+                if(geo!="RNA_gene"):
+                    tt=[geo]
+                else:
+                    tt=["ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene"]
+                if(len(sk)>0):
+                    p=[x*ws for x in sk]                    
+                    annot=annotationsLocal(positions=p, window=ws*len(pattern), gff=data["gff"][k], types=tt, onlyIDs="False", intersect=intersect)
+                    p=[x/ws for x in annot.keys()];
+                    search[k]=(str)(p)
+                else:
+                    search[k]=""
+        else:   #intergenic regions, by now without any annotations
+            for k in data["seq"].keys():
+                sk=eval(search[k])
+                ws=data["windowSize"]
+                
+                if(len(sk)>0):
+                    print("Search before filtering", len(eval(search[k])), " ws ", ws)
+                    p=[x*ws for x in sk]
+                    
+                    annot=annotationsLocal(positions=p, window=ws*len(pattern), gff=data["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect)
+                    p1=set(p)-set(annot.keys())
+                    p=[x/ws for x in p1];
+                    search[k]=(str)(list(p))
+                    print("Search after filtering", len(p))
+                    
+                else:
+                    search[k]=""
+            
+                
+    data["search"]={'points':search, 'sizePattern':len(pattern)}
     return jsonify(points=search, sizePattern=len(pattern))
 
 
@@ -423,28 +354,35 @@ def getPartSeq(start=0, end=0, track="None"):
 
 #%%
 @app.route("/annotations")
-def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs="False", align="left"):
-    import time
-    t0=time.clock()
-    global data
+def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft"):
     window=int(request.args.get("window"))
     pos=eval(request.args.get("positions"))
     types=eval(request.args.get("types"))
     track=str(request.args.get("track"))
     onlyIDs=str(request.args.get("onlyIDs"))
     align=str(request.args.get("align"))
+    intersect=str(request.args.get("intersect"))
+
+    print("INTERSECT ANNOT is",intersect)
     
-    res=ann.annotate(pos, data["gff"][track], types, window, align)
+    res=annotationsLocal(positions=pos, gff=data["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
+    return jsonify(response=res)
+
+def annotationsLocal(positions, gff, window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft"):
+    import time
+    global data
+    t0=time.clock()
+    res=ann.annotate(positions, gff, types, window, align, intersect)
     print("Annotations take",(time.clock()-t0),"s")
-    print("Sent back at",time.gmtime())
     if(onlyIDs=="True"):
         ids=[]
         for k in res.keys():
             kl=res[k]
             for x in kl:
                 ids.append(x["id"])
-        return jsonify(response=list(set(ids)))
-    return jsonify(response=res)
+        return list(set(ids))
+    return res
+
 
 #%%
 @app.route("/nucleotides")
@@ -458,6 +396,16 @@ def nucleotides(start=0, end=10, track="None"):
     return jsonify(response=data["fasta"][track][start:end])
  
 #%%
+'''
+Given a number of genomic positions on a given wig-fasta track, 
+it returns the nucleotide profile for such positions
+Size refers to the sequence length to take for computing the profiles, 
+starting at positions.
+
+Originally, this method aligned profiles but that was very costly computationally
+(commented code). Now it only retrieves the sequences and computes the best
+k-motif (currently also limited to 6-mers)
+'''
 @app.route("/nucProfile")
 def nucProfile(positions=[], size=10, track="None"):
     global data
@@ -468,7 +416,7 @@ def nucProfile(positions=[], size=10, track="None"):
     track=str(request.args.get("track"))
     #align=str(request.args.get("align"))
     
-    #basic operatons (prof and c might not be very useful)
+    #basic operations (prof and c might not be very useful)
     seqs={}
     for p in pos:
         seqs[p]=data["fasta"][track][p:p+size].upper()

@@ -206,13 +206,12 @@ function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize
     if(Math.floor(fullLength/maxSize) >= 1)
         globalSeq.scaleSeqServ = Math.floor(fullLength/maxSize);
 
+    drawGrid();
 
     // We use the core function
     dataLine_core(false, globalDL1,
         globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
 
-    if ($("#grid").is(':checked'))
-        drawGrid(globalSeq.bins);
 
     // We confirm that we have finished
     globalDL1.drawn = true;
@@ -288,7 +287,7 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
     globalDL1.cv.svg.append("g")
         .attr("class", globalDL1.cv.classSVG+" search-label")
         .append("text")
-        .attr('x', 385)
+        .attr('x', 355)
         .attr('y', -2)
         .text("matches:");
 
@@ -397,7 +396,7 @@ function dataLine_1_drawEnrichment(enrichment)
         {
             var text = "p-value: "+ d3.format(".2e")(d.pval)+"<br>"+
                 d.ngis+"/"+ d.ngo +" genes"+"<br>";
-            if(d["gis"].length>0) {
+            /*if(d["gis"].length>0) {
                 var names=[];
                 for (var j in d["gis"])
                     names.push(globalDL1.annotations[d["gis"][j]]["name"]);
@@ -406,7 +405,7 @@ function dataLine_1_drawEnrichment(enrichment)
                 for(var j in names)
                     text+=names[j]+" "
                 text+="]";
-                }
+                }*/
             return text;
         });
 
@@ -1253,17 +1252,22 @@ for(var i in genes)
  * For datalines 1 and 2 in case the option to see how bands are determined is selected
  */
 function drawGrid() {
-    if ($("#grid").is(':checked') == false) {
+    if (globalDL1.drawn)
+    {
         globalDL1.cv.svg.selectAll(".dl1.band").remove();
         globalDL1.cv.svg.selectAll(".dl1.band.letter").remove();
-        if (globalDL2.drawn)
-            {
-            globalDL2.cv.svg.selectAll(".dl1.band").remove();
-            globalDL2.cv.svg.selectAll(".dl1.band.letter").remove();
-            }
-
-        return;
     }
+    if (globalDL2.drawn)
+    {
+        globalDL2.cv.svg.selectAll(".dl1.band").remove();
+        globalDL2.cv.svg.selectAll(".dl1.band.letter").remove();
+    }
+
+    if ($("#paramGrid").is(':checked') == false)
+        {
+        return;
+        }
+
 
     var bands = globalSeq.bins;
     var y0 = 0;

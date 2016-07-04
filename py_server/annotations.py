@@ -56,7 +56,7 @@ def go(filename="genomes/annotations/go/go-basic.obo"):
     return data
 
 
-#%% Loads the gene ontology annottion of a given species into an array which only stores gene_id, gene_name, go_id, go_type and gene_desc
+#%% Loads the gene ontology annotation of a given species into an array which only stores gene_id, gene_name, go_id, go_type and gene_desc
 def goa(filename="genomes/annotations/spombe/goa/gene_association.pombase"):
     f=open(filename)
     lines=f.readlines()
@@ -84,7 +84,7 @@ def fasta(ch):
 
 
 #%%
-def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
+def annotate(mm, dataGFF, types=["any"], ws=1000, align="center", intersect="soft"):
     import numpy as np
     data2=dataGFF
     if(types[0]!="any"):
@@ -95,6 +95,8 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
     em={} #enriched (i.e. detailed) matches, including for each the thigs found at GFF
     interval=ws*0.5
     
+    print("INTERSECT FINAL IS",intersect)
+    
     for x in mm:
         if(align=="left"):
             s1=x
@@ -102,8 +104,12 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center"):
         else:
             e1=x+interval
             s1=x-interval
-        #sel=data2[(data2["start"]<s1) & (data2["end"]>e1)] #annotated interval fully inside the search window
-        sel=data2[((data2["end"]>s1) & (data2["end"]<e1)) | ((data2["start"]>s1) & (data2["start"]<e1)) | ((data2["start"]<s1) & (data2["end"]>e1))] #intersecting (more time expensive and not sure it makes a difference)
+
+        if(intersect=="hard"):
+            sel=data2[(data2["start"]<s1) & (data2["end"]>e1)] #annotated interval fully inside the search window
+        else:    
+            sel=data2[((data2["end"]>s1) & (data2["end"]<e1)) | ((data2["start"]>s1) & (data2["start"]<e1)) | ((data2["start"]<s1) & (data2["end"]>e1))] #intersecting (more time expensive and not sure it makes a difference)
+
         if(len(sel)>0):     
             em[x]=[]
             for s in sel:

@@ -214,6 +214,12 @@ textarea {
     *zoom: 1;
 }
 
+input.options{
+    width: 4.5em; height: 1.5em;
+    border: 0px; background: #ffffff;
+    font-size: 0.7em;
+}
+
 /* ==========================================================================
    EXAMPLE Media Queries for Responsive Design.
    These examples override the primary ('mobile first') styles.

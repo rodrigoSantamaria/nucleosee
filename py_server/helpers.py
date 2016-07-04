@@ -14,6 +14,123 @@ on standard deviations
 @author: rodri
 """
     
+    # --------------------- INTERNAL METHODS -----------------
+#%% -----------  READ WIG --------------
+def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig"):
+    import numpy
+    import time
+    import re
+    
+    t0=time.clock()
+    f=open(path)
+    seq=f.readlines()
+    print ((time.clock()-t0),' s in reading') 
+    t0=time.clock()
+    chsize=[]
+    cont=0
+    for i in range(len(seq)):
+        s=seq[i]
+        if s[0]=='t' and i>0:#new chromosome
+         chsize.append(cont-1)
+         cont=0
+        else:
+            cont=cont+1
+    chsize.append(cont-1)
+    print((time.clock()-t0),' s in computing sizes')
+    t0=time.clock()
+    ch={}
+    cont=0
+    name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont+1])))
+    ch[name]=[]
+    print("name is ", name)
+    for i in chsize:
+        print(i)
+        cont=cont+2
+        #chi=numpy.array(seq[cont:cont+i-1],float)
+        chi=numpy.array(seq[cont:cont+i-1], dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+        ch[name].append(chi)
+        cont=cont+i
+        if(cont<len(seq)):
+            name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
+            print("name is ", name)
+            ch[name]=[]
+    for k in ch.keys():
+        ch[k]=ch[k][0]
+    print ((time.clock()-t0),' s in formatting')
+    
+    return ch
+    
+#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/dwtMini2.wig")
+#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/23479_h90_wlt_mean.wig")
+#seq=tal["chromosome1"][0]
+#np.mean(seq)
+#%% ------------------ DISCRETIZATION -------------------
+"""Given a numerical sequence seq, this method binarizes based on the average 
+and standard deviations on windows of size windowSize. Binarzation is done
+in categories a to z (z the larger), as many as detailed by numBins
+
+Percentile - if true, percentiles are used based in numBins, instead of just
+   a division of the range between min and maximum (default true)"""
+
+#NOTE: maybe a good idea to optimize this method is to use numerical bins instead of letters
+def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True):
+    import numpy as np
+    alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
+    alphabet=alphabetTotal[:numBins]   
+    dseq=[]
+    factor=(numBins-1.0)/float(maximo-minimo)
+    
+    sseq=rolling_window(seq,windowSize)
+    #sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
+    mseq=np.mean(sseq, axis=1, keepdims=True)
+    
+    if(percentile==True):
+        mseq=np.array(mseq);
+        pers=[0]
+        for i in range(1,numBins+1):
+            p=np.percentile(mseq,(100.0/numBins)*i)
+            print("percentile",(100.0/numBins)*i,"=",p)
+            pers.append(p)
+        bins=pers
+        digseq=np.digitize(mseq,pers)
+        for s in digseq:
+           # print(s)
+            dseq.append(alphabet[min(s-1,len(alphabet)-1)])           
+    else:
+        for im in mseq:
+            dseq.append(alphabet[(int)(factor*(im-minimo))])
+        bins=[]
+        for i in range(numBins):
+            bins.append(factor*i)
+    return {'dseq':dseq, 'bins':bins} 
+    
+#0.20s faster for 5M    
+#def discretize(seq, windowSize, minimo, maximo, numBins=5):
+#    import numpy as np
+#    #alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
+#    #alphabet=alphabetTotal[:numBins]   
+#    #alphabet=np.arange(numBins)
+#    factor=(numBins-1.0)/float(maximo-minimo)
+#    
+#    sseq=helpers.rolling_window(seq,windowSize)
+#    mseq=np.mean(sseq, axis=1, keepdims=True)
+#    dseq=np.empty(len(mseq),dtype=int)
+#    #for im in mseq:
+#    for i in xrange(len(mseq)):
+#        #dseq.append(alphabet[(int)(factor*(im-minimo))])
+#        #dseq.append((int)(factor*(im-minimo)))
+#        dseq[i]=factor*(mseq[i]-minimo)
+#    return dseq 
+#%%
+#import time
+#import numpy as np
+#t0=time.clock()   
+#tal=discretize(seq,30, np.min(seq), np.max(seq))
+#print '{}'.format((time.clock()-t0))
+##%%
+#t0=time.clock()   
+#tal0=discretize0(seq,30, np.min(seq), np.max(seq))
+#print '{}'.format((time.clock()-t0))
 #%%
 #wig="/Users/rodri/Documents/investigacion/IBFG/quique/mono-H3K9_me2_norm_center_wlt.wig"
 #ch=a.readWig(wig)

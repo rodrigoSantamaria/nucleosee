@@ -301,7 +301,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param pattern
          * @param d
          */
-        Server.search = function (callback, pattern, d)
+        Server.search = function (callback, pattern, d, geo, intersect)
         {
             var startTime = new Date();
 
@@ -314,7 +314,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d,
+                    url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+"&geo="+geo+"&intersect="+intersect,
                     type: "GET",
                     datatype: "json"
                 });
@@ -374,7 +374,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param startTime         it's not necessary!!
          * @param numMatches        it's not necessary!!
          */
-        Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs, chromosomes, ws,
+        Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs, chromosomes, ws, intersect,
                                                gis, annotations, numChromosome, startTime, numMatches)
         {
             // Initialize variables first
@@ -395,7 +395,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/annotations?user="+_user+"&password="+_password+
-                    "&positions=["+points+"]&types="+types+"&window="+window+"&align="+align+"&track="+track+"&onlyIDs="+onlyIDs,
+                    "&positions=["+points+"]&types="+types+"&window="+window+"&align="+align+"&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+intersect,
                     type: "GET",
                     datatype: "json"
                 });
@@ -450,7 +450,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     {
 
                         var startWS=new Date()
-                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False", chromosomes, GVB_GLOBAL.ws,
+                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False", chromosomes, GVB_GLOBAL.ws, intersect,
                                                     gis, annotations, numChromosome, (new Date()-startTime), numMatches);
                         console.log("Time spent getting annotations: "+ (new Date()-startWS)+"ms");
                     }
@@ -546,7 +546,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/annotations?user="+_user+"&password="+_password+
-                                    "&positions=["+point+"]&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs,
+                                    "&positions=["+point+"]&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+GVB_GLOBAL.intersect,
                     type: "GET",
                     datatype: "json"
                 });
