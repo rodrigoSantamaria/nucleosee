@@ -267,41 +267,70 @@ geo        si distinto de "none", filtra las búsquedas que no esten en la zona 
 retorna    las posiciones dentro de dseq donde aparece el patrón
 """
 @app.route("/search")
-def search(pattern="", d=0, geo="none", intersect="soft"):
+def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false"):
     global data
     
+    print("searching..:")
     t00=time.clock()
     
     d=int(request.args.get("d"))
     pattern=str(request.args.get("pattern"))
-    pattern=helpers.convertString(pattern)
     geo=str(request.args.get("geo"))
     intersect=str(request.args.get("intersect"))
+    softMutations=str(request.args.get("softMutations"))
 
+    ws=data["windowSize"]
+                
+    #CASE 1) Numerical range pattern
+    interval=helpers.convertRange(pattern)
+    if(interval!=-1):
+        print("NUMERICAL RANGE")
+        points={}
+        for k in data["seq"].keys():
+            points[k]=(str)([(int)(interval["start"]/ws)] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
+        data["search"]={'points':points, 'sizePattern':((int)(interval["length"]/ws))}
+        return jsonify(points=points, sizePattern=((int)(interval["length"]/ws)));
+    
+    #CASE 2) gene/go name pattern
+    t=data["bwt"][data["seq"].keys()[0]]
+    if(False in [x in ['*','+',t["firstOccurrence"]] for x in set(pattern)]):
+        print("GENE OR TERM")
+        points={}
+        for k in data["seq"].keys():
+            oc=ann.searchGene(pattern, data["gff"][k])
+            points[k]=(str)([(int)(y["start"]/ws) for y in oc])
+        data["search"]={'points':points, 'sizePattern':1}
+        return jsonify(points=points, sizePattern=1);#TODO: variable lengths in this case and proper client treatment of it 
+        
+    #CASE 3) bin pattern    
+    pattern=helpers.convertString(pattern)
+    print("BWT ON ",pattern)
     search={}
     for k in data["seq"].keys():
-        t=data["bwt"][k]
         if(False in [x in t["firstOccurrence"] for x in set(pattern)]):
             return jsonify(response="error", msg="{}: There are characters in pattern that do not correspond to the sequence characters: {}".format(k, t["firstOccurrence"].keys()))
         else:
             t0=time.clock()
+            t=data["bwt"][k]
             search[k]=(ss.bwMatchingV8("".join(data["dseq"][k]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d))
             print(len("".join(data["dseq"][k])))
             print("Search ",k,"takes",(time.clock()-t0), "and finds",len(search[k]), "occurences")
             if(len(search[k])>10000):
                 return jsonify(response="error", msg="Too many occurrences, please narrow your search", points={}, sizePattern=len(pattern))
-            search[k]=(str)(search[k])
     print("Search finished in ",(time.clock()-t00))
     
     
-    print("INTERSECT SEARCH is",intersect)
-
+    if(softMutations=="true"):
+        ti=time.clock()
+        for k in data["seq"].keys():
+            search[k]=helpers.filterHard(search[k], data["dseq"][k], pattern)
+        print("Soft mutation filtering takes ", (time.clock()-ti))
+            
     #geo filtering
     if(geo!="none"):
         if(geo!="intergenic"):
             for k in data["seq"].keys():
-                sk=eval(search[k])
-                ws=data["windowSize"]
+                sk=search[k]
                 
                 if(geo!="RNA_gene"):
                     tt=[geo]
@@ -311,28 +340,28 @@ def search(pattern="", d=0, geo="none", intersect="soft"):
                     p=[x*ws for x in sk]                    
                     annot=annotationsLocal(positions=p, window=ws*len(pattern), gff=data["gff"][k], types=tt, onlyIDs="False", intersect=intersect)
                     p=[x/ws for x in annot.keys()];
-                    search[k]=(str)(p)
+                    search[k]=p
                 else:
-                    search[k]=""
+                    search[k]=[]
         else:   #intergenic regions, by now without any annotations
             for k in data["seq"].keys():
-                sk=eval(search[k])
+                sk=search[k]
                 ws=data["windowSize"]
                 
                 if(len(sk)>0):
-                    print("Search before filtering", len(eval(search[k])), " ws ", ws)
                     p=[x*ws for x in sk]
                     
                     annot=annotationsLocal(positions=p, window=ws*len(pattern), gff=data["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect)
                     p1=set(p)-set(annot.keys())
                     p=[x/ws for x in p1];
-                    search[k]=(str)(list(p))
-                    print("Search after filtering", len(p))
-                    
+                    search[k]=list(p)
                 else:
-                    search[k]=""
+                    search[k]=[]
+       
+    #for JSON serialization   
+    for k in search.keys():
+        search[k]=(str)(search[k])
             
-                
     data["search"]={'points':search, 'sizePattern':len(pattern)}
     return jsonify(points=search, sizePattern=len(pattern))
 

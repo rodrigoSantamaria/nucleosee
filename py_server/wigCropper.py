@@ -20,3 +20,4 @@ for k in seq.keys():
     for n in tal:
         f.write((str)(n)+"\n")
 f.close()
+#%%

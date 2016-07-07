@@ -301,7 +301,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param pattern
          * @param d
          */
-        Server.search = function (callback, pattern, d, geo, intersect)
+        Server.search = function (callback, pattern, d, geo, intersect, softMutations)
         {
             var startTime = new Date();
 
@@ -314,7 +314,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+"&geo="+geo+"&intersect="+intersect,
+                    //url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+"&geo="+geo+"&intersect="+intersect+"&softMutations="+softMutations,
+                    url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+"&geo="+geo+"&intersect=false&softMutations="+softMutations,
                     type: "GET",
                     datatype: "json"
                 });

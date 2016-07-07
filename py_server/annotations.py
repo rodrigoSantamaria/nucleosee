@@ -83,7 +83,12 @@ def fasta(ch):
 #print(time.clock()-t0)
 
 
-#%%
+#%% Returns the annotations on areas around positions in mm
+#dataGFF gff data where to search annotations (as returned by gff())
+#types   specific lifst of annotations to retrieve (such as 'gene' or 'CDS') (default ["any"])
+#ws      range from mm where to search for annotations
+#align   wheter mm is taken as the start ("left" or the center of the range
+#intersect  whether the range must be fully inside of the annotations ("hard") ur just have a non-null intersection ("soft")
 def annotate(mm, dataGFF, types=["any"], ws=1000, align="center", intersect="soft"):
     import numpy as np
     data2=dataGFF
@@ -129,6 +134,22 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center", intersect="sof
 #for x in tal[61000]:
 #    print "{}\t{}, {}".format(x["id"],x["type"],x["start"])
 #    
+#%%
+def searchGene(text, dataGFF, types=["gene"]):
+    import numpy as np
+    import string
+    data=dataGFF
+    result=[]
+    if(types[0]!="any"):
+        wanted_set = set(types)  # Much faster look up than with lists, for larger lists
+        @np.vectorize
+        def selected(elmt): return elmt in wanted_set  # Or: selected = numpy.vectorize(wanted_set.__contains__)
+        data=dataGFF[selected(dataGFF["type"])]
+    for x in data:
+      if(string.find(x["id"],text)>=0 or string.find(x["name"],text)>=0):
+          result.append({"start":x["start"], "end":x["end"]})
+    return result
+#searchGene("raf1", data)    
 #%%
 #em is just a list of gene ids
 #dataGOA is a table with GOA data as retrieved by goa()

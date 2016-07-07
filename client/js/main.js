@@ -22,7 +22,7 @@ var GVB_GLOBAL =
     maxSize: 400000,        // maximum number of normalized data to store
     intersect: "soft",   // If true Hard instersects are considered (whole inclusion of pattern in genomic annotation for enrichment, etc.)
     geo: false,            // True if some genomic information (genes, UTRs, etc.) is used to filter out pattern matches
-    softMutations: false,   // if true soft mutations (only 1-distance switch) is allowed to the patterns. E.g. "b" may change to "c" or "a" but not to "d" or "e".
+    softMutations: true,   // if true soft mutations (only 1-distance switch) is allowed to the patterns. E.g. "b" may change to "c" or "a" but not to "d" or "e".
     grid : false           // if true, a grid to show percentile regions is shown on both lane 1 and 2
 };
 
@@ -147,7 +147,7 @@ function searchPattern()
 
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
 //        Server.search(drawSearch, pattern,d, geo, GVB_GLOBAL.intersect);
-        Server.search(drawSearch, pattern,d, geo, "soft");
+        Server.search(drawSearch, pattern,d, geo, "soft", GVB_GLOBAL.softMutations);
     }
 }
 

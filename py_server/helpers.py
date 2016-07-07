@@ -203,6 +203,31 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True):
 ##t=align({},"kalign")
 ##print("Clustal takes ",(time.clock()-t0))
 #    
+#%% Filters the occurrences found by bwt that mutate with a high level of difference
+#E.g if p contains a position x which has a pattern abcce and the pattern searched
+#is abccd, it's alright. But if the pattern searched is abccc, as distance between
+#e and c is >1, then it will be filtered. Distance is always alphabetic
+#p array with starting positions of the pattern
+#k size of the pattern
+#pattern original pattern
+#seq sequence
+def filterHard(p,seq, pattern):
+    p2=[]
+    for x in p:
+        x=(int)(x)
+        #print("x es", x)
+        oc=seq[x:x+len(pattern)]
+        add=True
+        for i in range(len(pattern)):
+            d=ord(oc[i])-ord(pattern[i])
+            if(d>1):
+                break
+        if(add):
+            p2.append(x)
+    return p2
+        
+
+#filterHard([0,2], "abcdedbedaacaaa", "abcde")    
 #%%
 #Evolved from http://www.rigtorp.se/2011/01/01/rolling-statistics-numpy.html
 # (however that solution get overlapping windows)
@@ -265,12 +290,32 @@ def convertString(text):
                 s3+=(s2[i]+s2[i+2])
             else:
                 s3+=s2[i+2]
-        #else:
-            #s3+=(s2[i])
-         #   i+=1
         i+=1
     print("Search string is ",s3)
     return s3
+
+"""
+Converst a range expression on a starting points + length
+Range expression are of the tipe start:end
+Both start and end can contain K or M to express *10e3 or 10e6
+It returns start + length of the interval
+""" 
+def convertRange(text):
+    import string
+    text1=text.upper()
+    text2=text1.split("-")
+    if(len(text2)==2): #numerical range
+        n0=(float)(string.replace(string.replace(text2[0], "M", ""), "K", ""))
+        n1=(float)(string.replace(string.replace(text2[1], "M", ""), "K", ""))
+        n0*=1000 if text2[0].count("K")==1 else 1
+        n1*=1000 if text2[1].count("K")==1 else 1 
+        n0*=1000000 if text2[0].count("M")==1 else 1 
+        n1*=1000000 if text2[1].count("M")==1 else 1 
+        
+        return {'start':n0, 'length':n1-n0};
+    else:
+        return -1
+
     
 #convertString("abcba+a*5+abcba")
 #%%    
