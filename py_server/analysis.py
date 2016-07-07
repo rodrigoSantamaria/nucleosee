@@ -293,8 +293,15 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     
     #CASE 2) gene/go name pattern
     t=data["bwt"][data["seq"].keys()[0]]
-    if(False in [x in ['*','+',t["firstOccurrence"]] for x in set(pattern)]):
-        print("GENE OR TERM")
+    patternLetters=t["firstOccurrence"].keys()
+    patternLetters.append('+')
+    patternLetters.append('*')
+    for x in range(1,10):
+        patternLetters.append((str)(x)) 
+    
+    print(patternLetters, "\t",set(pattern))
+    if(False in [x in patternLetters for x in set(pattern)]):
+        print("GENE OR TERM")       #TODO: GO Term search not implemented yet
         points={}
         for k in data["seq"].keys():
             oc=ann.searchGene(pattern, data["gff"][k])
