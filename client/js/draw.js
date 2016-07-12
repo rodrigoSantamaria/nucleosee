@@ -211,9 +211,10 @@ function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize
     // We use the core function
     dataLine_core(false, globalDL1,
         globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
+       // globalSeq.seqServ, startSeq, endSeq, startSeq);
 
 
-    // We confirm that we have finished
+        // We confirm that we have finished
     globalDL1.drawn = true;
 
     if(DEBUG_GBV) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
@@ -225,14 +226,16 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
     var tracks = globalSeq.tracks;
     var points = JSON.parse(allPoints[track]);
     var numNucleotidesDraw  = globalDL1.cv.dim.width; // because the scale is 1:1
-
+    if(typeof(sizePattern)=="object")
+        sizePattern=JSON.parse(sizePattern[track]);
     if(DEBUG_GBV) console.log("\ndataLine_1_drawPoints(): "+points.length+" points");
 
     // We calculate the points found in the sequence
     var seqPoints=[];
     for(var i=0; i<points.length; i++)
     {
-        seqPoints.push(points[i] * globalSeq.ws);
+    //    seqPoints.push(points[i] * globalSeq.ws);
+        seqPoints.push(points[i]);
     }
 
     // Now, with seqPoints, we calculate the points found in the dataLine
@@ -242,8 +245,26 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
         var dataPoint = Math.round(seqPoints[i]/globalDL1.cv.scaleSeqScreen);
         if(dataPoint>=globalDL1.cv.data.length)
             console.log("Out of bounds!: "+dataPoint+", "+seqPoints[i]);
-        else
-            dataPoints.push({real_pos: seqPoints[i], pos: (globalDL1.cv.data)[dataPoint].pos, value: (globalDL1.cv.data)[dataPoint].value, selected: false});
+        else {
+            //            dataPoints.push({real_pos: seqPoints[i], pos: (globalDL1.cv.data)[dataPoint].pos, value: (globalDL1.cv.data)[dataPoint].value, selected: false});
+            if (typeof(sizePattern)=="number")//in the case of BWT/interval searches
+                dataPoints.push({
+                    real_pos: seqPoints[i],
+                    pos: (globalDL1.cv.data)[dataPoint].pos,
+                    value: (globalDL1.cv.data)[dataPoint].value,
+                    size: sizePattern,
+                    selected: false
+                });
+            else                //in the case of nominal gene/go searches
+                dataPoints.push({
+                    real_pos: seqPoints[i],
+                    pos: (globalDL1.cv.data)[dataPoint].pos,
+                    value: (globalDL1.cv.data)[dataPoint].value,
+                    size: sizePattern[i],
+                    selected: false
+                });
+            }
+
     }
 
 
@@ -256,8 +277,16 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
             var point = d.real_pos;
 
             // We round to the nearest hundred from sizePattern. E.g. 270 --> 300,  540 --> 500
-            var focusLine = Math.round(sizePattern*globalSeq.ws/100)*100;
-
+            //var focusLine = Math.round(sizePattern*globalSeq.ws/100)*100;
+            var focusLine = Math.round(d.size*globalSeq.ws/100)*100;
+            if(focusLine>globalDL2.cv.dim.width)
+                numNucleotidesDraw=focusLine*1.1;//make it a 10% larger than the thing to draw
+            else
+                numNucleotidesDraw=globalDL2.cv.dim.width;  //1:1 scale in the rest of cases
+            /*if(typeof(sizePattern)=="object")
+                {
+                numNucleotidesDraw=focusLine;
+                }*/
             var startSeq = point-(numNucleotidesDraw/2)+(focusLine/2);
             var endSeq   = point+(numNucleotidesDraw/2)+(focusLine/2);
 
@@ -266,7 +295,8 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
             globalDL2.endSeq = endSeq;
 
             // Draw dataLine2
-            Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, sizePattern);
+            //Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, sizePattern);
+            Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, d.size);
 
             return "<strong>"+d3.format(",")(point) + ":</strong> " + d3.format(".2f")(d.value); // e.g. "307,770 : 0.79"
         });
@@ -318,10 +348,12 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
 
     //GET SEQUENCES, MOTIFS, (ALIGNMENT), CONSENSUS
     //NOTE: alignment takes more than 1s if there's >50 sequences! (using the fastest method: kalign)
-    for( var j=0;j<points.length;j++)
-        points[j]*=globalSeq.ws;
-    Server.nucProfile(saveSequences, globalSeq.track, "["+points+"]", sizePattern*globalSeq.ws);
-
+    //NOTE: by now searches in seq are only possible with equal lengths
+    if(typeof(sizePattern)=="number") {
+        for (var j = 0; j < points.length; j++)
+            points[j] *= globalSeq.ws;
+        Server.nucProfile(saveSequences, globalSeq.track, "[" + points + "]", sizePattern * globalSeq.ws);
+        }
 }
 
 
@@ -499,23 +531,6 @@ function dataLine_1_drawEnrichment(enrichment)
 
 
             drawPoints(dataPoints);
-
-            /*
-            globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".gogene").remove();
-
-            if(d3.select(this).classed("selected")==true) {
-                globalDL1.cv.svg.selectAll("." + globalDL1.cv.classSVG + ".gogene")
-                    .data(gis)
-                    .enter()
-                    .append("path")
-                    .attr('class', globalDL1.cv.classSVG + ' gogene')
-                    .attr("d", function (d) {
-                            var pos = Math.round(d / globalDL1.cv.scaleSeqScreen);
-                            return "M" + (pos - 3) + ",100L" + (pos + 3) + ",100";
-                        }
-                    );
-
-            }*/
         })
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
@@ -525,7 +540,10 @@ function dataLine_1_drawEnrichment(enrichment)
 //-------------------------------------------------------------
 //          DATALINE 2
 //-------------------------------------------------------------
-
+// partSeq - portion of sequence's abundance to draw
+// numNucleotides - number of nucleotides to draw (?) (should be equal to partSeq.length?)
+// point - starting point of the drawing
+// sizePattern - size of the searched pattern (to highlight over the whole seq)
 function dataLine_2(partSeq, numNucleotides, point, sizePattern)
 {
     // DRAWING DATALINE 2
@@ -533,10 +551,14 @@ function dataLine_2(partSeq, numNucleotides, point, sizePattern)
     var startSeq = globalDL2.startSeq;
     var endSeq   = globalDL2.endSeq;
 
+    globalDL2.scale=1;
+    if(Math.floor((sizePattern*globalSeq.ws)/(endSeq-startSeq)) > 1)
+        globalDL2.scale= Math.ceil((sizePattern*globalSeq.ws)/(endSeq-startSeq));
 
     // We use the core function
     dataLine_core(false, globalDL2,
-        partSeq, 1, 0, numNucleotides, startSeq,
+        partSeq, 1/globalDL2.scale, 0, numNucleotides, startSeq,
+        //partSeq, 0, numNucleotides, startSeq,
         point, sizePattern);
 
 
@@ -572,16 +594,14 @@ function dataLine_2(partSeq, numNucleotides, point, sizePattern)
 
 function dataLine_2_drawAnnotationLine(annotations)
 {
-    // console.log("\ndataLine_2_drawAnnotationLine(): there are annotations");
-
-
     var startSeq = globalDL2.startSeq;
     var endSeq = globalDL2.endSeq;
-    var factor = globalDL2.cv.scaleSeqScreen*globalDL2.cv.scaleServScreen; // De momento queremos que el factor sea 1:1 siempre
+    //var factor = globalDL2.cv.scaleSeqScreen*globalDL2.cv.scaleServScreen; // De momento queremos que el factor sea 1:1 siempre
+    var factor = globalDL2.cv.scaleSeqScreen;
+    //var factor = globalDL2.cv.scaleSeqServ;
     var lineHeight = globalDL2.cv.dimAnnotation.lineHeight;
 
     //gene line
-    /*
     globalDL2.cv.svg.append("g")
         .selectAll(".dl2.annotation")
         .data(annotations)
@@ -589,27 +609,13 @@ function dataLine_2_drawAnnotationLine(annotations)
         .attr('class', 'dl2 annotation')
         .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
         .attr("x", function(d)
-        {  return Math.max(0,(d.s-startSeq)*factor) })
-        .attr("y", function(d){  var y=0; y=d.ss=="+"?0:15; y+=(d.t=="gene" || d.t=="transcript")?5:0; return y;})
-        .attr("width", function(d){return Math.max(0,Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)*factor), Math.max(0,d.e-Math.max(startSeq, d.s)*factor)))})
-        .attr("height", function(d){
-            var h=lineHeight;
-            if (d.t=="gene" || d.t=="transcript")
-                h=lineHeight*.25;
-            return h});
-*/
-    globalDL2.cv.svg.append("g")
-        .selectAll(".dl2.annotation")
-        .data(annotations)
-        .enter().append("rect")
-        .attr('class', 'dl2 annotation')
-        .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
-        .attr("x", function(d)
-        {  return Math.max(0,(d.s-startSeq)*factor) })
+        {
+        return Math.max(0,(d.s-startSeq)/factor)
+        })
         .attr("y", function(d){  var y=0; y=d.ss=="+"?0:15; y+=(d.t=="gene" || d.t=="transcript")?5:0; return y;})
         .attr("width", function(d)
             {
-            return Math.max(0,Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)*factor)+1, Math.max(0,d.e-Math.max(startSeq, d.s)*factor)+1))
+            return Math.max(0,Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)/factor)+1, Math.max(0,(d.e-Math.max(startSeq, d.s))/factor)+1))
             })
         .attr("fill", function(d) {
             if (d.t.indexOf("RNA") >= 0)    return "#ffccff";
@@ -638,9 +644,9 @@ function dataLine_2_drawAnnotationLine(annotations)
 
         .attr("points", function(d){
             var y0=d.ss=="+"?0:15;
-            var x0=Math.max(0,(d.s-startSeq)*factor);
+            var x0=Math.max(0,(d.s-startSeq)/factor);
             if(d.ss=="+")
-                x0+=Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)*factor), Math.max(0,d.e-Math.max(startSeq, d.s)*factor));
+                x0+=Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)/factor), Math.max(0,d.e-Math.max(startSeq, d.s)/factor));
             if(d.ss=="+")
                 path=x0+","+y0+ " " +x0+", "+(y0+lineHeight)+" "+(x0+lineHeight *.5)+","+(y0+lineHeight *.5);
             else
@@ -733,7 +739,7 @@ function dataLine_2_drawAnnotationLine(annotations)
         .attr('class', 'dl2 annotation label')
         .attr("transform", "translate(0," + (globalDL2.cv.dim.height+20) + ")")
         .attr("x", function(d) {
-            return Math.max(10,(d.s-startSeq+6)*factor);
+            return Math.max(10,(d.s-startSeq+6)/factor);
         })
         .attr("y", function(d){   return d.ss=="+"?10:25})
         .text(function(d){
@@ -950,7 +956,11 @@ function drawNucleotides(start, point, nuc)
 //-------------------------------------------------------------
 //          DATALINE CORE AND OTHER FUNCTIONS
 //-------------------------------------------------------------
-
+/*
+startSeq: first position we want to draw
+endSeq: last position we want to draw
+seqServ: sequence of points in the above range that we dispose of to draw.
+*/
 function dataLine_core(DEBUG, globalDL,
                        seqServ, scaleSeqServ, startSeq, endSeq, initialPoint,
                        point, sizePattern)
@@ -962,6 +972,7 @@ function dataLine_core(DEBUG, globalDL,
     // Get info about sequence
     var mean = globalSeq.mean;
     var stdev = globalSeq.stdev;
+
 
 
     // Get information of dataLine
@@ -983,12 +994,32 @@ function dataLine_core(DEBUG, globalDL,
     var endData = Math.floor(endSeq/scaleSeqServ);
     var sizeData = endData-startData;
 
+    /*SCALE: There are three ranges:
+        sizeData - Range of nucleotides i want to show
+        sizeSeq - Number of data i have in the range of nucleotides to show
+        width - Size of the screen
+
+        Based on these ranges, we can define 2/3 scales:
+
+        nucleotides per data -->  seqServ: how many data the server returns me from the whole number of nucleotides
+        data per pixel --> servScreen: how many data can i put on each pixel
+        nucleotides per pixel --> seqServ: how many actual pixels would i have per pixel
+
+        E.g. the server returns 400K values for a chromosome of 5.5M nucleotides. I have a screen of 1200 pixels.
+        Therefore I have: ~13 nucleotides per data (the server returns the average abundance for each 13 nucs)
+                          ~355 data would correspond to a single pixel
+                          ~355*13=4611 nucleotides would correspond to a single pixel
+
+       Another example: for a small range related to a gene i have 4378 data corresponding to the same number of genes,
+       they must be shown again in 1200 pixesl:
+       1 nucleotide per data
+       3.6 data and nucleotides per pixel
+
+     */
     var scaleServScreen = sizeData/width;
     var scaleSeqScreen=1;
-    if(sizeSeq>width)   // width/bps compression
-    {
-        scaleSeqScreen = sizeSeq/width; // i.e. nucleotides per pixel
-    }
+    scaleSeqScreen=scaleSeqServ*scaleServScreen;
+
     if(DEBUG) console.log("dataLine("+classSVG+"): startSeq: "+startSeq+" - endSeq: "+endSeq+" - sizeSeq: "+sizeSeq+" - width(pixels): "+width);
     if(DEBUG) console.log("            startData: "+startData+" - endData: "+endData+" - sizeData: "+sizeData);
     if(DEBUG) console.log("            scaleSeqScreen (nucleotides/pixel): "+scaleSeqScreen+" - scaleServScreen: "+scaleServScreen+" - scaleSeqServ: "+scaleSeqServ);
@@ -996,9 +1027,6 @@ function dataLine_core(DEBUG, globalDL,
 
     // Calculate 'y minimum' and 'y maximum'
     var ymin = 0;
-    /*var ymax = mean+(3*stdev);
-    if(mean-(3*stdev) > 0)
-        ymin = mean-3*stdev;*/
     var ymax=globalSeq.max;
 
 
@@ -1033,8 +1061,10 @@ function dataLine_core(DEBUG, globalDL,
 
     // Axis labels
     var xAxis = d3.svg.axis().scale(xScale).orient("bottom")
-        .tickFormat(function(d) {return roundTickFormat(d,scaleSeqScreen,initialPoint, startSeq,endSeq)})
-        .tickValues(getTicks(sizeSeq, scaleSeqScreen));
+       // .tickFormat(function(d) {return roundTickFormat(d,scaleSeqScreen,initialPoint, startSeq,endSeq)})
+       // .tickValues(getTicks(sizeSeq, scaleSeqScreen));
+     .tickFormat(function(d) {return roundTickFormat(d,Math.max(scaleSeqScreen, scaleServScreen),initialPoint, startSeq,endSeq)})
+     .tickValues(getTicks(sizeSeq, Math.max(scaleSeqScreen, scaleServScreen)));
     var yAxis = d3.svg.axis().scale(yScale).orient("left");
 
     // Function to draw the line
@@ -1095,7 +1125,7 @@ function dataLine_core(DEBUG, globalDL,
     svg.append("g")
         .attr("class", classSVG+" scale")
         .append("text")
-        .text("1 : "+Math.round(scaleSeqScreen))
+        .text("1 : "+Math.max(Math.round(scaleSeqScreen), Math.round(scaleServScreen)))
         .attr("x", width-margin.left)
         .attr("y", margin.top*0.75);
 

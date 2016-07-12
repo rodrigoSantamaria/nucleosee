@@ -388,8 +388,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             // Calculate points of this track and number of matches
             var track  = chromosomes[numChromosome-1];
             var points = JSON.parse(allPoints[track]);
-            for( var j=0; j<points.length; j++)
-                points[j]*=ws;
+            //for( var j=0; j<points.length; j++)
+            //    points[j]*=ws;
             numMatches += points.length;
             if(_DEBUG) console.log(points.length+" matches in track: "+track);
 
@@ -654,9 +654,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 {
                     var response = [];
                     response.partSeq = result.partSeq;
-
-                    //console.log("getPartSeq(): get part of sequence...");
-                    //console.log("Time spent getPartSeq: " + (new Date() - startTime) + "ms");
 
                     callback(response.partSeq, numNucleotides, point, sizePattern);
                 })

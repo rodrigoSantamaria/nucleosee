@@ -287,7 +287,8 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
         print("NUMERICAL RANGE")
         points={}
         for k in data["seq"].keys():
-            points[k]=(str)([(int)(interval["start"]/ws)] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
+            #points[k]=(str)([(int)(interval["start"]/ws)] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
+            points[k]=(str)([(int)(interval["start"])] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
         data["search"]={'points':points, 'sizePattern':((int)(interval["length"]/ws))}
         return jsonify(points=points, sizePattern=((int)(interval["length"]/ws)));
     
@@ -303,11 +304,14 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     if(False in [x in patternLetters for x in set(pattern)]):
         print("GENE OR TERM")       #TODO: GO Term search not implemented yet
         points={}
+        sizes={}
         for k in data["seq"].keys():
             oc=ann.searchGene(pattern, data["gff"][k])
-            points[k]=(str)([(int)(y["start"]/ws) for y in oc])
-        data["search"]={'points':points, 'sizePattern':1}
-        return jsonify(points=points, sizePattern=1);#TODO: variable lengths in this case and proper client treatment of it 
+            #points[k]=(str)([(int)(y["start"]/ws) for y in oc])
+            points[k]=(str)([(int)(y["start"]) for y in oc])
+            sizes[k]=(str)([(int)((y["end"]-y["start"])/ws) for y in oc])
+        data["search"]={'points':points, 'sizePattern':sizes}
+        return jsonify(points=points, sizePattern=sizes);
         
     #CASE 3) bin pattern    
     pattern=helpers.convertString(pattern)
@@ -327,12 +331,17 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     print("Search finished in ",(time.clock()-t00))
     
     
+    
+    
     if(softMutations=="true"):
         ti=time.clock()
         for k in data["seq"].keys():
             search[k]=helpers.filterHard(search[k], data["dseq"][k], pattern)
         print("Soft mutation filtering takes ", (time.clock()-ti))
-            
+    
+    for k in data["seq"].keys():
+        search[k]=[x*ws for x in search[k]]        
+        
     #geo filtering
     if(geo!="none"):
         if(geo!="intergenic"):
@@ -344,9 +353,10 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
                 else:
                     tt=["ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene"]
                 if(len(sk)>0):
-                    p=[x*ws for x in sk]                    
-                    annot=annotationsLocal(positions=p, window=ws*len(pattern), gff=data["gff"][k], types=tt, onlyIDs="False", intersect=intersect)
-                    p=[x/ws for x in annot.keys()];
+                    #p=[x*ws for x in sk]                    
+                    annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["gff"][k], types=tt, onlyIDs="False", intersect=intersect)
+                    #p=[x/ws for x in annot.keys()];
+                    p=[(int)(x) for x in annot.keys()];
                     search[k]=p
                 else:
                     search[k]=[]
@@ -356,11 +366,12 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
                 ws=data["windowSize"]
                 
                 if(len(sk)>0):
-                    p=[x*ws for x in sk]
+                    #p=[x*ws for x in sk]
                     
-                    annot=annotationsLocal(positions=p, window=ws*len(pattern), gff=data["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect)
+                    annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect)
                     p1=set(p)-set(annot.keys())
-                    p=[x/ws for x in p1];
+                    #p=[x/ws for x in p1];
+                    p=[(int)(x) for x in p1];
                     search[k]=list(p)
                 else:
                     search[k]=[]
