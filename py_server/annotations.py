@@ -86,10 +86,11 @@ def fasta(ch):
 #%% Returns the annotations on areas around positions in mm
 #dataGFF gff data where to search annotations (as returned by gff())
 #types   specific lifst of annotations to retrieve (such as 'gene' or 'CDS') (default ["any"])
-#ws      range from mm where to search for annotations
+#ws      interval size from mm where to search for annotations (or a list of numbers for the same length than mm)
 #align   wheter mm is taken as the start ("left" or the center of the range
 #intersect  whether the range must be fully inside of the annotations ("hard") ur just have a non-null intersection ("soft")
-def annotate(mm, dataGFF, types=["any"], ws=1000, align="center", intersect="soft"):
+#TODO: something broken here?
+def annotate(mm, dataGFF, types=["any"], winSize=1000, align="center", intersect="soft"):
     import numpy as np
     data2=dataGFF
     if(types[0]!="any"):
@@ -98,22 +99,27 @@ def annotate(mm, dataGFF, types=["any"], ws=1000, align="center", intersect="sof
         def selected(elmt): return elmt in wanted_set  # Or: selected = numpy.vectorize(wanted_set.__contains__)
         data2=dataGFF[selected(dataGFF["type"])]
     em={} #enriched (i.e. detailed) matches, including for each the thigs found at GFF
-    interval=ws*0.5
     
-    print("INTERSECT FINAL IS",intersect)
+    if(type(winSize)==int):
+        ws=winSize
+        interval=ws*0.5
     
-    for x in mm:
+    for i in range(len(mm)):
+        x=mm[i]
+        if(type(winSize)==list):
+            ws=winSize[i]
+            interval=ws*0.5
+        
         if(align=="left"):
             s1=x
             e1=x+ws
         else:
             e1=x+interval
             s1=x-interval
-
         if(intersect=="hard"):
-            sel=data2[(data2["start"]<s1) & (data2["end"]>e1)] #annotated interval fully inside the search window
+            sel=data2[(data2["start"]<=s1) & (data2["end"]>=e1)] #annotated interval fully inside the search window
         else:    
-            sel=data2[((data2["end"]>s1) & (data2["end"]<e1)) | ((data2["start"]>s1) & (data2["start"]<e1)) | ((data2["start"]<s1) & (data2["end"]>e1))] #intersecting (more time expensive and not sure it makes a difference)
+            sel=data2[((data2["end"]>=s1) & (data2["end"]<=e1)) | ((data2["start"]>=s1) & (data2["start"]<=e1)) | ((data2["start"]<=s1) & (data2["end"]>=e1))] #intersecting (more time expensive and not sure it makes a difference)
 
         if(len(sel)>0):     
             em[x]=[]
@@ -149,7 +155,44 @@ def searchGene(text, dataGFF, types=["gene"]):
       if(string.find(x["id"],text)>=0 or string.find(x["name"],text)>=0):
           result.append({"start":x["start"], "end":x["end"]})
     return result
-#searchGene("raf1", data)    
+#searchGene("raf1", dataGFF)    
+#%%
+#Searches a given text in go descriptions, then searches for genes annotated
+#with the corresponding go terms and returns their locations as start-end
+def searchGO(text, dataGOA, dataGO, dataGFF):
+    import numpy as np
+    import string
+    result=[]
+    for k in dataGO.keys():
+      if(string.find(dataGO[k],text)>=0):
+          result.append(k)
+    result=set(result)
+    res2=[]
+    for x in dataGOA:
+        if x["go_id"] in result:
+            res2.append(x["gene_name"])
+    res2=set(res2)
+    
+    wanted_set = set(["gene"])  # Much faster look up than with lists, for larger lists
+    @np.vectorize
+    def selected(elmt): return elmt in wanted_set  # Or: selected = numpy.vectorize(wanted_set.__contains__)
+    data=dataGFF[selected(dataGFF["type"])]
+
+    res3=[]
+    for x in data:
+      if x["name"] in res2:
+         res3.append({"start":x["start"], "end":x["end"]})
+    return res3
+
+#result=searchGO("ribosomal", dataGOA, dataGO, dataGFF)    
+#result
+#
+#import numpy as np
+#wanted_set = set(result)  # Much faster look up than with lists, for larger lists
+#@np.vectorize
+#def selected(elmt): return elmt in wanted_set  # Or: selected = numpy.vectorize(wanted_set.__contains__)
+#data=dataGOA[selected(dataGOA["go_id"])]
+
 #%%
 #em is just a list of gene ids
 #dataGOA is a table with GOA data as retrieved by goa()
@@ -178,14 +221,22 @@ def annotateGOnames(em, dataGOA, dataGO):
         except KeyError:
             print('Key',k,' not found')
     return egon
-
+#%%
+#goids=[x["go_id"] for x in dataGOA]
+#goterms={}
+#for x in goids:
+#    goterms[x]=set()
+#for x in dataGOA:
+#    goterms[x["go_id"]].add(x["gene_id"])
+    
 #%% Fisher's enrichment
 #According to https://pypi.python.org/pypi/fisher/0.1.4
 # gis is a set of genes of interest by id
 # th is the threshold
 # minGO minimum number of genes in a GO term to be considered
 # maxGO maximum numer of genes in a GO term to be considered
-def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=500):
+#discard TODO: indicate terms that we want to discard (typically inferred electronically annotations)
+def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=5, maxGO=500, discard=["IEA"]):
     #0) Prepare sets    
     # Retrieve a dict where k=go id and value=set of genes
     print("enrichment fisher")
@@ -216,9 +267,10 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
     
         unigo=len(goterms[k])-selgo #number of non-gis in the term
         uninogo=uni-len(gis)-len(goterms[k])+selgo
-        if(unigo>=minGO and unigo<=maxGO and selgo>0):
+
+        #if(unigo>=minGO and unigo<=maxGO and selgo>0):
+        if(len(goterms[k])>=minGO and len(goterms[k])<=maxGO and selgo>0):
             p = pvalue(selgo, selnogo, unigo, uninogo)
-            #pvals[k]={"pval":p.right_tail, "ngis":selgo, "ngo":len(goterms[k])}
             pvals[k]={"pval":p.right_tail, "ngis":selgo, "ngo":len(goterms[k]), "gis":list(gisInTerm)}
     print("fisher test finished with ", len(pvals)," terms enriched")
         
@@ -257,7 +309,6 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=2, maxGO=50
     return pvalsf
 #%%
 #tal=enrichmentFisher(set(gis),dataGOA, 0.01, "fdr")
-#fisher.pvalue(2,294,255,4584)
 #tal=enrichmentFisher(set(gis),dataGOA,0.01,"fdr")
 #%%
 #def keyL(k):

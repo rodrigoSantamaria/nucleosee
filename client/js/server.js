@@ -142,16 +142,17 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
                                 callback();
                             })
-                            .fail(function()
+                            .fail(function(jqXHR, textStatus, errorThrown)
                             {
                                 if(_DEBUG) console.log("sendFile(): upload failed...");
                             });
                     }
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("sendFile(): testUpload failed...");
-                    javascript_abort();
+                    console.log(jqXHR)
+                    javascript_abort("Error sending the file. "+errorThrown+" "+jqXHR.responseText);
                 });
         };
 
@@ -227,7 +228,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
                     callback(response, track);
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("preprocress(): discretization failed...");
                 });
@@ -288,7 +289,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
                     callback(response, track);
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("getTrack(): get track failed...");
                 });
@@ -347,14 +348,13 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     else
                     {
                         if(_DEBUG) console.log("search(): "+result.msg);
-                        $("#searchImg")[0].style.visibility="hidden";
-                        alert("Error: "+result.msg);
+                        javascript_abort("Search failed: "+result.msg);
                     }
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("search(): search failed...");
-                    $("#searchImg")[0].style.visibility="hidden";
+                    javascript_abort("search() failed");
                 });
         };
 
@@ -388,15 +388,16 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             // Calculate points of this track and number of matches
             var track  = chromosomes[numChromosome-1];
             var points = JSON.parse(allPoints[track]);
-            //for( var j=0; j<points.length; j++)
-            //    points[j]*=ws;
+            var ws=window;
+            if(typeof(window)=="object")
+                ws=window[track];
             numMatches += points.length;
             if(_DEBUG) console.log(points.length+" matches in track: "+track);
 
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/annotations?user="+_user+"&password="+_password+
-                    "&positions=["+points+"]&types="+types+"&window="+window+"&align="+align+"&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+intersect,
+                    "&positions=["+points+"]&types="+types+"&window="+ws+"&align="+align+"&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+intersect,
                     type: "GET",
                     datatype: "json"
                 });
@@ -464,9 +465,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         callback(gis, annotations);
                     }
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations failed...");
+                    javascript_abort("allAnnotationsGenes failed");
+
                 });
         };
 
@@ -523,9 +526,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     callback(response);
 
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("enrichmentGO(): enrichmentGO failed...");
+                    javascript_abort("enrichmentGO() failed");
+
                 });
         };
 
@@ -570,9 +575,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         callback(annotations[point]);
                     }
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
+                    javascript_abort("annotationsGenes() failed");
+
                 });
         };
 
@@ -616,9 +623,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     callback(genes, goterms);
                     //return annotations;
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
+                    javascript_abort("annotationGenes() failed");
+
                 });
         };
 
@@ -657,9 +666,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
                     callback(response.partSeq, numNucleotides, point, sizePattern);
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("getPartSeq(): getPartSeq failed...");
+                    javascript_abort("getPartSeq() failed");
+
                 });
         };
 
@@ -701,9 +712,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
                     callback(start, point, response)
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("nucleotides(): get nucleotides failed...");
+                    javascript_abort("nucleotides() failed");
+
                 });
         };
 
@@ -755,9 +768,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
                     callback(response);
                 })
-                .fail(function()
+                .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("nucProfile(): discretization failed...");
+                    console.log(requestAJAX.url);
+                    javascript_abort("nucProfile failed");
                 });
         };
 
@@ -787,7 +802,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
         function javascript_abort(msg)
         {
-            msg   || ( msg = 'This is not an error. This is just to abort javascript' );
+            msg   || ( msg = 'An error has occurred' );
             alert(msg);
 
             // Hide all images of "loading..."

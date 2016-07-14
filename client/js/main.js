@@ -183,9 +183,22 @@ function getAllAnnotations(allPoints, sizePattern)
 
     globalTime=new Date();
 
+    var winS;
     if(typeof(sizePattern)=="object")//TODO: allow different sizes for each point
-        sizePattern=30;
-    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", sizePattern*ws, "left", "False", chromosomes, ws, "soft");
+        {
+        winS={};
+        for(var i in sizePattern)
+            {
+            winS[i]=JSON.parse(sizePattern[i]);
+            for(var j in winS[i])
+                winS[i][j]*=ws;
+            winS[i]="["+winS[i].join(",")+"]";
+            }
+        //winS=3000
+        }
+    else
+        winS=sizePattern*ws;
+    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", winS, "left", "False", chromosomes, ws, "soft");
 }
 
 

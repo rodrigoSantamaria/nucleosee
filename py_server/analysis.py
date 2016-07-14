@@ -13,6 +13,7 @@ from flask import redirect, url_for #for uploading files
 from werkzeug.utils import secure_filename
 import os
 import time
+import string
 
 #Our methods
 import suffixSearch as ss
@@ -306,8 +307,12 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
         points={}
         sizes={}
         for k in data["seq"].keys():
-            oc=ann.searchGene(pattern, data["gff"][k])
-            #points[k]=(str)([(int)(y["start"]/ws) for y in oc])
+            if(string.find(pattern,"go:")==-1):
+                print("GENE")
+                oc=ann.searchGene(pattern, data["gff"][k])
+            else:
+                print("TERM")
+                oc=ann.searchGO(pattern.replace("go:", ""), data["goa"], data["go"], data["gff"][k])
             points[k]=(str)([(int)(y["start"]) for y in oc])
             sizes[k]=(str)([(int)((y["end"]-y["start"])/ws) for y in oc])
         data["search"]={'points':points, 'sizePattern':sizes}
@@ -369,7 +374,7 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
                     #p=[x*ws for x in sk]
                     
                     annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect)
-                    p1=set(p)-set(annot.keys())
+                    p1=set(sk)-set(annot.keys())
                     #p=[x/ws for x in p1];
                     p=[(int)(x) for x in p1];
                     search[k]=list(p)
@@ -402,7 +407,7 @@ def getPartSeq(start=0, end=0, track="None"):
 #%%
 @app.route("/annotations")
 def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft"):
-    window=int(request.args.get("window"))
+    window=eval(request.args.get("window"))
     pos=eval(request.args.get("positions"))
     types=eval(request.args.get("types"))
     track=str(request.args.get("track"))
@@ -410,7 +415,7 @@ def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs=
     align=str(request.args.get("align"))
     intersect=str(request.args.get("intersect"))
 
-    print("INTERSECT ANNOT is",intersect)
+    print("WINDOW IS",type(window))
     
     res=annotationsLocal(positions=pos, gff=data["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
     return jsonify(response=res)
@@ -419,7 +424,9 @@ def annotationsLocal(positions, gff, window=1000, types=["any"], track="None", o
     import time
     global data
     t0=time.clock()
+    print("Annotating ",len(positions)," positions")
     res=ann.annotate(positions, gff, types, window, align, intersect)
+    print("Annotations found for ",len(res)," positions")
     print("Annotations take",(time.clock()-t0),"s")
     if(onlyIDs=="True"):
         ids=[]

@@ -215,10 +215,9 @@ def filterHard(p,seq, pattern):
     p2=[]
     for x in p:
         x=(int)(x)
-        #print("x es", x)
-        oc=seq[x:x+len(pattern)]
+        oc=seq[x:(x+len(pattern))]
         add=True
-        for i in range(len(pattern)):
+        for i in range(len(oc)):
             d=ord(oc[i])-ord(pattern[i])
             if(d>1):
                 break

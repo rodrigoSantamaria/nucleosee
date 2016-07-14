@@ -317,7 +317,7 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
     globalDL1.cv.svg.append("g")
         .attr("class", globalDL1.cv.classSVG+" search-label")
         .append("text")
-        .attr('x', 355)
+        .attr('x', 325)
         .attr('y', -2)
         .text("matches:");
 
@@ -331,7 +331,7 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
     .enter()
     .append("text")
     .attr("class", globalDL1.cv.classSVG+" search-label")
-    .attr('x', function(d,i){return 440+i*30;})
+    .attr('x', function(d,i){return 380+i*30;})
     .attr('y', -2)
     .style("font-weight", function (d, i) {
         if(tracks[i]==track) return "bold";
@@ -350,8 +350,8 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
     //NOTE: alignment takes more than 1s if there's >50 sequences! (using the fastest method: kalign)
     //NOTE: by now searches in seq are only possible with equal lengths
     if(typeof(sizePattern)=="number") {
-        for (var j = 0; j < points.length; j++)
-            points[j] *= globalSeq.ws;
+        /*for (var j = 0; j < points.length; j++)
+            points[j] *= globalSeq.ws;*/
         Server.nucProfile(saveSequences, globalSeq.track, "[" + points + "]", sizePattern * globalSeq.ws);
         }
 }
