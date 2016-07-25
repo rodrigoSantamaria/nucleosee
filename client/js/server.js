@@ -176,7 +176,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
          *                      on.
          */
-        Server.preprocess = function (callback, filename, track, ws, nb, maxSize)
+        Server.preprocess = function (callback, filename, track, ws, nb, maxSize, organism, interpolation)
         {
             var stdev = 3;
             var recharge = "False";
@@ -189,7 +189,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&stdev="+stdev+"&recharge="+recharge,
+                    url: _serverPath+"/preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&stdev="+stdev+"&recharge="+recharge+"&organism="+organism+"&interpolation="+interpolation,
                     type: "GET",
                     datatype: "json"
                 });
@@ -231,6 +231,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("preprocress(): discretization failed...");
+                    javascript_abort("preprocessing() failed: possible causes: \n· Make sure the wig file follows the standard format\n· Make sure you selected the right species");
                 });
         };
 
@@ -292,6 +293,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("getTrack(): get track failed...");
+                    javascript_abort("getTrack() failed");
+
                 });
         };
 
@@ -440,6 +443,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                                         annotations[rrki["id"]]["start"] = rrki["s"];
                                         annotations[rrki["id"]]["end"] = rrki["e"];
                                         annotations[rrki["id"]]["chromosome"] = track;
+                                       //TODO: Recently published MyGene.info can help a lot in expanding to any organism http://mygene.info/v3/query?q=rp&species=4932&fields=all
                                     }
                                 }
                             }

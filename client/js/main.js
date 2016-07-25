@@ -23,7 +23,9 @@ var GVB_GLOBAL =
     intersect: "soft",   // If true Hard instersects are considered (whole inclusion of pattern in genomic annotation for enrichment, etc.)
     geo: false,            // True if some genomic information (genes, UTRs, etc.) is used to filter out pattern matches
     softMutations: true,   // if true soft mutations (only 1-distance switch) is allowed to the patterns. E.g. "b" may change to "c" or "a" but not to "d" or "e".
-    grid : false           // if true, a grid to show percentile regions is shown on both lane 1 and 2
+    grid : false,           // if true, a grid to show percentile regions is shown on both lane 1 and 2
+    forceReload : false,     //if true, available preprocessed data are discarded and the full preprocessing is remade based on actual parameters
+    interpolation : "none"  //Either 'none', 'step' or 'rolling' for no interpolation, step-like or a rolling average 30-length window
 };
 
 
@@ -68,7 +70,10 @@ function preprocessing(chromosome)
     {
         GVB_GLOBAL.track = "None";
         if (DEBUG_GBV) console.log("chromosome: " + GVB_GLOBAL.track + " (first chromosome found)");
-        Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, GVB_GLOBAL.ws, GVB_GLOBAL.nb, GVB_GLOBAL.maxSize);
+
+        //Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, GVB_GLOBAL.ws, GVB_GLOBAL.nb, GVB_GLOBAL.maxSize, "Saccharomyces cerevisiae");
+        Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, GVB_GLOBAL.ws, GVB_GLOBAL.nb, GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value, $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value);
+        //TODO: explore if it can be 'intelligent' given the number of chromosomes?
     }
     else
     {
@@ -92,6 +97,8 @@ function drawingFirstDataLine(processedData, chromosome)
      * @property fullLength
      * @property chromosomes
      */
+
+    GVB_GLOBAL.forceReload=false;
 
     // We create icons chromosomes and bind the click event
     GVB_GLOBAL.chromosomes = processedData.chromosomes;
@@ -131,6 +138,37 @@ function drawingFirstDataLine(processedData, chromosome)
 
 // SEARCH POINTS
 ////////////////////////////////
+/**
+ * Search workflow is as follows:
+ *
+ *          pattern --> SEARCH --> positions --> GET_ALL_ANNOT_GENES --> gids --> ENRICHMENT
+ * API                  search                   annotations                      enrichmentGO
+ * SOURCE               wig                      gff                              go+goa
+ * SERVER               OUR                      OUR                              OUR
+ *                                               ¿MyGene.info?
+ *
+ *  There's an additional workflow on navigation on positions
+ *              single_position --> ANNOTATIONS_GENES  --> gene details
+ *  CLIENT                          draw.dataLine_2
+ *  API                             annotations
+ *  SOURCE                          gff
+ *  SERVER                          OUR
+ *                                  ¿MyGene.info?
+ *
+ *
+ * And also for sequences. There we can try to outsurce to eutils (example with S cerevisiae):
+ *
+ * 1) Get organism id (in id_list)
+ * http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=genome&term=Saccharomyces%20cerevisiae&retmode=json  --> note this will provide for ALL strains of Sc
+ *
+ * 2) Get sequence id (parse query key and webenv)
+ * http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=genome&db=nuccore&id=15&term=chromosome&cmd=neighbor_history  --> we can use just a taxon id
+ * http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=genome&db=nuccore&id=4392&term=chromosome&cmd=neighbor_history --> it still generates the whole Sc family fasta! (1.5G)
+ *
+ * 3) Get the real stuff
+ * http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&query_key=2&WebEnv=NCID_1_44089431_130.14.22.215_9001_1469092699_175516958_0MetA0_S_MegaStore_F_1&rettype=fasta&retmode=txt
+
+ */
 function searchPattern()
 {
     if(globalDL1.drawn)
@@ -147,14 +185,14 @@ function searchPattern()
 
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
 //        Server.search(drawSearch, pattern,d, geo, GVB_GLOBAL.intersect);
-        Server.search(drawSearch, pattern,d, geo, "soft", GVB_GLOBAL.softMutations);
+        Server.search(searchResults, pattern,d, geo, "soft", GVB_GLOBAL.softMutations);
     }
 }
 
 
 // DRAW POINTS ON DATALINE 1
 ////////////////////////////////
-function drawSearch(result)
+function searchResults(result)
 {
     /**
      * @typedef {Object} result
@@ -164,7 +202,7 @@ function drawSearch(result)
 
     // DATALINE 1: DRAW POINTS
     //----------------------------------
-    dataLine_1_drawPoints(result.points, result.sizePattern);
+    drawSearch(result.points, result.sizePattern);
 
 
     // ENRICHMENT
@@ -213,12 +251,6 @@ function getEnrichment(gis, annotations)
 }
 
 
-// DRAW ENRICHMENT
-////////////////////////////////
-function drawEnrichment(enrichment)
-{
-    dataLine_1_drawEnrichment(enrichment);
-}
 
 
 
@@ -233,6 +265,7 @@ function createIconsChromosomes(chromosomes)
         $('#imagesChromosomes').append('<img style="margin-top:15px;margin-right:5px"'+
             'id="'+chromosomes[i]+'" class="image-chromosome" data-chromosome="'+chromosomes[i]+'" '+
             'src="images/chromosome.png" height="24px" width="24px">');
+            //TODO: ponerles un tamaño proporcional a su longitud puede molar
     }
 
     $(".image-chromosome").bind( "click", function()

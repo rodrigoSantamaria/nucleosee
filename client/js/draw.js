@@ -220,7 +220,7 @@ function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize
     if(DEBUG_GBV) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
 }
 
-function dataLine_1_drawPoints(allPoints, sizePattern)
+function drawSearch(allPoints, sizePattern)
 {
     var track = globalSeq.track;
     var tracks = globalSeq.tracks;
@@ -283,10 +283,6 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
                 numNucleotidesDraw=focusLine*1.1;//make it a 10% larger than the thing to draw
             else
                 numNucleotidesDraw=globalDL2.cv.dim.width;  //1:1 scale in the rest of cases
-            /*if(typeof(sizePattern)=="object")
-                {
-                numNucleotidesDraw=focusLine;
-                }*/
             var startSeq = point-(numNucleotidesDraw/2)+(focusLine/2);
             var endSeq   = point+(numNucleotidesDraw/2)+(focusLine/2);
 
@@ -331,7 +327,7 @@ function dataLine_1_drawPoints(allPoints, sizePattern)
     .enter()
     .append("text")
     .attr("class", globalDL1.cv.classSVG+" search-label")
-    .attr('x', function(d,i){return 380+i*30;})
+    .attr('x', function(d,i){return 380+i*29;})
     .attr('y', -2)
     .style("font-weight", function (d, i) {
         if(tracks[i]==track) return "bold";
@@ -384,7 +380,7 @@ function drawPoints(dataPoints)
     });
     }
 
-function dataLine_1_drawEnrichment(enrichment)
+function drawEnrichment(enrichment)
 {
     // Remove all goterm (previous)
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm")
@@ -412,11 +408,11 @@ function dataLine_1_drawEnrichment(enrichment)
                 goterms.push(e);
             }
             else
-                console.log("dataLine_1_drawEnrichment(): Error! => GO term " + k + " not found (possibly outdated OBO file?");
+                console.log("drawEnrichment(): Error! => GO term " + k + " not found (possibly outdated OBO file?");
         }
 
     }
-    if(DEBUG_GBV) console.log("dataLine_1_drawEnrichment(): "+goterms.length+" enriched terms");
+    if(DEBUG_GBV) console.log("drawEnrichment(): "+goterms.length+" enriched terms");
 
 
     // Mouseover tip and show the information of goterm
@@ -567,7 +563,7 @@ function dataLine_2(partSeq, numNucleotides, point, sizePattern)
 
     // DRAWING ANNOTATIONS
     //-------------------------------------------------
-    Server.annotationsGenes(dataLine_2_drawAnnotationLine, point,"[\"any\"]",globalDL2.cv.dim.width, "center", globalSeq.track, "False");
+    Server.annotationsGenes(drawAnnotations, point,"[\"any\"]",globalDL2.cv.dim.width, "center", globalSeq.track, "False");
 
 
     // DRAWING NUCLEOTIDES (DATALINE 3)
@@ -592,7 +588,7 @@ function dataLine_2(partSeq, numNucleotides, point, sizePattern)
     });
 }
 
-function dataLine_2_drawAnnotationLine(annotations)
+function drawAnnotations(annotations)
 {
     var startSeq = globalDL2.startSeq;
     var endSeq = globalDL2.endSeq;

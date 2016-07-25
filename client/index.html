@@ -91,13 +91,19 @@
                     <script src="js/upload-file.js"></script>
                 </div>
 
-                <div style="    float:left;margin-left:5px;margin-right:5px;">
-                    <input type="checkbox" id="reload" title="Check if you want to recompute bins instead of using the previouly computed ones, if available.">Reload<br>
+                <!--<div style="float:left;margin-left:5px;margin-right:5px;margin-bottom:0px">
+                    <input type="button" id="showSpecies" value="Species" title="Select species for your wig file. If not the correct species, you can experience errors during the data loading. If your species is not available, choose the blank option: functional annotations and sequence will not be available" class="options"><br>
                 </div>
 
-                <!--<div style="float:left;margin-left:5px;margin-right:5px;">
-                    <button type="button" style="float:left" onclick="destroyAll(true)">Delete</button>
+                <div style="    float:left;margin-left:5px;margin-right:5px;">
+                    <input type="checkbox" id="reload" title="Check if you want to recompute bins instead of using the previouly computed ones, if available.">Reload<br>
                 </div>-->
+
+                <div style="float:left;margin-left:5px;margin-right:5px;margin-top:-3px">
+                    <input type="button" id="loadOptions" value="Options" title="Load options related to organism and interpolation and discretization parameters" class="options"><br>
+                </div>
+
+
 
                 <!-- ICON OF "LOADING..." -->
                 <div style="float:left;margin-left:5px;">
@@ -265,6 +271,87 @@
     </div>
 
 
+
+
+    <div class="modal fade" id="modalLoadOptions" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <!-- Modal: header -->
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h3 class="modal-title">Load options</h3>
+                </div>
+
+                <!-- Modal: body -->
+                <div class="modal-body">
+
+                    <!--SPECIES-->
+                    <div class="row">
+                        <div class="col-sm-9 col-sm-offset-1">
+                        <b>Organism: </b> select your .wig organism or 'None' if unavailable.
+                            <label title="Select the organism for your .wig data, or None if unavailable (no functional or sequence data will load)">
+                                <select size=3 id="speciesList">
+                                <option value="Saccharomyces cerevisiae">Saccharomyces cerevisiae</option>
+                                <option value="Schizosaccharomyces pombe">Schizosaccharomyces pombe</option>
+                                <option value="none" SELECTED>None</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- INTERPOLATION -->
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-9 col-sm-offset-1">
+
+                            <b>Interpolation</b>: In case of variableStep .wig files, select the method to infer missing values:<br>
+                            <label title="None: no interpolation. Step: missing values are set to the next value level. Mean: all values are set to the mean level of a window of 30 nucleotidas">
+                                <select size=3 id="interpolationList">
+                                    <option value="none">None</option>
+                                    <option value="step">Step</option>
+                                    <option value="rolling" SELECTED>Mean</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                    <!--DISCRETIZATION-->
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-9 col-sm-offset-1">
+                            <b>Discretization: </b>searches are made based on a discretized version of .wig data. Mean values in a <i>window size</i> range are set into an alphanumerical bin depending on its percentile.<br>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-7 col-sm-offset-1">
+                            <label class="control-label" for="paramWS" title="Number of positions to use for each bin. E.g. with a size of 30, each letter correspond to the percentile interval corresponding to the average level of 30 nucleotides">Window size</label>
+                        </div>
+                        <div class="col-sm-2">
+                            <input class="form-control" type="text" value="30" id="paramWS">
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top:10px;">
+                        <div class="col-sm-7 col-sm-offset-1">
+                            <label class="control-label" for="paramNB" title="Number of percentile bins into which the quantitative levels will be divided. E .g. 5 bins will use percentiles 0,20,40,60,80,100 to set bins a,b,c,d,e respectively">Number of bins</label>
+                        </div>
+                        <div class="col-sm-2">
+                            <input class="form-control" type="text" value="5" id="paramNB">
+                        </div>
+                    </div>
+                </div>
+
+
+                    <!-- Modal: footer-->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="button" id="btLoadOptions" class="btn btn-primary">Save</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
@@ -310,6 +397,15 @@
                 reloadParams(true);
             });
 
+            $('#btLoadOptions').click(function()
+            {
+                $('#modalLoadOptions').modal('hide');
+                GVB_GLOBAL.ws       = $('#paramWS').val();
+                GVB_GLOBAL.nb       = $('#paramNB').val();
+                GVB_GLOBAL.forceReload = true;
+
+            });
+
             function reloadParams(saveParams)
             {
                 var IParamWS        = $('#paramWS');
@@ -318,11 +414,16 @@
 
 
                 if(saveParams)
-                {
+                    {
                     GVB_GLOBAL.ws       = IParamWS.val();
                     GVB_GLOBAL.nb       = IParamNB.val();
+                    GVB_GLOBAL.forceReload = true;
 //                    GVB_GLOBAL.maxSize  = IParamMaxSize.val();
-                }
+                    }
+                else
+                    {
+                    GVB_GLOBAL.forceReload=false;
+                    }
 
                 IParamWS.val(GVB_GLOBAL.ws);
                 IParamNB.val(GVB_GLOBAL.nb);
@@ -336,6 +437,11 @@
             $('#showSearchOptions').click(function()
             {
                 $('#searchOptions').modal();
+            });
+            $('#loadOptions').click(function()
+            {
+                $('#modalLoadOptions').modal();
+
             });
 
 

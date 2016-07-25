@@ -7,9 +7,14 @@ Different methods to read annotations
 #%% -------------------------- ADDITIONAL ANNOTATIONS ----------------------
 
 #%%
-def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.gff3"):
-    f=open(filename)
+"""
+Returns a np table ("single") or a dictionary with np tables (structure="multilple") 
+with genome functional annotations.
+"""
+def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.gff3", structure="single"):
     import csv
+    
+    f=open(filename)
     cad=f.readline()
     skip=0
 
@@ -19,28 +24,123 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
     tam=len(f.readlines())+1
     f.seek(0)
     reader=csv.DictReader(f, delimiter="\t")
-    reader.fieldnames=["chromosome", "source", "type", "start", "end", "xx", "sense", "xx", "id"]
+    reader.fieldnames=["seqid", "source", "type", "start", "end", "score", "sense", "phase", "attributes"]
 
     import numpy as np
     import re
 
-
-    data=np.empty(tam,dtype=[("chromosome", "a2"),("type", "a40"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a50"), ("name", "a50")])
+    sc=("cerevisiae" in filename)
+    print sc
+    data=np.empty(tam,dtype=[("chromosome", "a10"),("type", "a40"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a50"), ("name", "a50")])
     for i in range(skip):
         next(reader)
     for i in range(tam):
         row=reader.next()
         data[i]["start"]=(int)(row["start"])
         data[i]["end"]=(int)(row["end"])
-        data[i]["chromosome"]=row["chromosome"]
+        
+        seqid=row["seqid"]
+        try:
+            rs=re.search("[XIV]+$",seqid).start() #roman numbers, happen is yeasts :s
+            if(rs>=0):
+                an=roman2arabic(seqid[rs:])
+                if(an<10):
+                    an="0"+(str)(an)
+                else:
+                    an=(str)(an)
+                seqid=seqid[:rs]+an
+        except:
+            pass
+        data[i]["chromosome"]=seqid
+        
         data[i]["type"]=row["type"]
         data[i]["sense"]=row["sense"]
-        gid=re.sub("gene:", "", re.sub(";Name.*","",re.sub(".*ID=", "", row["id"])))
+        if(sc==True):#SGD are 'flexible' about standars... grrr
+            gid=re.sub("^.*ID=", "",re.sub(";.*$","",re.sub("^.*SGD:", "", row["attributes"])))
+            name=re.sub("^.*ID=", "", re.sub(";.*$","",re.sub("^.*gene=", "", row["attributes"])))
+        else:
+            gid=re.sub("gene:", "", re.sub(";Name.*$","",re.sub("^.*ID=", "", row["attributes"])))
+            name=re.sub(";.*$","",re.sub("^.*ID=.*;Name=", "", row["attributes"]))
+        
         data[i]["id"]=gid
-        name=re.sub(";.*","",re.sub(".*ID=.*;Name=", "", row["id"]))
-        data[i]["name"]=name
-    return data
+        data[i]["name"]=name            
+    if(structure=="single"):
+        return data
+    else:
+        d={}
+        wanted_set = set(data["chromosome"])  # Much faster look up than with lists, for larger lists
+        for k in wanted_set:
+            @np.vectorize
+            def selected(elmt): return elmt in k  # Or: selected = numpy.vectorize(wanted_set.__contains__)
+            d[k]=data[selected(data["chromosome"])]
 
+        return d
+#import time
+#t0=time.clock()
+#dataGFF=gff("genomes/annotations/scerevisiae/gff/saccharomyces_cerevisiae.gff", "multiple")    
+#dataGFF["chr01"][100]
+#print("it took",(time.clock()-t0))
+#%%
+"""
+Wraps annotations.gff to return a dictionary, with keys as provided, for the
+corresponding organism.
+
+This is highly heterogeneous: some organisms have all their chromosomes in a single
+gff, some have one gff per chromosome, chromosome names does not mach with wig files, etc..
+
+By now we are dealing it with this multiplexer function and by now ONLY for S pombe and S cerevisiae
+
+Another option is to force gff files to a given format.
+"""
+def gffData(org="Schizosaccharomyces pombe", tracks=[]):
+    path=(org[0]+org[org.find(" ")+1:]).lower()
+    
+    d={}
+    if(org=="Schizosaccharomyces pombe"):
+        for k in tracks:
+            roman="I"
+            if(k.find("3")>=0 or k.find("III")>=0):
+                roman+="II"
+            elif(k.find("2")>=0 or k.find("II")>=0):
+                roman+="I"
+            ret="genomes/annotations/spombe/gff/"+"schizosaccharomyces_pombe."+roman+".gff3"
+            d[k]=gff(ret, "single")
+    if(org=="Saccharomyces cerevisiae"):
+        data=gff("genomes/annotations/"+path+"/gff/saccharomyces_cerevisiae.gff", "multilpe")
+        print("gff read")
+        for k in data.keys():
+            k0=k
+            k=k.replace("chromosome", "").replace("chr", "") 
+            k=k.upper()
+            if("I" in k or "X" in k or "V" in k):
+                k=roman2arabic(k)
+            k2="chr"
+            if(k<10):
+                k2+="0"
+            k2+=(str)(k)
+            d[k2]=data[k0]
+            
+    return d
+#dataGFF2=gffData("Saccharomyces cerevisiae", seq.keys())
+#%%
+"""
+Roman to arabic number conversion from 1 to 39 (no L, D, C, M contempled)
+"""
+def roman2arabic(roman):
+    roman=roman.upper()
+    arab=0
+    for i in range(len(roman)):
+        if(roman[i]=="X"):
+            arab+=10
+        if(roman[i]=="V"):
+            arab+=5
+        if(roman[i]=="I"):
+            if(i<(len(roman)-1) and roman[i+1]!="I"):
+                arab-=1
+            else:
+                arab+=1
+    return arab
+#roman2arabic("xxxviii")
 #%%  Loads the gene ontology into a dic where keys are go_ids and values are just go names by now
 def go(filename="genomes/annotations/go/go-basic.obo"):
     f=open(filename)
@@ -57,25 +157,37 @@ def go(filename="genomes/annotations/go/go-basic.obo"):
 
 
 #%% Loads the gene ontology annotation of a given species into an array which only stores gene_id, gene_name, go_id, go_type and gene_desc
-def goa(filename="genomes/annotations/spombe/goa/gene_association.pombase"):
-    f=open(filename)
+def goa(org="Schizosaccharomyces pombe"):
+    path=org[0]+org[org.find(" ")+1:]
+    path=path.lower()
+    try:
+        f=open("genomes/annotations/"+path+"/goa/gene_association.sgd")
+    except:  
+        f=open("genomes/annotations/"+path+"/goa/gene_association.pombase")
+        
     lines=f.readlines()
     data=[]
     for l in lines:
         if(l.startswith("!")==False):
             vals=l.split("\t")
-            data.append({"gene_id":vals[1],"gene_name":vals[2], "go_id":vals[4], "go_type":vals[8], "gene_desc":vals[9]})
+            data.append({"gene_id":vals[1],"gene_name":vals[2], "go_id":vals[4], "evidence":vals[6], "go_type":vals[8], "gene_desc":vals[9]})
     return data
     
 
 #%% Loads the fasta sequence of a given file (by now only working forS pombe files)
 #it takes only 0.125s for the pombe genomw (the three chromosomes)
-def fasta(ch):
-    f=open("genomes/annotations/spombe/fasta/"+(str)(ch)+".fasta")
+def fasta(ch, org="Schizosaccharomyces pombe"):
+    path=org[0]+org[org.find(" ")+1:]
+    path=path.lower()
+    try:
+        f=open("genomes/annotations/"+path+"/fasta/"+(str)(ch)+".fasta")
+    except:  
+        f=open("genomes/annotations/"+path+"/fasta/"+(str)(ch)+".fsa")
     reader=f.readlines()
     reader=reader[1:]
     return "".join(reader).replace("\n","")
-    
+  
+#dataFASTA=fasta("chr01", "Saccharomyces cerevisiae")  
 #import time
 #t0=time.clock()
 #for x in ["chromosome1","chromosome2","chromosome3"]:
@@ -245,7 +357,9 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=5, maxGO=50
     for x in goids:
         goterms[x]=set()
     for x in dataGOA:
-        goterms[x["go_id"]].add(x["gene_id"])
+        if((x["evidence"] in discard) == False):
+            goterms[x["go_id"]].add(x["gene_id"])
+            
     # Compute universe genes
     unigenes=set()
     for k in goterms.keys():
@@ -268,7 +382,6 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=5, maxGO=50
         unigo=len(goterms[k])-selgo #number of non-gis in the term
         uninogo=uni-len(gis)-len(goterms[k])+selgo
 
-        #if(unigo>=minGO and unigo<=maxGO and selgo>0):
         if(len(goterms[k])>=minGO and len(goterms[k])<=maxGO and selgo>0):
             p = pvalue(selgo, selnogo, unigo, uninogo)
             pvals[k]={"pval":p.right_tail, "ngis":selgo, "ngo":len(goterms[k]), "gis":list(gisInTerm)}

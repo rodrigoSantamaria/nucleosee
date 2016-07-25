@@ -111,9 +111,9 @@ retorna    objeto JSON con los siguientes campos:
                maximum,minimum,mean,sdev   medidas estadísticas de los datos normalizados
                dseq        datos discretizados por la función discretize()
 """
-#%%
+#%%#TODO: select and pass organism to 
 @app.route("/preprocess")
-def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", recharge="False"):
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", recharge="False", organism="Saccharomyces cerevisiae", interpolation="rolling"):
     import numpy as np
     global data
     global session
@@ -128,12 +128,16 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     path=os.path.join(basePath,filename)
     track=request.args.get("track")
     forceReload=request.args.get("recharge")
+    organism=request.args.get("organism")
     windowSize=int(request.args.get("windowSize"))
     numBins=int(request.args.get("numBins"))
     maxSize=int(request.args.get("maxSize"))
+    interpolation=request.args.get("interpolation")
     stdev=float(request.args.get("stdev"))
     picklePath=os.path.join(basePath,re.sub(r"\..*$", ".pic", filename))
     savePickle=False
+    
+    print("SPECIES:",organism)
     
     m={}
     sd={}
@@ -160,7 +164,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         sd=datap["stdev"]
         bins=datap["bins"]
     else:
-        genome=helpers.readWig(path)
+        genome=helpers.readWig(path, method=interpolation)
         savePickle=True
 
 
@@ -207,8 +211,12 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         print('\tsampling in',(time.clock()-t0),'s')
     
         t0=time.clock()
-        dataGFF[k]=ann.gff(helpers.gffPath(ch=k))
-        dataFASTA[k]=ann.fasta(k)
+        #dataGFF[k]=ann.gff(helpers.gffPath(org=organism, ch=k))#this might (should) be on a single gff for the whole genome!
+        try:
+            dataFASTA[k]=ann.fasta(k, org=organism)
+        except:
+            print("sequence for track", k,"on organism",organism," missing or failing")
+            pass
         print('\ttime in annotations (GFF and FASTA):',(time.clock()-t0),'s')
         seqd[k]=seq
         print("processing",k,"takes",(time.clock()-tk))
@@ -216,7 +224,14 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     #3) annotations
     t0=time.clock()
     dataGO=ann.go()
-    dataGOA=ann.goa()
+    dataGOA=[]
+    dataGFF=[]
+    try:
+        dataGOA=ann.goa(organism)
+        print("GO loaded")
+        dataGFF=ann.gffData(org=organism, tracks=genome.keys())
+    except:
+        print("organism",organism,"'s annotations missing or failing")
     print("done! ... GO annotations takes",(time.clock()-t0))
     
     data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
@@ -248,11 +263,12 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 def getTrack(track="None"):
     global data
 
+    print("returning chromosome",track)
+    
     track=request.args.get("track")
     if track=="None":
         track=data["res"].keys()[0]
 
-    print("returning chromosome",track)
     if("search" in data.keys() == False):
         d["search"]={"points":{}, "sizePattern":0}
     return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], bins=data["bins"][track], chromosomes=sorted(data["res"].keys()), search=data["search"])
@@ -283,22 +299,23 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     ws=data["windowSize"]
                 
     #CASE 1) Numerical range pattern
-    interval=helpers.convertRange(pattern)
-    if(interval!=-1):
-        print("NUMERICAL RANGE")
-        points={}
-        for k in data["seq"].keys():
-            #points[k]=(str)([(int)(interval["start"]/ws)] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
-            points[k]=(str)([(int)(interval["start"])] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
-        data["search"]={'points':points, 'sizePattern':((int)(interval["length"]/ws))}
-        return jsonify(points=points, sizePattern=((int)(interval["length"]/ws)));
+    if(string.find(pattern, "go:")==-1):#go terms might contain '-'
+        interval=helpers.convertRange(pattern)
+        if(interval!=-1):
+            print("NUMERICAL RANGE")
+            points={}
+            for k in data["seq"].keys():
+                #points[k]=(str)([(int)(interval["start"]/ws)] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
+                points[k]=(str)([(int)(interval["start"])] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
+            data["search"]={'points':points, 'sizePattern':((int)(interval["length"]/ws))}
+            return jsonify(points=points, sizePattern=((int)(interval["length"]/ws)));
     
     #CASE 2) gene/go name pattern
     t=data["bwt"][data["seq"].keys()[0]]
     patternLetters=t["firstOccurrence"].keys()
     patternLetters.append('+')
     patternLetters.append('*')
-    for x in range(1,10):
+    for x in range(0,10):
         patternLetters.append((str)(x)) 
     
     print(patternLetters, "\t",set(pattern))

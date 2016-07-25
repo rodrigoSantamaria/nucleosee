@@ -11,12 +11,14 @@ Ancillary methods for python server
 """
 This script crops a wig file so max values cannot exceed a given value based
 on standard deviations
+method indicated the way to interpolate values in variable step cases ("none", "step", "slope")
 @author: rodri
 """
     
     # --------------------- INTERNAL METHODS -----------------
 #%% -----------  READ WIG --------------
-def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig"):
+#TODO: by now, only fixed step!
+def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig",method="slope",window=30):
     import numpy
     import time
     import re
@@ -26,44 +28,164 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     seq=f.readlines()
     print ((time.clock()-t0),' s in reading') 
     t0=time.clock()
-    chsize=[]
-    cont=0
-    for i in range(len(seq)):
-        s=seq[i]
-        if s[0]=='t' and i>0:#new chromosome
-         chsize.append(cont-1)
-         cont=0
-        else:
-            cont=cont+1
-    chsize.append(cont-1)
-    print((time.clock()-t0),' s in computing sizes')
-    t0=time.clock()
-    ch={}
-    cont=0
-    name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont+1])))
-    ch[name]=[]
-    print("name is ", name)
-    for i in chsize:
-        print(i)
-        cont=cont+2
-        #chi=numpy.array(seq[cont:cont+i-1],float)
-        chi=numpy.array(seq[cont:cont+i-1], dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
-        ch[name].append(chi)
-        cont=cont+i
-        if(cont<len(seq)):
-            name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
-            print("name is ", name)
-            ch[name]=[]
-    for k in ch.keys():
-        ch[k]=ch[k][0]
-    print ((time.clock()-t0),' s in formatting')
-    
-    return ch
+    if("fixedStep" in seq[1]):
+        chsize=[]
+        cont=0
+        for i in range(len(seq)):
+            s=seq[i]
+            if s[0]=='t' and i>0:#new chromosome
+             chsize.append(cont-1)
+             cont=0
+            else:
+                cont=cont+1
+        chsize.append(cont-1)
+        print((time.clock()-t0),' s in computing sizes')
+        t0=time.clock()
+        ch={}
+        cont=0
+        name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont+1])))
+        ch[name]=[]
+        print("name is ", name)
+        for i in chsize:
+            print(i)
+            cont=cont+2
+            #chi=numpy.array(seq[cont:cont+i-1],float)
+            chi=numpy.array(seq[cont:cont+i-1], dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+            ch[name].append(chi)
+            cont=cont+i
+            if(cont<len(seq)):
+                name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
+                print("name is ", name)
+                ch[name]=[]
+        for k in ch.keys():
+            ch[k]=ch[k][0]
+        print ((time.clock()-t0),' s in formatting')
+        
+        return ch
+    else:
+        print "Variable step"
+        chsize=[]
+        for i in range(2,len(seq)):
+            s=seq[i]
+            if "variableStep" in seq[i]:
+             chsize.append((int)(seq[i-2].split("\t")[0]))
+        chsize.append((int)(seq[i-2].split("\t")[0]))
+        print((time.clock()-t0),' s in computing sizes')
+        
+        
+        t0=time.clock()
+        ch=interpolate(seq,chsize, method)
+      
+        print((time.clock()-t0),' s in <<interpolating>> seqs')
+        return ch
     
 #tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/dwtMini2.wig")
 #tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/23479_h90_wlt_mean.wig")
 #seq=tal["chromosome1"][0]
 #np.mean(seq)
+    
+#seq=readWig(path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/GSM585199_FC14703_YE_MNase_Lane_1_eland_result.S.cerevisiae.reads.wig")
+#print len(tal)
+#import numpy 
+#numpy.mean(tal["chr01"])
+#tal["chr01"][230032]
+    
+#seq=readWig(path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/GSM585199_FC14703_YE_MNase_Lane_1_eland_result.S.cerevisiae.reads.wig", method="slope")
+#print len(seq)
+#import numpy 
+#numpy.mean(seq["chr01"])
+#seq["chr01"][230032]
+#    
+#%% ------------------ INTERPOLATION -------------------
+"""
+seq - sequence lines as read from a wig variabale step, withouth initial comments
+chsize - wig track sizes
+method - interpolation method. Default 'step'
+        'step' simply imputes value seq[i]=v to each point i+n up to n=next variableStep value -1
+        'slope' imputes in the same ranges than 'step' values in the line between v1 and v2
+"""    
+def interpolate(seq, chsize, method="step", window=30):
+    import numpy, re
+    ch={}
+    cont=0
+    if(method=="step"):
+        for i in chsize:
+            cont+=1
+            print(seq[cont])
+            name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
+            cont+=1
+            print(i, name)
+            chi=numpy.empty(i, dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+            index=0
+            while((cont+2< len(seq)) and (("variable" in seq[cont+2]) == False)):
+                s=seq[cont].split("\t")
+                level=(float)(s[1])
+                if("variable" in seq[cont-1]):
+                    nuc=0
+                    nuc2=(int)(s[0])
+                else:
+                    nuc=(int)(s[0])
+                    nuc2=(int)(seq[cont+1].split("\t")[0])
+                step=nuc2-nuc
+                chi[nuc:nuc2]=[level]*step
+                index+=step
+                cont+=1
+            cont+=1
+            ch[name]=chi
+    if(method=="slope"):
+        for i in chsize:
+            cont+=1
+            print(seq[cont])
+            name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
+            cont+=1
+            print(i, name)
+            chi=numpy.empty(i, dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+
+            y0=0
+            x0=0
+            while((cont+2< len(seq)) and (("variable" in seq[cont+2]) == False)):
+                s=seq[cont].split("\t")
+                x1=(int)(s[0])
+                y1=(float)(s[1])
+                
+                f=(y1-y0)/(x1-x0)
+                for x in range(x0,x1):
+                    chi[x]=f*(x-x0)+y0
+                    
+                cont+=1
+                x0=x1
+                y0=y1
+            cont+=1
+            ch[name]=chi
+    if(method=="rolling"):
+        for i in chsize:
+            cont+=1
+            print(seq[cont])
+            name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
+            cont+=1
+            print(i, name)
+            chi=numpy.empty(i, dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+
+            y0=0
+            x0=0
+            while((cont+2< len(seq)) and (("variable" in seq[cont+2]) == False)):
+                s=seq[cont].split("\t")
+                x1=(int)(s[0])
+                y1=(float)(s[1])
+                
+                f=(y1-y0)/(x1-x0)
+                for x in range(x0,x1):
+                    chi[x]=f*(x-x0)+y0
+                    
+                cont+=1
+                x0=x1
+                y0=y1
+            cont+=1
+            
+            
+            ch[name]=numpy.mean(rolling_window0(chi, window),-1)
+        
+    return ch;
 #%% ------------------ DISCRETIZATION -------------------
 """Given a numerical sequence seq, this method binarizes based on the average 
 and standard deviations on windows of size windowSize. Binarzation is done
@@ -89,7 +211,7 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True):
         pers=[0]
         for i in range(1,numBins+1):
             p=np.percentile(mseq,(100.0/numBins)*i)
-            print("percentile",(100.0/numBins)*i,"=",p)
+            #print("percentile",(100.0/numBins)*i,"=",p)
             pers.append(p)
         bins=pers
         digseq=np.digitize(mseq,pers)
@@ -226,7 +348,17 @@ def filterHard(p,seq, pattern):
     return p2
         
 
-#filterHard([0,2], "abcdedbedaacaaa", "abcde")    
+#filterHard([0,2], "abcdedbedaacaaa", "abcde")  
+
+#%%
+#As in from http://www.rigtorp.se/2011/01/01/rolling-statistics-numpy.html
+#(overlapped windoes)
+def rolling_window0(a, window):
+    import numpy as np
+    
+    shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
+    strides = a.strides + (a.strides[-1],)
+    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)  
 #%%
 #Evolved from http://www.rigtorp.se/2011/01/01/rolling-statistics-numpy.html
 # (however that solution get overlapping windows)
@@ -318,24 +450,6 @@ def convertRange(text):
     
 #convertString("abcba+a*5+abcba")
 #%%    
-"""
-Return the right gff for a given species/chromosome.
-This is highly heterogeneous: some organisms have all their chromosomes in a single
-gff, some have one gff per chromosome, etc.
-By now we are dealing it with this multiplexer function and by now ONLY for S pombe
-
-Another option is to force gff files to a given format.
-"""
-def gffPath(organism="Schizosaccharomyces pombe", ch="chromosome1"):
-    ret="schizosaccharomyces_pombe.I.gff3" #only pombe by now
-    if(organism=="Schizosaccharomyces pombe"):
-        roman="I"
-        if(ch.find("3")>=0 or ch.find("III")>=0):
-            roman+="II"
-        elif(ch.find("2")>=0 or ch.find("II")>=0):
-            roman+="I"
-        ret="schizosaccharomyces_pombe."+roman+".gff3"
-    return "genomes/annotations/spombe/gff/"+ret
 #%%
     
 #tal=readWig()
