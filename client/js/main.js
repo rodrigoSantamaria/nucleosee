@@ -19,7 +19,7 @@ var GVB_GLOBAL =
     track: null,            // track: name of selected chromosome
     ws: 30,                 // window size: discrete to real ratio
     nb: 5,                  // num bins
-    maxSize: 100000,        // maximum number of normalized data to store
+    maxSize: 5000,        // maximum number of normalized data to store
     intersect: "soft",   // If true Hard instersects are considered (whole inclusion of pattern in genomic annotation for enrichment, etc.)
     geo: false,            // True if some genomic information (genes, UTRs, etc.) is used to filter out pattern matches
     softMutations: true,   // if true soft mutations (only 1-distance switch) is allowed to the patterns. E.g. "b" may change to "c" or "a" but not to "d" or "e".
@@ -50,12 +50,14 @@ function checkFile(file)
 
         GVB_GLOBAL.filename = file.name;
 
-        var forceReload = false;
+        /*var forceReload = false;
         if ($("#reload").is(':checked'))
-            forceReload = true;
+            forceReload = true;*/
 
         // We try to communicate with the server, upload  file (if necessary)
-        Server.sendFile(preprocessing, file, forceReload);
+        //Server.sendFile(preprocessing, file, forceReload);
+        Server.sendFile(preprocessing, file, GVB_GLOBAL.forceReload);
+
     }
 }
 
@@ -72,7 +74,11 @@ function preprocessing(chromosome)
         if (DEBUG_GBV) console.log("chromosome: " + GVB_GLOBAL.track + " (first chromosome found)");
 
         //Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, GVB_GLOBAL.ws, GVB_GLOBAL.nb, GVB_GLOBAL.maxSize, "Saccharomyces cerevisiae");
-        Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, GVB_GLOBAL.ws, GVB_GLOBAL.nb, GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value, $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value);
+        Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, GVB_GLOBAL.ws, GVB_GLOBAL.nb,
+        GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value,
+        $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value, $("#paramSD").val(),
+        GVB_GLOBAL.forceReload);
+
         //TODO: explore if it can be 'intelligent' given the number of chromosomes?
     }
     else
@@ -124,12 +130,15 @@ function drawingFirstDataLine(processedData, chromosome)
     if(DEBUG_GBV) console.log("\n----- DRAWING: DATALINE 1 ("+GVB_GLOBAL.track+")-----");
     if(DEBUG_GBV) console.log("Length of seqServer:"+seqServer.length+" (full length seq="+fullLength+")");
 
-    dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength, seqServer, 0, fullLength, GVB_GLOBAL.maxSize, mean, stdev, processedData.max, GVB_GLOBAL.ws, processedData.bins);
+    if(typeof(fullLength)=="object")
+        dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength[GVB_GLOBAL.track], seqServer, 0, fullLength[GVB_GLOBAL.track], GVB_GLOBAL.maxSize, mean, stdev, processedData.max, GVB_GLOBAL.ws, processedData.bins);
+    else
+        dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength, seqServer, 0, fullLength, GVB_GLOBAL.maxSize, mean, stdev, processedData.max, GVB_GLOBAL.ws, processedData.bins);
 
     if(processedData.hasOwnProperty("search") && processedData.search.points.hasOwnProperty(chromosome))
         {
         console.log("There's a search!")
-        drawSearch(processedData.search);
+        drawSearch(processedData.search.points, processedData.search.sizePattern);
         }
 }
 

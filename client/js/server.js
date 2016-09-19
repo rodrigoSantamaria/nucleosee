@@ -89,7 +89,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&forceReload="+_forceReload,
+                    //url: _serverPath+"/testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&forceReload="+_forceReload,
+                    url: _serverPath+"/testUpload?user="+_user+"&password="+_password+"&filename="+encodeURIComponent(file.name)+"&forceReload="+_forceReload,
                     type: "GET",
                     datatype: "json"
                 });
@@ -145,6 +146,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                             .fail(function(jqXHR, textStatus, errorThrown)
                             {
                                 if(_DEBUG) console.log("sendFile(): upload failed...");
+                                console.log(jqXHR)
+                                javascript_abort("Error uploading the file. Available formats are .wig and .bw "+errorThrown+" "+jqXHR.responseText);
                             });
                     }
                 })
@@ -176,16 +179,16 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
          *                      on.
          */
-        Server.preprocess = function (callback, filename, track, ws, nb, maxSize, organism, interpolation)
+        Server.preprocess = function (callback, filename, track, ws, nb, maxSize, organism, interpolation, stdev, recharge)
         {
-            var stdev = 3;
-            var recharge = "False";
 
 
             var startTime = new Date();
 
             // Show the image of "loading..."
             showImageLoading("imgLoadingFile", true);
+
+            filename = encodeURIComponent(filename);  // it encodes the following characters: , / ? : @ & = + $ #
 
             var requestAJAX = $.ajax(
                 {
@@ -266,6 +269,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
              * @property dseq
              * @property fullLength
              * @property chromosomes
+             * @property search
              */
             $.when(requestAJAX)
                 .done(function(result)

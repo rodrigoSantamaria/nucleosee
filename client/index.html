@@ -86,7 +86,7 @@
             <div style="margin-top:5px;">
 
                 <div style="float:left;margin-left: 30px;margin-right:5px;">
-                    <input type="file" id="files" name="files[]" multiple style="float:left" title="Select any .wig file"/>
+                    <input type="file" id="files" name="files[]" multiple style="float:left" title="Select any .wig file (first you must select your organism or None at the right Options link)" disabled/>
                     <!--output id="list"></output-->
                     <script src="js/upload-file.js"></script>
                 </div>
@@ -291,10 +291,13 @@
                         <div class="col-sm-9 col-sm-offset-1">
                         <b>Organism: </b> select your .wig organism or 'None' if unavailable.
                             <label title="Select the organism for your .wig data, or None if unavailable (no functional or sequence data will load)">
-                                <select size=3 id="speciesList">
+                                <select id="speciesList">
+                                <option value="null" SELECTED>Select organism...</option>
+                                <option value="Drosophila melanogaster">Drosophila melanogaster</option>
+                                <option value="Mus musculus">Mus musculus</option>
                                 <option value="Saccharomyces cerevisiae">Saccharomyces cerevisiae</option>
                                 <option value="Schizosaccharomyces pombe">Schizosaccharomyces pombe</option>
-                                <option value="none" SELECTED>None</option>
+                                <option value="none">None</option>
                                 </select>
                             </label>
                         </div>
@@ -303,16 +306,29 @@
                     <!-- INTERPOLATION -->
                     <hr>
                     <div class="row">
-                        <div class="col-sm-9 col-sm-offset-1">
+                        <div class="col-sm-7 col-sm-offset-1">
 
                             <b>Interpolation</b>: In case of variableStep .wig files, select the method to infer missing values:<br>
+                        </div>
+                        <div class="col-sm-2">
                             <label title="None: no interpolation. Step: missing values are set to the next value level. Mean: all values are set to the mean level of a window of 30 nucleotidas">
-                                <select size=3 id="interpolationList">
+                                <select id="interpolationList">
                                     <option value="none">None</option>
                                     <option value="step">Step</option>
                                     <option value="rolling" SELECTED>Mean</option>
                                 </select>
                             </label>
+                        </div>
+                    </div>
+
+                    <!--CLIPPING-->
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-7 col-sm-offset-1">
+                            <b>Clipping: </b>Set the upper/lower limits to this number of standard deviations.<br>
+                        </div>
+                        <div class="col-sm-2">
+                            <input class="form-control" type="text" value="3" id="paramSD">
                         </div>
                     </div>
                     <!--DISCRETIZATION-->
@@ -323,20 +339,20 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-7 col-sm-offset-1">
+                        <div class="col-sm-2 col-sm-offset-1">
                             <label class="control-label" for="paramWS" title="Number of positions to use for each bin. E.g. with a size of 30, each letter correspond to the percentile interval corresponding to the average level of 30 nucleotides">Window size</label>
                         </div>
                         <div class="col-sm-2">
                             <input class="form-control" type="text" value="30" id="paramWS">
                         </div>
-                    </div>
-                    <div class="row" style="padding-top:10px;">
-                        <div class="col-sm-7 col-sm-offset-1">
+                        <div class="col-sm-2 col-sm-offset-1">
                             <label class="control-label" for="paramNB" title="Number of percentile bins into which the quantitative levels will be divided. E .g. 5 bins will use percentiles 0,20,40,60,80,100 to set bins a,b,c,d,e respectively">Number of bins</label>
                         </div>
                         <div class="col-sm-2">
                             <input class="form-control" type="text" value="5" id="paramNB">
                         </div>
+                    </div>
+                    <div class="row" style="padding-top:10px;">
                     </div>
                 </div>
 
@@ -402,7 +418,9 @@
                 $('#modalLoadOptions').modal('hide');
                 GVB_GLOBAL.ws       = $('#paramWS').val();
                 GVB_GLOBAL.nb       = $('#paramNB').val();
-                GVB_GLOBAL.forceReload = true;
+                //GVB_GLOBAL.forceReload = true;
+                if(speciesList.selectedIndex!=0)
+                    files.disabled=false;
 
             });
 

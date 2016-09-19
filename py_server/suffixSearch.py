@@ -125,7 +125,10 @@ def bwMatchingV7(pattern, cf, fo, sa, checkpoints, k=1000):
         if(len(pattern)>0):
             symbol=pattern[len(pattern)-1]
             pattern=pattern[:len(pattern)-1]
-            fos=fo[symbol]
+            try:
+                fos=fo[symbol]
+            except:#in the rare case that the symbol is not in the whole sequence
+                return []
             top=fos + count(symbol, top, cf, checkpoints, k)
             bottom=fos + count(symbol, bottom+1, cf, checkpoints, k) - 1
         else:

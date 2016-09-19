@@ -1296,9 +1296,10 @@ function drawGrid() {
 
 
     var bands = globalSeq.bins;
+    //bands.push(globalSeq.max);
     var y0 = 0;
     var margin = globalDL1.cv.margin;
-    var scale = (dimDL.graphHeight - margin.top - margin.bottom) / (bands[bands.length - 1] - bands[0])
+    var scale = (dimDL.graphHeight - margin.top - margin.bottom) / (Math.max(globalSeq.max,bands[bands.length-1]) - bands[0])
 
     var bw = []
     for (var i = bands.length - 1; i >= 1; i--) {
@@ -1307,6 +1308,8 @@ function drawGrid() {
             top = globalSeq.max;
         else
             top = bands[i];
+        top=bands[i];
+        console.log("Adding band width for "+bands[i]+"-"+bands[i-1]+" = "+scale * (top - bands[i - 1]));
         bw.push(Math.max(0,scale * (top - bands[i - 1])));
     }
 

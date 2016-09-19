@@ -10,38 +10,41 @@ Different methods to read annotations
 """
 Returns a np table ("single") or a dictionary with np tables (structure="multilple") 
 with genome functional annotations.
+NOTE: for larger GFF files (e.g. dmelanogaster, 600MB, this is not performing at all)
 """
 def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.gff3", structure="single"):
     import csv
+    import time
     
     f=open(filename)
-    cad=f.readline()
-    skip=0
-
-    while(cad.startswith("#")==True):
-        cad=f.readline()
-        skip+=1
-    tam=len(f.readlines())+1
-    f.seek(0)
-    reader=csv.DictReader(f, delimiter="\t")
-    reader.fieldnames=["seqid", "source", "type", "start", "end", "score", "sense", "phase", "attributes"]
-
+    regions=["gene","exon","ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene", "three_prime_UTR", "five_prime_UTR"]
+    fieldnames=["seqid", "source", "type", "start", "end", "score", "sense", "phase", "attributes"]
+    reader=csv.DictReader(f, fieldnames=fieldnames, delimiter="\t")
+    
+    t0=time.clock()
+    entries=[]
+    for row in reader:
+        if(row['seqid'].startswith("#") or not (row["type"] in regions)):   #case with comments between entries. NOTE: tam will be miscalculated in these cases
+                continue
+        entries.append(row)
+    print("timer in filtering out entries", (time.clock()-t0))
+    t0=time.clock()
+ 
     import numpy as np
     import re
 
     sc=("cerevisiae" in filename)
-    print sc
-    data=np.empty(tam,dtype=[("chromosome", "a10"),("type", "a40"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a50"), ("name", "a50")])
-    for i in range(skip):
-        next(reader)
-    for i in range(tam):
-        row=reader.next()
+    data=np.empty(len(entries),dtype=[("chromosome", "a20"),("type", "a30"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a40"), ("name", "a40")])
+                
+    for i in xrange(len(entries)):
+        row=entries.pop()
+
         data[i]["start"]=(int)(row["start"])
         data[i]["end"]=(int)(row["end"])
         
         seqid=row["seqid"]
         try:
-            rs=re.search("[XIV]+$",seqid).start() #roman numbers, happen is yeasts :s
+            rs=re.search("[XIV]+$",seqid).start() #roman numbers, happen in yeasts :s
             if(rs>=0):
                 an=roman2arabic(seqid[rs:])
                 if(an<10):
@@ -77,9 +80,11 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
         return d
 #import time
 #t0=time.clock()
-#dataGFF=gff("genomes/annotations/scerevisiae/gff/saccharomyces_cerevisiae.gff", "multiple")    
-#dataGFF["chr01"][100]
+#dataGFF=gff("genomes/annotations/dmelanogaster/dmel-all-no-analysis-r6.12.gff", "multiple")    
+##dataGFF=gff("genomes/annotations/scerevisiae/gff/saccharomyces_cerevisiae.gff", "multiple")
+###dataGFF["chr01"][100]
 #print("it took",(time.clock()-t0))
+
 #%%
 """
 Wraps annotations.gff to return a dictionary, with keys as provided, for the
@@ -92,9 +97,9 @@ By now we are dealing it with this multiplexer function and by now ONLY for S po
 
 Another option is to force gff files to a given format.
 """
-def gffData(org="Schizosaccharomyces pombe", tracks=[]):
-    path=(org[0]+org[org.find(" ")+1:]).lower()
-    
+def gffData(org="Schizosaccharomyces pombe", tracks=[]):    
+    path=(org[0]+org[org.find(" ")+1:]).lower()    
+    print path
     d={}
     if(org=="Schizosaccharomyces pombe"):
         for k in tracks:
@@ -119,9 +124,22 @@ def gffData(org="Schizosaccharomyces pombe", tracks=[]):
                 k2+="0"
             k2+=(str)(k)
             d[k2]=data[k0]
-            
+    if(org=="Drosophila melanogaster"):
+        contents=os.listdir("genomes/annotations/"+path)
+        for c in contents:
+            if(re.search(".gff$", c)):
+                filename=c
+        data=gff("genomes/annotations/"+path+"/"+filename, "multiple")
+        d=data
+        print("gff read")
+        
     return d
-#dataGFF2=gffData("Saccharomyces cerevisiae", seq.keys())
+    
+#import time
+#t0=time.clock()
+#dataGFF2=gffData("Drosophila melanogaster", ["X","Y","2R"])
+#print("GFF takes", (time.clock()-t0))#takes 1.5 min (4M entries filterest to 150K)
+
 #%%
 """
 Roman to arabic number conversion from 1 to 39 (no L, D, C, M contempled)
@@ -160,10 +178,14 @@ def go(filename="genomes/annotations/go/go-basic.obo"):
 def goa(org="Schizosaccharomyces pombe"):
     path=org[0]+org[org.find(" ")+1:]
     path=path.lower()
-    try:
+    if(path=="scerevisiae"):
         f=open("genomes/annotations/"+path+"/goa/gene_association.sgd")
-    except:  
+    if(path=="spombe"):
         f=open("genomes/annotations/"+path+"/goa/gene_association.pombase")
+    if(path=="dmelanogaster"):
+        f=open("genomes/annotations/"+path+"/gene_association.fb")
+    if(path=="mmusculus"):
+        f=open("genomes/annotations/"+path+"/goa/gene_association.mgi")
         
     lines=f.readlines()
     data=[]

@@ -20,8 +20,9 @@ import suffixSearch as ss
 import motifSearch as ms
 import annotations as ann
 import helpers
-import pickle
 import re
+
+import pickle #i tried cPickle but is way slower!
     
 
     
@@ -31,7 +32,7 @@ import re
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
 #UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
 UPLOAD_FOLDER = './genomes' #wherever we run analysis.py
-ALLOWED_EXTENSIONS = set(['txt', 'wig'])
+ALLOWED_EXTENSIONS = set(['txt', 'wig', 'bw'])
 
 app=Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -44,11 +45,16 @@ def allowed_file(filename):
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     global user
+    import time
+    
+    t0=time.clock()
+    print("Uploading file...")
     if request.method == 'POST':
-        file = request.files['file']
+        print("requesting...")
+        file = request.files['file']#this is the data transmission
+        print("file requested")
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            print(filename)
             root=os.path.join(app.config['UPLOAD_FOLDER'])
             if (user in os.listdir(root))==False:                 #create directory for this user
                 os.mkdir(os.path.join(root,user))
@@ -57,8 +63,12 @@ def upload_file():
             else:
                 print('uploading...')
                 file.save(os.path.join(root, user, filename))
+                print("file saved in ",(time.clock-t0),"s")
             #return redirect(url_for('uploaded_file', filename=filename))
             return jsonify(path=os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        else:
+            print("file not found", file.filename, allowed_file(file.filename))
+            return json_response(status=415, responseText="File does not exist or unsported file type (.wig or .bw allowed)")
 #%%
 from flask import send_from_directory
 
@@ -66,19 +76,23 @@ from flask import send_from_directory
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
       
+#Tests if there's a pickle version of the file      
 @app.route('/testUpload', methods=['GET'])
 def testUpload():
     filename=""+request.args.get("filename") 
     filename=re.sub(r"\..*$", ".pic", filename)
-    print(filename)
+    print("Testing upload of ",filename)
     cpath=os.path.join(app.config['UPLOAD_FOLDER'],user)
     if os.path.exists(cpath) and filename in os.listdir(cpath):
         codeEx=request.args.get("forceReload")
         if(codeEx=="True"):
+            print("-> outdated version")
             return jsonify(response='outdated version')
         else:
+            print("-> file exists")
             return jsonify(response="file exists")
     else:
+        print("-> not found")
         return jsonify(response='not found')
  
 #%%------------- SESSION MANAGEMENT
@@ -114,14 +128,14 @@ retorna    objeto JSON con los siguientes campos:
 #%%#TODO: select and pass organism to 
 @app.route("/preprocess")
 def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", recharge="False", organism="Saccharomyces cerevisiae", interpolation="rolling"):
-    import numpy as np
     global data
     global session
 
     
     t00=time.clock()
-    #0) read
-    print('reading...')
+    
+    #0) getting parameter
+    print('Parameters...')
     t0=time.clock()
     basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
     filename=str(request.args.get("filename"))
@@ -137,124 +151,103 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     picklePath=os.path.join(basePath,re.sub(r"\..*$", ".pic", filename))
     savePickle=False
     
-    print("SPECIES:",organism)
+    print("organism:",organism)
+    print("reload:", forceReload)
     
-    m={}
-    sd={}
-    maximum={}
-    minimum={}
-    dseq={}#discretized (alphanumeric) sequence
-    bins={}#thresholds for the binaries
-    res={}#reduced sequence
-    t={} #burrows-wheeler transform
-    dataGFF={}
-    dataFASTA={}
-    seqd={}
+    genome={}
     
-    if os.path.isfile(picklePath) and forceReload=="False":
+    print("---> picklePath", picklePath, os.path.isfile(picklePath))
+    
+    #1A) Preprocessed data (.pic data) exist
+    if os.path.isfile(picklePath) and forceReload=="false":
         print("Pickle exists!!!, recharge=", forceReload)
         f=open(picklePath)
-        datap=pickle.load(f)
-        genome=datap["seq"]
-        t=datap["bwt"]
-        dseq=datap["dseq"]
-        maximum=datap["maximum"]
-        minimum=datap["minimum"]
-        m=datap["mean"]
-        sd=datap["stdev"]
-        bins=datap["bins"]
-    else:
-        genome=helpers.readWig(path, method=interpolation)
+        data=pickle.load(f)
+        print("pickle loaded!", data["maximum"].keys())
+        
+        if track=="None":
+            track=sorted(data["maximum"].keys())[0]
+            
+        print ("track is ", track)
+
+    #1B) Preprocessing must be done     
+    else: #no previous preprocessing -> do it now
+        if(path.endswith("bw")):
+            tbw=time.clock()
+            data=helpers.processBigWig(path=path, track=track, windowSize=windowSize, numBins=numBins, percentile=True, maxSize=maxSize, stdev=stdev, organism=organism, picklePath=picklePath)
+            print("process bw done in ",(time.clock()-tbw))
+            genome=data["seq"]
+
+        else:
+            genome=helpers.readWig(path, method=interpolation)
+            data=helpers.processWig(genome, stdev=stdev, windowSize=windowSize, numBins=numBins, maxSize=maxSize, percentile=True, organism=organism, track=track)
+
+        if track=="None":
+            track=sorted(genome.keys())[0]
         savePickle=True
 
-
-    if track=="None":
-        track=sorted(genome.keys())[0]
     
-    print("load wig takes",(time.clock()-t0))
+    print("load data takes",(time.clock()-t0))
    
-    #for each separate chromosome: TODO: include ds and bwt into pickle!
-    for k in genome.keys():
-        tk=time.clock()
-        seq=genome[k]
-        print("ch", k, "with length", len(seq))
-        if(savePickle):
-            #1) normalize 
-            t0=time.clock()
+    if(len(data["gff"].keys())!=len(data["seq"].keys())):
+        print("One or more chromosome tracks do not match with GFF names:")
+        print("\tData names:",data["seq"].keys())
+        print("\tGFF names:", data["gff"].keys())
 
-  
-            m[k]=np.mean(seq, dtype=float)
-            sd[k]=np.std(seq, dtype=float)
-            upperlim=m[k]+stdev*sd[k]#avoid outliers? testing
-            seq=np.clip(seq,0,upperlim)
-        
-            m[k]=np.mean(seq, dtype=float)
-            sd[k]=np.std(seq, dtype=float)
-            maximum[k]=np.max(seq)
-            minimum[k]=np.min(seq)
-            print('\\tstats in ',(time.clock()-t0), "s")
-        
-        
-            #2) discretize
-            t0=time.clock()
-            tmp=helpers.discretize(seq, windowSize, minimum[k], maximum[k], numBins, percentile=True)
-            dseq[k]=tmp["dseq"]
-            bins[k]=tmp["bins"]
-            print('\\tdiscretize in',(time.clock()-t0),' s')
-        
-            t0=time.clock()
-            t[k]=ss.bwt(''.join(dseq[k])+"$")
-            print('\tbwt in ',(time.clock()-t0),'s')
-    
-        t0=time.clock()
-        res[k]=list(np.mean(helpers.rolling_window(seq, max(1,len(seq)/maxSize)),-1, dtype=float)) #maybe round?  
-        print('\tsampling in',(time.clock()-t0),'s')
-    
-        t0=time.clock()
-        #dataGFF[k]=ann.gff(helpers.gffPath(org=organism, ch=k))#this might (should) be on a single gff for the whole genome!
-        try:
-            dataFASTA[k]=ann.fasta(k, org=organism)
-        except:
-            print("sequence for track", k,"on organism",organism," missing or failing")
-            pass
-        print('\ttime in annotations (GFF and FASTA):',(time.clock()-t0),'s')
-        seqd[k]=seq
-        print("processing",k,"takes",(time.clock()-tk))
-        
     #3) annotations
     t0=time.clock()
     dataGO=ann.go()
     dataGOA=[]
-    dataGFF=[]
+    #dataGFF=[] #GFF and FASTA now in the preprocess/.pic
+   
     try:
         dataGOA=ann.goa(organism)
         print("GO loaded")
-        dataGFF=ann.gffData(org=organism, tracks=genome.keys())
     except:
         print("organism",organism,"'s annotations missing or failing")
     print("done! ... GO annotations takes",(time.clock()-t0))
     
-    data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF, "res":res,
-          "go":dataGO, "goa":dataGOA, "fasta":dataFASTA, "bins":bins, "windowSize":windowSize}
+    #if(bigWig==False):
+        #data["fullLength"]
+        #data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
+        #      "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF, "res":res,
+        #      "go":dataGO, "goa":dataGOA, "fasta":dataFASTA, "bins":bins, "windowSize":windowSize}
+        #already done above
+    #else:#add missing fields to the data structure given by processBigWig
+    print ("Data keys:" ,data.keys())
+    data["go"]=dataGO
+    data["goa"]=dataGOA
+   # data["gff"]=dataGFF
+    data["windowSize"]=windowSize
+       
+    print("Setting session data")
     session[user]=data
+    print("Save pickle?", savePickle)
     
     if(savePickle):
         tpickle=time.clock()
-        print("pickle path:", picklePath)
-        datap={"seq":seqd, "dseq":dseq, "bwt":t, "maximum":maximum, "minimum":minimum,
-          "mean":m, "stdev":sd, "bins":bins, "windowSize":windowSize}
-    
+        print("saving pickle in path:", picklePath)
+        datap=data
+
         f=open(picklePath, 'w')
         pickle.dump(datap,f)
         print("serialize data takes",(time.clock()-tpickle))
         #NOTE: should remove the .wig here to avoid double memory space?
 
     print('whole preprocess takes ',(time.clock()-t00),"s")
-    print('returning track',track)
-    print('max values are',maximum)
     
-    return jsonify(seq=res[track], fullLength=len(genome[track]), maximum=(float)(maximum[track]), minimum=(float)(minimum[track]), mean=(float)(m[track]), stdev=(float)(sd[track]), dseq=dseq[track], bins=bins[track], chromosomes=sorted(genome.keys()))
+    print('returning track',track)
+    print('max values are',data["maximum"])
+    
+    return jsonify(seq=data["res"][track], 
+                   fullLength=data["fullLength"],#len(genome[track]), 
+                   maximum=(float)(data["maximum"][track]), 
+                   minimum=(float)(data["minimum"][track]), 
+                    mean=(float)(data["mean"][track]), 
+                stdev=(float)(data["stdev"][track]), 
+                dseq=data["dseq"][track], 
+                bins=data["bins"][track], 
+                chromosomes=sorted(data["maximum"].keys()))
 
 #%%preprocess(filename="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/dwtMini2.wig")
 
@@ -262,15 +255,15 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 @app.route("/getTrack")
 def getTrack(track="None"):
     global data
-
-    print("returning chromosome",track)
     
     track=request.args.get("track")
+    print("returning chromosome",track)
     if track=="None":
         track=data["res"].keys()[0]
 
-    if("search" in data.keys() == False):
-        d["search"]={"points":{}, "sizePattern":0}
+    if( ("search" in data.keys()) == False):
+        data["search"]={"points":{}, "sizePattern":0}
+    print data["search"]
     return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], bins=data["bins"][track], chromosomes=sorted(data["res"].keys()), search=data["search"])
 
 #%% -------------- SEARCHES -----------
@@ -312,15 +305,19 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     
     #CASE 2) gene/go name pattern
     t=data["bwt"][data["seq"].keys()[0]]
-    patternLetters=t["firstOccurrence"].keys()
-    patternLetters.append('+')
-    patternLetters.append('*')
-    for x in range(0,10):
-        patternLetters.append((str)(x)) 
     
-    print(patternLetters, "\t",set(pattern))
-    if(False in [x in patternLetters for x in set(pattern)]):
-        print("GENE OR TERM")       #TODO: GO Term search not implemented yet
+    #patternLetters=t["firstOccurrence"].keys()#Sometimes might happen that the text does not have some of the letters! (on very skewed data)
+    patternLetters=[chr(x) for x in range(ord('a'), ord('a')+len(data["bins"][data["bins"].keys()[0]])-1)]
+
+    patternSymbols=patternLetters
+    patternSymbols.append('+')
+    patternSymbols.append('*')
+    for x in range(0,10):
+        patternSymbols.append((str)(x)) 
+    
+    print(patternSymbols, "\t",set(pattern))
+    if(False in [x in patternSymbols for x in set(pattern)]):
+        print("GENE OR TERM")      
         points={}
         sizes={}
         for k in data["seq"].keys():
@@ -340,9 +337,10 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     print("BWT ON ",pattern)
     search={}
     for k in data["seq"].keys():
-        if(False in [x in t["firstOccurrence"] for x in set(pattern)]):
-            return jsonify(response="error", msg="{}: There are characters in pattern that do not correspond to the sequence characters: {}".format(k, t["firstOccurrence"].keys()))
-        else:
+         if(False in [x in patternLetters for x in set(pattern)]):
+            #return jsonify(response="error", msg="{}: There are characters in pattern that do not correspond to the sequence characters: {}".format(k, t["firstOccurrence"].keys()))
+            search[k]=[] #instead of returning an error
+         else:
             t0=time.clock()
             t=data["bwt"][k]
             search[k]=(ss.bwMatchingV8("".join(data["dseq"][k]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d))
@@ -432,7 +430,9 @@ def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs=
     align=str(request.args.get("align"))
     intersect=str(request.args.get("intersect"))
 
-    print("WINDOW IS",type(window))
+    print("---------------------------------------")
+    print("Retrieving annotations on track", track)
+    print(data["gff"].keys())
     
     res=annotationsLocal(positions=pos, gff=data["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
     return jsonify(response=res)

@@ -14,7 +14,132 @@ on standard deviations
 method indicated the way to interpolate values in variable step cases ("none", "step", "slope")
 @author: rodri
 """
+#%% ------------------ PROCESS BIG WIG --------------------
+def processBigWig(path, track="None",  windowSize=100, numBins=5, percentile=True, maxSize=10000, stdev=3, recharge="False", organism="Saccharomyces cerevisiae", picklePath=""):
+    import pyBigWig
+    import time
+    import math
+    import numpy as np
+    import suffixSearch as ss
+    import annotations as ann
     
+    print("BigWig",path)
+    
+    bw=pyBigWig.open(path)
+    m={}
+    sd={}
+    minimum={}
+    maximum={}
+    dseq={}
+    bins={}
+    t={} #burrows-wheeler transform
+    seqd={}#full seq
+    dataFASTA={}
+    res={}
+    
+     
+    #Processing all chromosomes
+    for k in (bw.chroms().keys()):
+        print k
+        
+        #chromosome resolution array
+        step=max(1,(int)(math.ceil(bw.chroms(k)/maxSize)))
+        rr=range(0, bw.chroms(k)-step,step)
+        res[k]=[0]*len(rr)
+        print("step is ",step, "and length",len(res[k]))
+        t0=time.clock()
+        for i in rr:
+            value=bw.stats(k,i,i+step)[0]
+            if(value==None):
+                value=0
+            res[k][(int)(i/step)]=value
+        print("time in cromosome-view seq", (time.clock()-t0))
+           
+        #level imputation, clipping and discretization
+        t0=time.clock()
+        seq=np.array(bw.values(k, 0, bw.chroms(k)), dtype=np.float16)
+        
+        
+        seq=np.where(seq>0,seq,0)#Replace missing values by zero
+
+        #seq[np.where(np.isnan(seq))]=bw.stats(k, type="mean")[0]
+
+        m[k]=bw.stats(k, type="mean")[0]
+        sd[k]=bw.stats(k, type="std")[0]
+        maximum[k]=bw.stats(k, type="max")[0]
+        minimum[k]=bw.stats(k, type="min")[0]
+        
+       # return {'seq':seq, 'm':m[k], 'sd':sd[k], 'max':maximum[k], 'min':minimum[k], "ch":k}
+        upperlim=m[k]+stdev*sd[k]#avoid outliers? testing
+
+        print("sdev is", sd[k], "and upperlim is ", upperlim)
+        
+        # testing this for maximum
+        maximum[k]=upperlim
+        #
+        seq=np.clip(seq,0,upperlim)
+        seqd[k]=seq
+        print("time in cleaning seq", (time.clock()-t0))
+        t0=time.clock()
+    
+        tmp=discretize(seq, windowSize, minimum[k], maximum[k], numBins, percentile=percentile)
+        dseq[k]=tmp["dseq"]
+        bins[k]=tmp["bins"]
+        
+        print("time in discretize seq", (time.clock()-t0))
+        
+        #burrows-wheeler transform
+        t0=time.clock()
+        t[k]=ss.bwt(''.join(dseq[k])+"$")
+        print('\tbwt in ',(time.clock()-t0),'s')
+        
+        #FASTA annotations TODO: possibly outside later on? as GFF, GOA
+        t0=time.clock()
+        try:
+            dataFASTA[k]=ann.fasta(k, org=organism)
+        except:
+            print("sequence for track", k,"on organism",organism," missing or failing")
+            pass
+        print('\ttime in annotations (GFF and FASTA):',(time.clock()-t0),'s')
+
+
+    try:
+        print("Loading GFF data")
+        dataGFF={}
+        dataGFF=ann.gffData(org=organism, tracks=bw.chroms.keys())
+        if(len(dataGFF.keys())!=len(bw.chroms.keys())):
+            print("One or more chromosome tracks do not match with GFF names:")
+            print("\tData names:",bw.chroms.keys())
+            print("\tGFF names:", dataGFF.keys())
+    except:
+        print("GFF data couldn't be retrieved")
+        
+    print("preparing response")
+    if(track=="None"): #Vestigial for fullLength: to deprecate
+        track=seqd.keys()[0]
+        
+    print("sending response")
+    return {'seq':seqd,
+            'fullLength':bw.chroms(track), #check-> TODO: change for full array
+            'maximum':maximum,
+            'minimum':minimum, 
+            'mean':m, 
+            'stdev':sd, 
+            'dseq':dseq,
+            'bwt':t,
+            'res':res,#check
+            'fasta':dataFASTA,
+            'bins':bins,
+            'gff':dataGFF
+            }
+           
+#import time
+#t0=time.clock()
+#path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/fly-GSM883798_Dmel36_AdF5d_.bw"
+#tal=processBigWig(path=path, track="chr2RHet", windowSize=100, numBins=2, percentile=True)
+#print("time in processing: ", (time.clock()-t0))#20s for fly (maxSize:100K)
+#print(tal["bins"])
+  
     # --------------------- INTERNAL METHODS -----------------
 #%% -----------  READ WIG --------------
 #TODO: by now, only fixed step!
@@ -29,11 +154,12 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     print ((time.clock()-t0),' s in reading') 
     t0=time.clock()
     if("fixedStep" in seq[1]):
+        print ("Fixed Step")
         chsize=[]
-        cont=0
-        for i in range(len(seq)):
+        cont=1
+        for i in xrange(1, len(seq)):
             s=seq[i]
-            if s[0]=='t' and i>0:#new chromosome
+            if s[0]=='t':#new chromosome
              chsize.append(cont-1)
              cont=0
             else:
@@ -45,27 +171,27 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         cont=0
         name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont+1])))
         ch[name]=[]
+        lenseq=len(seq)
         print("name is ", name)
         for i in chsize:
             print(i)
             cont=cont+2
-            #chi=numpy.array(seq[cont:cont+i-1],float)
-            chi=numpy.array(seq[cont:cont+i-1], dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
-            ch[name].append(chi)
+            sr=seq[cont:(cont+i-1)]
+            ch[name]=numpy.array(sr, dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
             cont=cont+i
-            if(cont<len(seq)):
-                name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
+            if(cont<lenseq):
+                s=seq[cont]
+                name=re.sub("\n", "",re.sub(" .*$", "", re.sub("^.*chrom=", "", s)))
                 print("name is ", name)
-                ch[name]=[]
-        for k in ch.keys():
-            ch[k]=ch[k][0]
+#        for k in ch.keys():
+#            ch[k]=ch[k][0]
         print ((time.clock()-t0),' s in formatting')
         
         return ch
     else:
         print "Variable step"
         chsize=[]
-        for i in range(2,len(seq)):
+        for i in xrange(2,len(seq)):
             s=seq[i]
             if "variableStep" in seq[i]:
              chsize.append((int)(seq[i-2].split("\t")[0]))
@@ -79,9 +205,161 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         print((time.clock()-t0),' s in <<interpolating>> seqs')
         return ch
     
+#%%
+def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism, track="None"):
+    import time
+    import numpy as np
+    import suffixSearch as ss
+    import annotations as ann
+
+    
+    m={};sd={};maximum={}; minimum={} #minimal stats
+    dseq={}#discretized (alphanumeric) sequence
+    bins={}#thresholds for the bin sections
+    t={} #burrows-wheeler transform
+    res={}#reduced sequence
+    seqd={} #clipped sequence
+    fullLength={}#length of the original seqs
+    
+    dataGFF={}
+    dataFASTA={}
+    
+    
+    #for each chromosomes
+    for k in genome.keys():
+        tk=time.clock()
+        seq=genome[k]
+        print("ch", k)
+        #1) normalize 
+        t0=time.clock()
+
+  
+        m[k]=np.mean(seq, dtype=float)
+        sd[k]=np.std(seq, dtype=float)
+        upperlim=m[k]+stdev*sd[k]#avoid outliers? testing
+        seq=np.clip(seq,0,upperlim)
+        
+        m[k]=np.mean(seq, dtype=float)
+        sd[k]=np.std(seq, dtype=float)
+        maximum[k]=np.max(seq)
+        minimum[k]=np.min(seq)
+        print('\\tstats in ',(time.clock()-t0), "s")
+    
+    
+        #2) discretize
+        t0=time.clock()
+        tmp=discretize(seq, windowSize, minimum[k], maximum[k], numBins, percentile)
+        dseq[k]=tmp["dseq"]
+        bins[k]=tmp["bins"]
+        print(set(dseq[k]))
+        print('\\tdiscretize in',(time.clock()-t0),' s')
+    
+        t0=time.clock()
+        t[k]=ss.bwt(''.join(dseq[k])+"$")
+        print('\tbwt in ',(time.clock()-t0),'s')
+        
+        t0=time.clock()
+        res[k]=list(np.mean(rolling_window(seq, max(1,len(seq)/maxSize)),-1, dtype=float)) #maybe round?  
+        print('\tsampling in',(time.clock()-t0),'s')
+        
+        seqd[k]=seq
+        fullLength[k]=len(seq)
+
+        t0=time.clock()
+        try:
+            dataFASTA[k]=ann.fasta(k, org=organism)
+        except:
+            print("sequence for track", k,"on organism",organism," missing or failing")
+            pass
+            
+        print('\ttime in annotations (FASTA):',(time.clock()-t0),'s')
+
+        print("time in processing ", k, ": ", (time.clock()-tk))
+    #end (for each chromosome)
+        
+    try:
+        dataGFF=ann.gffData(org=organism, tracks=genome.keys())
+    except:
+        print("annotations for track", k,"on organism",organism," missing or failing")
+        pass
+
+    data={"seq":seqd, "fullLength":fullLength, "maximum":maximum, "minimum":minimum,
+      "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF, "res":res,
+#      "go":dataGO, "goa":dataGOA, 
+      "fasta":dataFASTA, "bins":bins, "windowSize":windowSize}
+    return data
+
+
+#Read wig tests without readlines:no time in reading but worse in formatting    
+#def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig",method="slope",window=30):
+#    import numpy
+#    import time
+#    import re
+#    
+#    t0=time.clock()
+#    f=open(path)
+#    #seq=f.readlines()
+#    print ((time.clock()-t0),' s in reading') 
+#    t0=time.clock()
+#    next(f)
+#    line=next(f)
+#    if("fixedStep" in line):
+#        chsize=[]
+#        chname=[]
+#        cont=0
+#        name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", line)))
+#        for line in f:    
+#            if line[0]=='t':#new chromosome
+#              line=next(f)
+#              chsize.append(cont)
+#              chname.append(name)
+#              name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", line)))
+#              cont=0
+#            else:
+#                cont+=1
+#        chsize.append(cont)
+#        chname.append(name)
+#        print((time.clock()-t0),' s in computing sizes')
+#        print(chsize, chname)
+#        
+#        t0=time.clock()
+#        ch={}
+#        f.seek(0)
+#        for i in range(len(chsize)):
+#            cont=0
+#            f.next()
+#            f.next()
+#            print(chname[i],chsize[i])
+#            chi=numpy.empty(chsize[i],dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+#            while(cont<chsize[i]):
+#                chi[cont]=f.next()
+#                cont+=1
+#            ch[chname[i]]=chi
+#        print ((time.clock()-t0),' s in formatting')
+#        
+#        return ch
+#    else:
+#        print "Variable step"
+#        chsize=[]
+#        for i in xrange(2,len(seq)):
+#            s=seq[i]
+#            if "variableStep" in seq[i]:
+#             chsize.append((int)(seq[i-2].split("\t")[0]))
+#        chsize.append((int)(seq[i-2].split("\t")[0]))
+#        print((time.clock()-t0),' s in computing sizes')
+#        
+#        
+#        t0=time.clock()
+#        ch=interpolate(seq,chsize, method)
+#      
+#        print((time.clock()-t0),' s in <<interpolating>> seqs')
+#        return ch
+   #%%
+ 
 #tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/dwtMini2.wig")
 #tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/23479_h90_wlt_mean.wig")
-#seq=tal["chromosome1"][0]
+##tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/test.wig")
+#seq=tal["chromosome1"]
 #np.mean(seq)
     
 #seq=readWig(path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/GSM585199_FC14703_YE_MNase_Lane_1_eland_result.S.cerevisiae.reads.wig")
@@ -95,7 +373,14 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
 #import numpy 
 #numpy.mean(seq["chr01"])
 #seq["chr01"][230032]
-#    
+#seq=readWig(path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/GSM585199_FC14703_YE_MNase_Lane_1_eland_result.S.cerevisiae.reads.wig", method="rolling")
+#print len(seq)
+#import numpy 
+#numpy.mean(seq["chr01"])
+#seq["chr01"][230032]
+#%%
+#seq=readWig(path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/mouse-GSM1305865_Runx2_day28_normalized.wig", method="rolling")
+    
 #%% ------------------ INTERPOLATION -------------------
 """
 seq - sequence lines as read from a wig variabale step, withouth initial comments
@@ -192,33 +477,41 @@ and standard deviations on windows of size windowSize. Binarzation is done
 in categories a to z (z the larger), as many as detailed by numBins
 
 Percentile - if true, percentiles are used based in numBins, instead of just
-   a division of the range between min and maximum (default true)"""
+   a division of the range between min and maximum (default true)
+bins - if it's a list with one or more numbers, these are taken as percentiles
+    (only used if percentile=True, default [])"""
 
 #NOTE: maybe a good idea to optimize this method is to use numerical bins instead of letters
-def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True):
+def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True, bins=[]):
     import numpy as np
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
     alphabet=alphabetTotal[:numBins]   
     dseq=[]
-    factor=(numBins-1.0)/float(maximo-minimo)
-    
+    print("discretize",len(seq), alphabet)
+            
     sseq=rolling_window(seq,windowSize)
-    #sseq=np.split(np.array(seq[:windowSize*(len(seq)/windowSize)]), len(seq)/windowSize)
     mseq=np.mean(sseq, axis=1, keepdims=True)
     
-    if(percentile==True):
+    if(percentile==True):#PERCENTILE
+        print("percentile",len(seq))
+        pseq=seq[seq.ravel().nonzero()]#remove zeroes to compute percs.
+        #pseq=seq
+        if(len(bins)==0):
+            pers=[0]
+            for i in range(1,numBins+1):
+                p=np.percentile(pseq,(100.0/numBins)*i)
+                pers.append(p)
+            bins=pers
+        else:
+            alphabet=alphabetTotal[:len(bins)]
+        print bins
         mseq=np.array(mseq);
-        pers=[0]
-        for i in range(1,numBins+1):
-            p=np.percentile(mseq,(100.0/numBins)*i)
-            #print("percentile",(100.0/numBins)*i,"=",p)
-            pers.append(p)
-        bins=pers
-        digseq=np.digitize(mseq,pers)
+        digseq=np.digitize(mseq,bins)
         for s in digseq:
-           # print(s)
             dseq.append(alphabet[min(s-1,len(alphabet)-1)])           
-    else:
+    else:           #ABSOLUTE
+        factor=(numBins-1.0)/float(maximo-minimo)
+    
         for im in mseq:
             dseq.append(alphabet[(int)(factor*(im-minimo))])
         bins=[]
@@ -247,7 +540,29 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True):
 #import time
 #import numpy as np
 #t0=time.clock()   
-#tal=discretize(seq,30, np.min(seq), np.max(seq))
+#
+#m={}; sd={}; maximum={}; minimum={}
+#stdev=3
+#numBins=5
+#windowSize=30
+#k=1
+#m[k]=np.mean(seq, dtype=float)
+#sd[k]=np.std(seq, dtype=float)
+#upperlim=m[k]+stdev*sd[k]#avoid outliers? testing
+#seq=np.clip(seq,0,upperlim)
+#
+#m[k]=np.mean(seq, dtype=float)
+#sd[k]=np.std(seq, dtype=float)
+#maximum[k]=np.max(seq)
+#minimum[k]=np.min(seq)
+#print('\\tstats in ',(time.clock()-t0), "s")
+#
+#
+##2) discretize
+#t0=time.clock()
+#tmp=discretize(seq, windowSize, minimum[k], maximum[k], numBins, percentile=True)
+#
+##dseq=discretize(seq,30, np.min(seq), np.max(seq))
 #print '{}'.format((time.clock()-t0))
 ##%%
 #t0=time.clock()   
