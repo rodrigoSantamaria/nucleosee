@@ -36,23 +36,25 @@ def processBigWig(path, track="None",  windowSize=100, numBins=5, percentile=Tru
     seqd={}#full seq
     dataFASTA={}
     res={}
+    fullLength={}
     
      
     #Processing all chromosomes
     for k in (bw.chroms().keys()):
         print k
+        kn=adaptChNames(k, organism)
         
         #chromosome resolution array
         step=max(1,(int)(math.ceil(bw.chroms(k)/maxSize)))
         rr=range(0, bw.chroms(k)-step,step)
-        res[k]=[0]*len(rr)
-        print("step is ",step, "and length",len(res[k]))
+        res[kn]=[0]*len(rr)
+        print("step is ",step, "and length",len(res[kn]))
         t0=time.clock()
         for i in rr:
             value=bw.stats(k,i,i+step)[0]
             if(value==None):
                 value=0
-            res[k][(int)(i/step)]=value
+            res[kn][(int)(i/step)]=value
         print("time in cromosome-view seq", (time.clock()-t0))
            
         #level imputation, clipping and discretization
@@ -64,39 +66,41 @@ def processBigWig(path, track="None",  windowSize=100, numBins=5, percentile=Tru
 
         #seq[np.where(np.isnan(seq))]=bw.stats(k, type="mean")[0]
 
-        m[k]=bw.stats(k, type="mean")[0]
-        sd[k]=bw.stats(k, type="std")[0]
-        maximum[k]=bw.stats(k, type="max")[0]
-        minimum[k]=bw.stats(k, type="min")[0]
+        m[kn]=bw.stats(k, type="mean")[0]
+        sd[kn]=bw.stats(k, type="std")[0]
+        maximum[kn]=bw.stats(k, type="max")[0]
+        minimum[kn]=bw.stats(k, type="min")[0]
         
        # return {'seq':seq, 'm':m[k], 'sd':sd[k], 'max':maximum[k], 'min':minimum[k], "ch":k}
-        upperlim=m[k]+stdev*sd[k]#avoid outliers? testing
+        upperlim=m[kn]+stdev*sd[kn]#avoid outliers? testing
 
-        print("sdev is", sd[k], "and upperlim is ", upperlim)
+        print("sdev is", sd[kn], "and upperlim is ", upperlim)
         
         # testing this for maximum
-        maximum[k]=upperlim
+        maximum[kn]=upperlim
         #
         seq=np.clip(seq,0,upperlim)
-        seqd[k]=seq
+        seqd[kn]=seq
         print("time in cleaning seq", (time.clock()-t0))
         t0=time.clock()
     
-        tmp=discretize(seq, windowSize, minimum[k], maximum[k], numBins, percentile=percentile)
-        dseq[k]=tmp["dseq"]
-        bins[k]=tmp["bins"]
+        tmp=discretize(seq, windowSize, minimum[kn], maximum[kn], numBins, percentile=percentile)
+        dseq[kn]=tmp["dseq"]
+        bins[kn]=tmp["bins"]
         
         print("time in discretize seq", (time.clock()-t0))
         
         #burrows-wheeler transform
         t0=time.clock()
-        t[k]=ss.bwt(''.join(dseq[k])+"$")
+        t[kn]=ss.bwt(''.join(dseq[kn])+"$")
         print('\tbwt in ',(time.clock()-t0),'s')
+        
+        fullLength[kn]=bw.chroms(k)
         
         #FASTA annotations TODO: possibly outside later on? as GFF, GOA
         t0=time.clock()
         try:
-            dataFASTA[k]=ann.fasta(k, org=organism)
+            dataFASTA[kn]=ann.fasta(kn, org=organism)
         except:
             print("sequence for track", k,"on organism",organism," missing or failing")
             pass
@@ -106,7 +110,8 @@ def processBigWig(path, track="None",  windowSize=100, numBins=5, percentile=Tru
     try:
         print("Loading GFF data")
         dataGFF={}
-        dataGFF=ann.gffData(org=organism, tracks=bw.chroms.keys())
+        #dataGFF=ann.gffData(org=organism, tracks=bw.chroms.keys())
+        dataGFF=ann.gffData(org=organism, tracks=m.keys())
         if(len(dataGFF.keys())!=len(bw.chroms.keys())):
             print("One or more chromosome tracks do not match with GFF names:")
             print("\tData names:",bw.chroms.keys())
@@ -120,7 +125,7 @@ def processBigWig(path, track="None",  windowSize=100, numBins=5, percentile=Tru
         
     print("sending response")
     return {'seq':seqd,
-            'fullLength':bw.chroms(track), #check-> TODO: change for full array
+            'fullLength':fullLength, 
             'maximum':maximum,
             'minimum':minimum, 
             'mean':m, 
@@ -136,10 +141,19 @@ def processBigWig(path, track="None",  windowSize=100, numBins=5, percentile=Tru
 #import time
 #t0=time.clock()
 #path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/fly-GSM883798_Dmel36_AdF5d_.bw"
-#tal=processBigWig(path=path, track="chr2RHet", windowSize=100, numBins=2, percentile=True)
+#tal=processBigWig(path=path, track="chr2RHet", windowSize=100, numBins=2, percentile=True, organism="Drosophila melanogaster")
 #print("time in processing: ", (time.clock()-t0))#20s for fly (maxSize:100K)
-#print(tal["bins"])
-  
+#%% This tool is to change chromosome names to 'official' ones, taking as 
+#official its GFF names. This is clumsy an non-standard, but as wig/bw tend
+#to have some weird chr names might be useful.
+#(esp. designed for bw dmel, where it's not easy to edit names)
+def adaptChNames(ch, organism):
+    import string
+    chn=ch
+    if(organism=="Drosophila melanogaster"):
+            chn=string.replace(ch, "chr", "")
+    return chn
+#%%  
     # --------------------- INTERNAL METHODS -----------------
 #%% -----------  READ WIG --------------
 #TODO: by now, only fixed step!
@@ -289,98 +303,6 @@ def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism
       "fasta":dataFASTA, "bins":bins, "windowSize":windowSize}
     return data
 
-
-#Read wig tests without readlines:no time in reading but worse in formatting    
-#def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_center.wig",method="slope",window=30):
-#    import numpy
-#    import time
-#    import re
-#    
-#    t0=time.clock()
-#    f=open(path)
-#    #seq=f.readlines()
-#    print ((time.clock()-t0),' s in reading') 
-#    t0=time.clock()
-#    next(f)
-#    line=next(f)
-#    if("fixedStep" in line):
-#        chsize=[]
-#        chname=[]
-#        cont=0
-#        name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", line)))
-#        for line in f:    
-#            if line[0]=='t':#new chromosome
-#              line=next(f)
-#              chsize.append(cont)
-#              chname.append(name)
-#              name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", line)))
-#              cont=0
-#            else:
-#                cont+=1
-#        chsize.append(cont)
-#        chname.append(name)
-#        print((time.clock()-t0),' s in computing sizes')
-#        print(chsize, chname)
-#        
-#        t0=time.clock()
-#        ch={}
-#        f.seek(0)
-#        for i in range(len(chsize)):
-#            cont=0
-#            f.next()
-#            f.next()
-#            print(chname[i],chsize[i])
-#            chi=numpy.empty(chsize[i],dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
-#            while(cont<chsize[i]):
-#                chi[cont]=f.next()
-#                cont+=1
-#            ch[chname[i]]=chi
-#        print ((time.clock()-t0),' s in formatting')
-#        
-#        return ch
-#    else:
-#        print "Variable step"
-#        chsize=[]
-#        for i in xrange(2,len(seq)):
-#            s=seq[i]
-#            if "variableStep" in seq[i]:
-#             chsize.append((int)(seq[i-2].split("\t")[0]))
-#        chsize.append((int)(seq[i-2].split("\t")[0]))
-#        print((time.clock()-t0),' s in computing sizes')
-#        
-#        
-#        t0=time.clock()
-#        ch=interpolate(seq,chsize, method)
-#      
-#        print((time.clock()-t0),' s in <<interpolating>> seqs')
-#        return ch
-   #%%
- 
-#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/dwtMini2.wig")
-#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/23479_h90_wlt_mean.wig")
-##tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/test.wig")
-#seq=tal["chromosome1"]
-#np.mean(seq)
-    
-#seq=readWig(path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/GSM585199_FC14703_YE_MNase_Lane_1_eland_result.S.cerevisiae.reads.wig")
-#print len(tal)
-#import numpy 
-#numpy.mean(tal["chr01"])
-#tal["chr01"][230032]
-    
-#seq=readWig(path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/GSM585199_FC14703_YE_MNase_Lane_1_eland_result.S.cerevisiae.reads.wig", method="slope")
-#print len(seq)
-#import numpy 
-#numpy.mean(seq["chr01"])
-#seq["chr01"][230032]
-#seq=readWig(path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/GSM585199_FC14703_YE_MNase_Lane_1_eland_result.S.cerevisiae.reads.wig", method="rolling")
-#print len(seq)
-#import numpy 
-#numpy.mean(seq["chr01"])
-#seq["chr01"][230032]
-#%%
-#seq=readWig(path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/mouse-GSM1305865_Runx2_day28_normalized.wig", method="rolling")
-    
 #%% ------------------ INTERPOLATION -------------------
 """
 seq - sequence lines as read from a wig variabale step, withouth initial comments
@@ -776,3 +698,37 @@ def convertRange(text):
 #np.mean(seq[:30])
 #print 'mean takes {}s'.format((time.clock()-t0))
 
+#%% FIX DMEL GFF
+def fixDmelGFF():
+    import csv
+    import string
+    
+    filename="genomes/annotations/dmelanogaster/dmel-all-no-analysis-r6.12.gff"
+    f=open(filename)
+    fw=open("genomes/annotations/dmelanogaster/dmel-fix-r6.12.gff", "w")
+    regions=["gene","exon","ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene", "three_prime_UTR", "five_prime_UTR"]
+    chromosomes=["2L","3L","4","2R", "3R","X","Y","M","U"]
+    fieldnames=["seqid", "source", "type", "start", "end", "score", "sense", "phase", "attributes"]
+    
+    reader=csv.DictReader(f, fieldnames=fieldnames, delimiter="\t")
+    
+    
+    print("filtering out comments...")
+    for row in reader:
+        if(row['seqid'].startswith("#") or not (row["seqid"] in chromosomes)):   #case with comments between entries. NOTE: tam will be miscalculated in these cases
+                continue
+        if(row["end"]=="."):
+            row["attributes"]=row["phase"]
+            row["phase"]=row["sense"]
+            row["sense"]=row["score"]
+            row["score"]=row["end"]
+            row["end"]=row["start"]
+            row["start"]=row["type"]
+            row["type"]="gene"
+        if(not (row["type"] in regions)):  
+            continue
+        cad="\t".join([row["seqid"],row["source"],row["type"],row["start"],row["end"],row["score"],row["sense"],row["phase"],row["attributes"],])+"\n"
+        cad=string.replace(cad, "\t.\t","\t\t")
+        fw.write(cad)
+    fw.close()
+#fixDmelGFF()

@@ -109,6 +109,8 @@ def loadSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/d
     f=open(path, "r")
     session=pickle.load(f)
     return session
+    
+    
 #%%
 """
 Preprocesa un fichero wig para su visualización
@@ -191,8 +193,8 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
    
     if(len(data["gff"].keys())!=len(data["seq"].keys())):
         print("One or more chromosome tracks do not match with GFF names:")
-        print("\tData names:",data["seq"].keys())
-        print("\tGFF names:", data["gff"].keys())
+    print("\tData names:",data["seq"].keys())
+    print("\tGFF names:", data["gff"].keys())
 
     #3) annotations
     t0=time.clock()
@@ -372,10 +374,8 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
                     tt=[geo]
                 else:
                     tt=["ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene"]
-                if(len(sk)>0):
-                    #p=[x*ws for x in sk]                    
+                if(len(sk)>0 and (k in data["gff"].keys())):
                     annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["gff"][k], types=tt, onlyIDs="False", intersect=intersect)
-                    #p=[x/ws for x in annot.keys()];
                     p=[(int)(x) for x in annot.keys()];
                     search[k]=p
                 else:
@@ -385,7 +385,7 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
                 sk=search[k]
                 ws=data["windowSize"]
                 
-                if(len(sk)>0):
+                if(len(sk)>0 and (k in data["gff"].keys())):
                     #p=[x*ws for x in sk]
                     
                     annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect)
@@ -434,7 +434,10 @@ def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs=
     print("Retrieving annotations on track", track)
     print(data["gff"].keys())
     
-    res=annotationsLocal(positions=pos, gff=data["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
+    if(track in data["gff"].keys()):
+        res=annotationsLocal(positions=pos, gff=data["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
+    else:
+        res=[]
     return jsonify(response=res)
 
 def annotationsLocal(positions, gff, window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft"):

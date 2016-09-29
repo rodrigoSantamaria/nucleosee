@@ -16,6 +16,7 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
     import csv
     import time
     
+    print("reading GFF csv...")
     f=open(filename)
     regions=["gene","exon","ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene", "three_prime_UTR", "five_prime_UTR"]
     fieldnames=["seqid", "source", "type", "start", "end", "score", "sense", "phase", "attributes"]
@@ -23,17 +24,21 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
     
     t0=time.clock()
     entries=[]
+    
+    print("filtering out comments...")
     for row in reader:
         if(row['seqid'].startswith("#") or not (row["type"] in regions)):   #case with comments between entries. NOTE: tam will be miscalculated in these cases
                 continue
         entries.append(row)
+        
     print("timer in filtering out entries", (time.clock()-t0))
     t0=time.clock()
  
     import numpy as np
     import re
-
+    print("populating annotations...")
     sc=("cerevisiae" in filename)
+    
     data=np.empty(len(entries),dtype=[("chromosome", "a20"),("type", "a30"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a40"), ("name", "a40")])
                 
     for i in xrange(len(entries)):
@@ -64,6 +69,7 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
         else:
             gid=re.sub("gene:", "", re.sub(";Name.*$","",re.sub("^.*ID=", "", row["attributes"])))
             name=re.sub(";.*$","",re.sub("^.*ID=.*;Name=", "", row["attributes"]))
+            
         
         data[i]["id"]=gid
         data[i]["name"]=name            
@@ -81,6 +87,7 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
 #import time
 #t0=time.clock()
 #dataGFF=gff("genomes/annotations/dmelanogaster/dmel-all-no-analysis-r6.12.gff", "multiple")    
+
 ##dataGFF=gff("genomes/annotations/scerevisiae/gff/saccharomyces_cerevisiae.gff", "multiple")
 ###dataGFF["chr01"][100]
 #print("it took",(time.clock()-t0))
@@ -96,8 +103,13 @@ gff, some have one gff per chromosome, chromosome names does not mach with wig f
 By now we are dealing it with this multiplexer function and by now ONLY for S pombe and S cerevisiae
 
 Another option is to force gff files to a given format.
+
+org - organism for the GFF (currently suppurted sce, spo, dme)
 """
+
 def gffData(org="Schizosaccharomyces pombe", tracks=[]):    
+    import re
+    import os
     path=(org[0]+org[org.find(" ")+1:]).lower()    
     print path
     d={}
@@ -445,37 +457,3 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=5, maxGO=50
 #%%
 #tal=enrichmentFisher(set(gis),dataGOA, 0.01, "fdr")
 #tal=enrichmentFisher(set(gis),dataGOA,0.01,"fdr")
-#%%
-#def keyL(k):
-#    return k[1]["pval"],k[0]
-#sorted(pvals.items(), key=keyL)    
-##%%
-#pvalso=[]
-#for key, value in sorted(pvals.items(), key=keyL):
-#        pvalso.append(value["pval"])
-#        
-##%%
-#path="/Users/rodri/WebstormProjects/seqview/py_server/genomes/annotations/spombe/goa/gene_association.pombase"
-#enrichmentFisher(set(["SPBC3B8.06"]), goa(path), th=0.01, correction="fdr")
-#
-##%%
-#dataGOA=dg
-#gis=set(["SPBC3B8.06"])
-#
-##%%
-#print "enrichment fisher"
-#goids=[x["go_id"] for x in dataGOA]
-#goterms={}
-#for x in goids:
-#    goterms[x]=set()
-#for x in dataGOA:
-#    goterms[x["go_id"]].add(x["gene_id"])
-## Compute universe genes
-#unigenes=set()
-#for k in goterms.keys():
-#        unigenes |= set(goterms[k])
-#unigenes=unigenes-gis
-#uni=len(unigenes)
-#sel=len(gis)
-#print "universe created"
-#    #
