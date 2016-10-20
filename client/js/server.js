@@ -70,27 +70,25 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
         /**
          * Uploads the file to the server. Posterior calls to REST will be by the path of the file
-         * @param callback
          * @param file
          * @param forceReload
          */
-        // NOTE: Remember REST Flask calls require enable CORS in the browser!!!
-        Server.sendFile = function (callback, file, forceReload)
+        Server.testFile = function (file)
         {
             var startTime = new Date();
 
             // Show the image of "loading..."
-            showImageLoading("imgLoadingFile", true);
+            //showImageLoading("imgLoadingFile", true);
 
 
-            var _forceReload = "";
+            /*var _forceReload = "";
             if(forceReload) _forceReload = "True";
-            else            _forceReload = "False";
+            else            _forceReload = "False";*/
 
             var requestAJAX = $.ajax(
                 {
                     //url: _serverPath+"/testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&forceReload="+_forceReload,
-                    url: _serverPath+"/testUpload?user="+_user+"&password="+_password+"&filename="+encodeURIComponent(file.name)+"&forceReload="+_forceReload,
+                    url: _serverPath+"/testUpload?user="+_user+"&password="+_password+"&filename="+encodeURIComponent(file.name)+"&forceReload=false",
                     type: "GET",
                     datatype: "json"
                 });
@@ -103,61 +101,72 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             $.when(requestAJAX)
                 .done(function(result)
                 {
-                    if(_DEBUG) console.log("sendFile(): uploaded? "+result.response);
-
+                    if(_DEBUG) console.log("testFile(): uploaded? "+result.response);
+                    GVB_GLOBAL.sendFile=false;
                     if(!(result.response == "outdated version" || result.response == "not found"))
-                    {
+                        {
                         // Hide the image of "loading..."
                         showImageLoading("imgLoadingFile", false);
 
-
                         if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
 
-                        callback();
-                    }
-                    // Only in this case, we upload it
-                    else
-                    {
-                        // The FormData object lets you compile a set of key/value pairs to send using XMLHttpRequest (AJAX)
-                        var fd = new FormData();
-                        fd.append('file',file);
+                        //callback();
+                        //Change load options if there's already a preprocessing done
+                        $("#paramSD")[0].value=result.clip;
+                        $("#paramWS")[0].value=result.ws;
+                        $("#paramNB")[0].value=result.nb;
+                        $("#speciesList")[0].value=result.org;
+                        $("#interpolationList")[0].value=result.interpol.toLowerCase();
 
-                        var requestAJAX2 = $.ajax(
-                            {
-                                url: _serverPath+"/upload?user="+_user+"&password="+_password,
-                                type: "POST",
-                                data: fd,
-                                processData: false, // tell jQuery not to process the data
-                                contentType: false  // tell jQuery not to set contentType
-                            });
-
-                        //noinspection JSUnresolvedFunction
-                        $.when(requestAJAX2)
-                            .done(function()
-                            {
-                                // Hide the image of "loading..."
-                                showImageLoading("imgLoadingFile", false);
-
-                                if (_DEBUG) console.log("sendFile(): uploaded");
-                                if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
-
-                                callback();
-                            })
-                            .fail(function(jqXHR, textStatus, errorThrown)
-                            {
-                                if(_DEBUG) console.log("sendFile(): upload failed...");
-                                console.log(jqXHR)
-                                javascript_abort("Error uploading the file. Available formats are .wig and .bw "+errorThrown+" "+jqXHR.responseText);
-                            });
-                    }
+                        $("#btLoadOptions")[0].disabled=false;
+                        }
+                    if(result.response=="not found")
+                        GVB_GLOBAL.sendFile=true;
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
-                    if(_DEBUG) console.log("sendFile(): testUpload failed...");
+                    if(_DEBUG) console.log("testFile(): testUpload failed...");
                     console.log(jqXHR)
-                    javascript_abort("Error sending the file. "+errorThrown+" "+jqXHR.responseText);
+                    javascript_abort("Error checking the file. "+errorThrown+" "+jqXHR.responseText);
                 });
         };
+
+
+
+        Server.sendFile=function(file)
+            {
+            // The FormData object lets you compile a set of key/value pairs to send using XMLHttpRequest (AJAX)
+            var fd = new FormData();
+            fd.append('file',file);
+
+            var requestAJAX2 = $.ajax(
+                {
+                    url: _serverPath+"/upload?user="+_user+"&password="+_password,
+                    type: "POST",
+                    data: fd,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false  // tell jQuery not to set contentType
+                });
+
+            //noinspection JSUnresolvedFunction
+            $.when(requestAJAX2)
+                .done(function()
+                {
+                    // Hide the image of "loading..."
+                    showImageLoading("imgLoadingFile", false);
+
+                    if (_DEBUG) console.log("testFile(): uploaded");
+                    if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
+
+                    //callback();
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    if(_DEBUG) console.log("testFile(): upload failed...");
+                    console.log(jqXHR)
+                    javascript_abort("Error uploading the file. Available formats are .wig and .bw "+errorThrown+" "+jqXHR.responseText);
+                });
+            }
 
 
         /**
@@ -181,8 +190,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.preprocess = function (callback, filename, track, ws, nb, maxSize, organism, interpolation, stdev, recharge)
         {
-
-
             var startTime = new Date();
 
             // Show the image of "loading..."
@@ -222,6 +229,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.fullLength=result.fullLength;
                     response.chromosomes=result.chromosomes;
                     response.bins=result.bins;
+                    response.filename=filename;
 
                     // Hide the image of "loading..."
                     showImageLoading("imgLoadingFile", false);

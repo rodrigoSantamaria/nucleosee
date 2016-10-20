@@ -364,7 +364,7 @@ def interpolate(seq, chsize, method="step", window=30):
                 y0=y1
             cont+=1
             ch[name]=chi
-    if(method=="rolling"):
+    if(method=="mean"):
         for i in chsize:
             cont+=1
             print(seq[cont])

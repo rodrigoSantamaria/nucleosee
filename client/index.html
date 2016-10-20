@@ -86,39 +86,35 @@
             <div style="margin-top:5px;">
 
                 <div style="float:left;margin-left: 30px;margin-right:5px;">
+                   <input type="button" id="loadOptions" value="Load file" title="Load wig or bigwig file"><br>
+                </div>
+
+                <!--<div style="float:left;margin-left: 30px;margin-right:5px;">
                     <input type="file" id="files" name="files[]" multiple style="float:left" title="Select any .wig file (first you must select your organism or None at the right Options link)" disabled/>
-                    <!--output id="list"></output-->
                     <script src="js/upload-file.js"></script>
                 </div>
 
-                <!--<div style="float:left;margin-left:5px;margin-right:5px;margin-bottom:0px">
-                    <input type="button" id="showSpecies" value="Species" title="Select species for your wig file. If not the correct species, you can experience errors during the data loading. If your species is not available, choose the blank option: functional annotations and sequence will not be available" class="options"><br>
-                </div>
-
-                <div style="    float:left;margin-left:5px;margin-right:5px;">
-                    <input type="checkbox" id="reload" title="Check if you want to recompute bins instead of using the previouly computed ones, if available.">Reload<br>
-                </div>-->
-
                 <div style="float:left;margin-left:5px;margin-right:5px;margin-top:-3px">
                     <input type="button" id="loadOptions" value="Options" title="Load options related to organism and interpolation and discretization parameters" class="options"><br>
-                </div>
+                </div>-->
 
 
 
                 <!-- ICON OF "LOADING..." -->
-                <div style="float:left;margin-left:5px;">
+                <div style="float:left;margin-left:5px;margin-right:5px;">
                     <img id="imgLoadingFile" src="images/loading.gif" style="visibility:hidden"/>
+                </div>
+
+                <div>
+                    <label id="loadText">No file loaded.</label>
                 </div>
 
             </div>
 
 
             <!-- SEARCH -->
-            <div>
+            <div style="margin-top:0px">
 
-                <!--div style="float:left;margin-top:4px;margin-left:30px;margin-right:20px;">
-                    <button type="button"id="btConfigParams">Params</button>
-                </div-->
 
                 <div style="float:left;margin-top:4px;margin-left:30px;margin-right:5px;">
                     <input type="text" id="patternSearch" title="pattern to search, according to the window and number of bins. You can also search for intervals with 'start-end' and by gene names">
@@ -150,7 +146,7 @@
         </div>
 
         <!-- CHROMOSOME ICONS -->
-        <div style="float:left;margin-left:25px;" id="imagesChromosomes"></div>
+        <div style="float:left;margin-left:36px;" id="imagesChromosomes"></div>
 
         <!-- LOGOUT -->
         <div style="float:right;margin-left:10px;margin-right:100px;margin-top:5px;">
@@ -286,12 +282,23 @@
                 <!-- Modal: body -->
                 <div class="modal-body">
 
+                    <!--FILE-->
+                    <div class="row">
+                        <div class="col-sm-9 col-sm-offset-1">
+                            <b>File: </b> select your .wig or .bw file.
+                            <div style="float:left;margin-left: 30px;margin-right:5px;">
+                            <input type="file" id="files" name="files[]" accept=".wig,.bw" multiple style="float:left" title="Select any .wig file (first you must select your organism or None at the right Options link)"/>
+                            <script src="js/upload-file.js"></script>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
                     <!--SPECIES-->
                     <div class="row">
                         <div class="col-sm-9 col-sm-offset-1">
                         <b>Organism: </b> select your .wig organism or 'None' if unavailable.
                             <label title="Select the organism for your .wig data, or None if unavailable (no functional or sequence data will load)">
-                                <select id="speciesList">
+                                <select id="speciesList" onchange="if (this.selectedIndex!=0) btLoadOptions.disabled=false; else btLoadOptions.disabled=true">
                                 <option value="null" SELECTED>Select organism...</option>
                                 <option value="Drosophila melanogaster">Drosophila melanogaster</option>
                                 <option value="Mus musculus">Mus musculus</option>
@@ -315,7 +322,7 @@
                                 <select id="interpolationList">
                                     <option value="none">None</option>
                                     <option value="step">Step</option>
-                                    <option value="rolling" SELECTED>Mean</option>
+                                    <option value="mean" SELECTED>Mean</option>
                                 </select>
                             </label>
                         </div>
@@ -360,7 +367,7 @@
                     <!-- Modal: footer-->
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                    <button type="button" id="btLoadOptions" class="btn btn-primary">Save</button>
+                    <button type="button" id="btLoadOptions" class="btn btn-primary" disabled="true">Load</button>
                 </div>
 
             </div>
@@ -418,10 +425,8 @@
                 $('#modalLoadOptions').modal('hide');
                 GVB_GLOBAL.ws       = $('#paramWS').val();
                 GVB_GLOBAL.nb       = $('#paramNB').val();
-                //GVB_GLOBAL.forceReload = true;
-                if(speciesList.selectedIndex!=0)
-                    files.disabled=false;
-
+                //preprocessing("undefined");
+                preprocessing();
             });
 
             function reloadParams(saveParams)

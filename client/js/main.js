@@ -25,7 +25,8 @@ var GVB_GLOBAL =
     softMutations: true,   // if true soft mutations (only 1-distance switch) is allowed to the patterns. E.g. "b" may change to "c" or "a" but not to "d" or "e".
     grid : false,           // if true, a grid to show percentile regions is shown on both lane 1 and 2
     forceReload : false,     //if true, available preprocessed data are discarded and the full preprocessing is remade based on actual parameters
-    interpolation : "none"  //Either 'none', 'step' or 'rolling' for no interpolation, step-like or a rolling average 30-length window
+    interpolation : "none",  //Either 'none', 'step' or 'rolling' for no interpolation, step-like or a rolling average 30-length window
+    sendFile : false    //if true, wig file should be uploaded to server for preprocessing
 };
 
 
@@ -49,15 +50,15 @@ function checkFile(file)
 
 
         GVB_GLOBAL.filename = file.name;
+        GVB_GLOBAL.file=file;
 
         /*var forceReload = false;
         if ($("#reload").is(':checked'))
             forceReload = true;*/
 
         // We try to communicate with the server, upload  file (if necessary)
-        //Server.sendFile(preprocessing, file, forceReload);
-        Server.sendFile(preprocessing, file, GVB_GLOBAL.forceReload);
-
+        //Server.testFile(preprocessing, file, GVB_GLOBAL.forceReload);
+        Server.testFile(file);
     }
 }
 
@@ -67,17 +68,21 @@ function checkFile(file)
 function preprocessing(chromosome)
 {
     if (DEBUG_GBV) console.log("\n----- PREPROCESSING -----");
-
+    if(GVB_GLOBAL.sendFile)
+        {
+        $('#loadText')[0].innerHTML="uploading file...";
+        Server.sendFile(GVB_GLOBAL.file)
+        }
     if(typeof(chromosome) === 'undefined')
     {
         GVB_GLOBAL.track = "None";
         if (DEBUG_GBV) console.log("chromosome: " + GVB_GLOBAL.track + " (first chromosome found)");
 
-        //Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, GVB_GLOBAL.ws, GVB_GLOBAL.nb, GVB_GLOBAL.maxSize, "Saccharomyces cerevisiae");
-        Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, GVB_GLOBAL.ws, GVB_GLOBAL.nb,
-        GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value,
-        $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value, $("#paramSD").val(),
-        GVB_GLOBAL.forceReload);
+        $('#loadText')[0].innerHTML="preprocessing data...";
+        Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, $("#paramWS")[0].value, $("#paramNB")[0].value,
+            GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value,
+            $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value, $("#paramSD").val(),
+            GVB_GLOBAL.forceReload);
 
         //TODO: explore if it can be 'intelligent' given the number of chromosomes?
     }
@@ -106,6 +111,7 @@ function drawingFirstDataLine(processedData, chromosome)
 
     GVB_GLOBAL.forceReload=false;
 
+    $('#loadText')[0].innerHTML=processedData.filename;
     // We create icons chromosomes and bind the click event
     GVB_GLOBAL.chromosomes = processedData.chromosomes;
     if(chromosome == "None")

@@ -206,13 +206,10 @@ function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize
     if(Math.floor(fullLength/maxSize) >= 1)
         globalSeq.scaleSeqServ = Math.floor(fullLength/maxSize);
 
-    drawGrid();
 
     // We use the core function
     dataLine_core(false, globalDL1,
         globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
-       // globalSeq.seqServ, startSeq, endSeq, startSeq);
-
 
         // We confirm that we have finished
     globalDL1.drawn = true;
@@ -1077,6 +1074,9 @@ function dataLine_core(DEBUG, globalDL,
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+    globalDL.cv.svg=svg;
+    drawGrid();
+
     // Image SVG: axis x
     svg.append("g")
         .attr("class", classSVG+" x axis")
@@ -1099,6 +1099,7 @@ function dataLine_core(DEBUG, globalDL,
         .datum(data)
         .append("path")
         .attr("d", line);
+
 
 
     // The image SVG: highlighted line
@@ -1278,6 +1279,8 @@ for(var i in genes)
  * For datalines 1 and 2 in case the option to see how bands are determined is selected
  */
 function drawGrid() {
+
+   /*
     if (globalDL1.drawn)
     {
         globalDL1.cv.svg.selectAll(".dl1.band").remove();
@@ -1293,6 +1296,22 @@ function drawGrid() {
         {
         return;
         }
+        */
+
+    if ($("#paramGrid").is(':checked') == false)    //No order to draw
+    {
+        if (globalDL1.drawn)
+            {
+            globalDL1.cv.svg.selectAll(".dl1.band").remove();
+            globalDL1.cv.svg.selectAll(".dl1.band.letter").remove();
+            }
+        if (globalDL2.drawn)
+            {
+            globalDL2.cv.svg.selectAll(".dl1.band").remove();
+            globalDL2.cv.svg.selectAll(".dl1.band.letter").remove();
+            }
+        return;
+    }
 
 
     var bands = globalSeq.bins;
@@ -1315,53 +1334,58 @@ function drawGrid() {
 
     //1) BANDS IN LINE 1
 
-    globalDL1.cv.svg.selectAll("bands")
-        .data(bw)
-        .enter()
-        .append("rect")
-        .attr('class', 'dl1 band')
-        .attr("x", 0)
-        .attr("y", function (d, i) {
-            if (i < bands.length - 1) {
+    if(globalDL1.drawn && globalDL1.cv.svg.selectAll(".dl1.band")[0].length<=1)    //If not already drawn
+    {
+        globalDL1.cv.svg.selectAll("bands")
+            .data(bw)
+            .enter()
+            .append("rect")
+            .attr('class', 'dl1 band')
+            .attr("x", 0)
+            .attr("y", function (d, i) {
+                if (i < bands.length - 1) {
+                    y0 += d;
+                    return y0 - d;
+                }
+                else
+                    return 0;
+            })
+            .attr("fill", function (d, i) {
+                if (i % 2 == 0)
+                    return "#ffc477";
+                else
+                    return "white";
+            })
+            .attr("width", dimDL.graphWidth - margin.right - margin.left)
+            .attr("height", function (d) {
+                return d;
+            });
+
+        y0 = 0;
+        var code = 97 + bw.length;
+
+        // Draw occurrences label
+        globalDL1.cv.svg.selectAll("band_letters")
+            .data(bw)
+            .enter()
+            .append("text")
+            .attr('class', 'dl1 band letter')
+            .attr('x', 10)
+            .attr("y", function (d, i) {
                 y0 += d;
-                return y0 - d;
-            }
-            else
-                return 0;
-        })
-        .attr("fill", function (d, i) {
-            if (i % 2 == 0)
-                return "#ffc477";
-            else
-                return "white";
-        })
-        .attr("width", dimDL.graphWidth - margin.right - margin.left)
-        .attr("height", function (d) {
-            return d;
-        });
-
-    y0 = 0;
-    var code = 97 + bw.length;
-
-    // Draw occurrences label
-    globalDL1.cv.svg.selectAll("band_letters")
-        .data(bw)
-        .enter()
-        .append("text")
-        .attr('class', 'dl1 band letter')
-        .attr('x', 10)
-        .attr("y", function (d, i) {
-            y0 += d;
-            return y0 - d + 10;
-        })
-        .text(function (d, i) {
-            code -= 1;
-            return String.fromCharCode(code);
-        });
+                return y0 - d + 10;
+            })
+            .text(function (d, i) {
+                code -= 1;
+                return String.fromCharCode(code);
+            });
+    }
 
 
     //2) BANDS IN LINE 2
-    if (globalDL2.drawn) {
+    if(globalDL2.drawn && globalDL2.cv.svg.selectAll(".dl1.band")[0].length<=1)    //If not already drawn
+    //if (globalDL2.drawn)
+        {
         y0=0;
         globalDL2.cv.svg.selectAll("bands")
             .data(bw)

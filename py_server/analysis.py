@@ -36,7 +36,7 @@ ALLOWED_EXTENSIONS = set(['txt', 'wig', 'bw'])
 
 app=Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
+#%%
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
@@ -77,24 +77,60 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
       
 #Tests if there's a pickle version of the file      
+#@app.route('/testUpload', methods=['GET'])
+#def testUpload():
+#    filename=""+request.args.get("filename") 
+#    filename=re.sub(r"\..*$", ".pic", filename)
+#    print("Testing upload of ",filename)
+#    cpath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+#    if os.path.exists(cpath) and filename in os.listdir(cpath):
+#        codeEx=request.args.get("forceReload")
+#        if(codeEx=="True"):
+#            print("-> outdated version")
+#            return jsonify(response='outdated version')
+#        else:
+#            print("-> file exists")
+#            return jsonify(response="file exists")
+#    else:
+#        print("-> not found")
+#        return jsonify(response='not found')
+#%%
 @app.route('/testUpload', methods=['GET'])
 def testUpload():
+    import re
     filename=""+request.args.get("filename") 
-    filename=re.sub(r"\..*$", ".pic", filename)
     print("Testing upload of ",filename)
     cpath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    print cpath
     if os.path.exists(cpath) and filename in os.listdir(cpath):
-        codeEx=request.args.get("forceReload")
-        if(codeEx=="True"):
-            print("-> outdated version")
-            return jsonify(response='outdated version')
-        else:
-            print("-> file exists")
-            return jsonify(response="file exists")
+        #.wig exists
+        filename=re.sub(r"\..*$", "", filename)
+        print("Path exists")
+        for f in os.listdir(cpath):
+            print f
+            try:
+                if(f.startswith(filename) and f.endswith(".pic")):
+                    #.pic exists
+                    f=re.sub("^"+filename,"",f)
+                    org=re.sub(".*org", "", re.sub("\\.pic$","",f))
+                    f=re.sub("org"+org, "",f)
+                    org=re.sub("_", " ", org)
+                    clip=float(re.sub("ws.*$","",re.sub("c","",f)))
+                    f=re.sub("c"+str(clip), "", f)
+                    ws=int(re.sub("nb.*$","",re.sub("ws","",f)))
+                    f=re.sub("ws"+str(ws), "", f)
+                    nb=int(re.sub("i.*$","",re.sub("nb","",f)))
+                    f=re.sub("nb"+str(nb), "", f)
+                    interpol=re.sub(".pic$", "", re.sub("^i","",f))
+                    
+                    print(clip," ",ws," ",nb, " ", interpol, " ", org)
+                    return jsonify(response="file exists", clip=clip, ws=ws, nb=nb, interpol=interpol, org=org)
+            except:
+                continue
+        return jsonify(response='outdated version') #no .pic (preprocess required)
     else:
-        print("-> not found")
-        return jsonify(response='not found')
- 
+        return jsonify(response='not found')#no .wig (upload required)
+#testUpload("dwtMini2.wig")
 #%%------------- SESSION MANAGEMENT
 #data must be a dic with dseq and bwt
 def saveSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/dwtMini2.pkl", data=""):
@@ -129,7 +165,7 @@ retorna    objeto JSON con los siguientes campos:
 """
 #%%#TODO: select and pass organism to 
 @app.route("/preprocess")
-def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", recharge="False", organism="Saccharomyces cerevisiae", interpolation="rolling"):
+def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", recharge="False", organism="Saccharomyces cerevisiae", interpolation="mean"):
     global data
     global session
 
@@ -150,9 +186,11 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     maxSize=int(request.args.get("maxSize"))
     interpolation=request.args.get("interpolation")
     stdev=float(request.args.get("stdev"))
-    picklePath=os.path.join(basePath,re.sub(r"\..*$", ".pic", filename))
+    f=re.sub(r"\..*$", "", filename)+"c"+str(stdev)+"ws"+str(windowSize)+"nb"+str(numBins)+"i"+interpolation+"org"+organism.replace(" ", "_")+".pic"
+    picklePath=os.path.join(basePath,f)
     savePickle=False
     
+    print("File: "+f)
     print("organism:",organism)
     print("reload:", forceReload)
     
