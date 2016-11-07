@@ -167,6 +167,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     seq=f.readlines()
     print ((time.clock()-t0),' s in reading') 
     t0=time.clock()
+    print(seq[1])
     if("fixedStep" in seq[1]):
         print ("Fixed Step")
         chsize=[]
@@ -250,13 +251,19 @@ def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism
   
         m[k]=np.mean(seq, dtype=float)
         sd[k]=np.std(seq, dtype=float)
-        upperlim=m[k]+stdev*sd[k]#avoid outliers? testing
-        seq=np.clip(seq,0,upperlim)
+        maximum[k]=np.max(seq)
+        minimum[k]=np.min(seq)
+        print("Values in [",minimum[k],maximum[k],"]")
+        upperlim=min(maximum[k],m[k]+stdev*sd[k])#avoid outliers? testing
+        lowerlim=max(minimum[k],m[k]-stdev*sd[k])
+        seq=np.clip(seq,lowerlim,upperlim)
+        #seq=np.clip(seq,0,upperlim)
         
         m[k]=np.mean(seq, dtype=float)
         sd[k]=np.std(seq, dtype=float)
         maximum[k]=np.max(seq)
         minimum[k]=np.min(seq)
+        print("Values after clipping in [",minimum[k],maximum[k],"]")
         print('\\tstats in ',(time.clock()-t0), "s")
     
     
@@ -299,7 +306,6 @@ def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism
 
     data={"seq":seqd, "fullLength":fullLength, "maximum":maximum, "minimum":minimum,
       "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF, "res":res,
-#      "go":dataGO, "goa":dataGOA, 
       "fasta":dataFASTA, "bins":bins, "windowSize":windowSize}
     return data
 
@@ -419,13 +425,15 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True, bins
         pseq=seq[seq.ravel().nonzero()]#remove zeroes to compute percs.
         #pseq=seq
         if(len(bins)==0):
-            pers=[0]
+            #pers=[0]
+            pers=[float(minimo)]
             for i in range(1,numBins+1):
                 p=np.percentile(pseq,(100.0/numBins)*i)
                 pers.append(p)
             bins=pers
         else:
             alphabet=alphabetTotal[:len(bins)]
+        bins.sort()        
         print bins
         mseq=np.array(mseq);
         digseq=np.digitize(mseq,bins)
@@ -732,3 +740,16 @@ def fixDmelGFF():
         fw.write(cad)
     fw.close()
 #fixDmelGFF()
+    
+    
+#%%
+def commonName(batch):
+    import difflib
+    import os
+    import re
+    a=re.sub("\..*$", "", os.path.basename(batch[0]))
+    b=re.sub("\..*$", "", os.path.basename(batch[1]))
+    seq=difflib.SequenceMatcher(None,a,b)
+    m=seq.find_longest_match(0,len(a),0,len(b))
+    return a[m.a:(m.a+m.size)]
+#%%

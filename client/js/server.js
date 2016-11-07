@@ -188,18 +188,19 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
          *                      on.
          */
-        Server.preprocess = function (callback, filename, track, ws, nb, maxSize, organism, interpolation, stdev, recharge)
+        Server.preprocess = function (callback, filenames, track, ws, nb, maxSize, organism, interpolation, stdev, recharge)
         {
             var startTime = new Date();
 
             // Show the image of "loading..."
             showImageLoading("imgLoadingFile", true);
 
-            filename = encodeURIComponent(filename);  // it encodes the following characters: , / ? : @ & = + $ #
+            for(var i in filenames)
+                filenames[i] = "\""+encodeURIComponent(filenames[i])+"\"";  // it encodes the following characters: , / ? : @ & = + $ #
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/preprocess?user="+_user+"&password="+_password+"&filename="+filename+"&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&stdev="+stdev+"&recharge="+recharge+"&organism="+organism+"&interpolation="+interpolation,
+                    url: _serverPath+"/preprocess?user="+_user+"&password="+_password+"&filenames=["+filenames+"]&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&stdev="+stdev+"&recharge="+recharge+"&organism="+organism+"&interpolation="+interpolation,
                     type: "GET",
                     datatype: "json"
                 });
@@ -229,7 +230,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.fullLength=result.fullLength;
                     response.chromosomes=result.chromosomes;
                     response.bins=result.bins;
-                    response.filename=filename;
+                    response.filenames=filenames;
 
                     // Hide the image of "loading..."
                     showImageLoading("imgLoadingFile", false);
@@ -293,6 +294,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.bins=result.bins;
                     response.chromosomes=result.chromosomes;
                     response.search=result.search;
+                    response.ego=result.ego;
 
                     // Hide the image of "loading..."
                     showImageLoading("imgLoadingFile", false);
@@ -330,8 +332,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var requestAJAX = $.ajax(
                 {
-                    //url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+"&geo="+geo+"&intersect="+intersect+"&softMutations="+softMutations,
-                    url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+"&geo="+geo+"&intersect=false&softMutations="+softMutations,
+                    url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+"&geo="+geo+"&intersect="+intersect+"&softMutations="+softMutations,
                     type: "GET",
                     datatype: "json"
                 });
@@ -678,9 +679,12 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .done(function(result)
                 {
                     var response = [];
-                    response.partSeq = result.partSeq;
+                    /*response.partSeq = result.partSeq;
+                    response.partMin = result.partMin;
+                    response.partMax = result.partMax;*/
+                    response=result;
 
-                    callback(response.partSeq, numNucleotides, point, sizePattern);
+                    callback(response, numNucleotides, point, sizePattern);
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
@@ -744,13 +748,13 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param size: length from the starting points
          * @param track: chromosome or track where the sequences must be taken from
          */
-        Server.nucProfile = function (callback, track, positions, size)
+        Server.nucProfile = function (callback, track, positions, size, k)
         {
             // var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/nucProfile?user="+_user+"&password="+_password+"&track="+track+"&positions="+positions+"&size="+size,
+                    url: _serverPath+"/nucProfile?user="+_user+"&password="+_password+"&track="+track+"&positions="+positions+"&size="+size+"&k="+k,
                     type: "GET",
                     datatype: "json"
                 });

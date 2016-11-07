@@ -103,7 +103,12 @@ body {
     fill: darkred;
     font-family: sans-serif;
     font-size: 11px;
-
+}
+.dl1.export-label{
+    fill: darkred;
+    font-family: sans-serif;
+    font-style: italic;
+    font-size: 11px;
 }
 
 /* ONTOLOGY TERMS */
@@ -190,9 +195,17 @@ body {
     stroke-width: 2px;
 }
 
+.dl2.line.shadow {
+    fill: #d1e0ff;
+    stroke: #d1e0ff;
+    stroke-width: 1px;
+    fill-opacity: .5;
+
+}
 
 /* GENE ANNOTATIONS */
 .dl2.annotation{
+    fill: #BFB;
     fill-opacity: 1;
 }
 .dl2.annotation.label{
@@ -212,8 +225,8 @@ body {
     font-family: sans-serif;
     font-size: 10px;
     color: #666;
-    fill-opacity: .5;
-    background: #EFE;
+    fill-opacity: 1;
+    background: #BFB;
     border: 1px;
     border-radius: 3px;
     padding: 2px;

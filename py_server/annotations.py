@@ -31,7 +31,7 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
                 continue
         entries.append(row)
         
-    print("timer in filtering out entries", (time.clock()-t0))
+    print("time in filtering out entries", (time.clock()-t0))
     t0=time.clock()
  
     import numpy as np

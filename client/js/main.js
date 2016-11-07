@@ -14,7 +14,8 @@ var globalTime;
 
 var GVB_GLOBAL =
 {
-    filename: null,         // filename: name of file
+    filenames: null,         // filenames: name of files
+    files: null,
     chromosomes: null,      // chromosomes: array with the names of all chromosomes
     track: null,            // track: name of selected chromosome
     ws: 30,                 // window size: discrete to real ratio
@@ -26,14 +27,16 @@ var GVB_GLOBAL =
     grid : false,           // if true, a grid to show percentile regions is shown on both lane 1 and 2
     forceReload : false,     //if true, available preprocessed data are discarded and the full preprocessing is remade based on actual parameters
     interpolation : "none",  //Either 'none', 'step' or 'rolling' for no interpolation, step-like or a rolling average 30-length window
-    sendFile : false    //if true, wig file should be uploaded to server for preprocessing
+    sendFile : false,    //if true, wig file should be uploaded to server for preprocessing
+    exportFileURL: ""
 };
 
 
 // CHECK FILE (AND UPLOAD FILE)
 ////////////////////////////////////////////
 
-function checkFile(file)
+//function checkFile(file)
+function checkFile(files)
 {
     /**
      * @typedef {Object} file
@@ -43,22 +46,21 @@ function checkFile(file)
     destroyAll(false);
 
     // We ensure that there is a selected file
-    if(typeof(file) != 'undefined')
+    if(typeof(files) != 'undefined')
     {
-        if (DEBUG_GBV) console.log("\n----- UPLOAD FILE -----");
-        if (DEBUG_GBV) console.log("Name of file: " + file.name);
+        GVB_GLOBAL.filenames=[];
+        GVB_GLOBAL.files=[];
+
+        for(var i=0;i<files.length;i++) {
+            if (DEBUG_GBV) console.log("\n----- UPLOAD FILE -----");
+            if (DEBUG_GBV) console.log("Name of file: " + files[i].name);
 
 
-        GVB_GLOBAL.filename = file.name;
-        GVB_GLOBAL.file=file;
+            GVB_GLOBAL.filenames.push(files[i].name);
+            GVB_GLOBAL.files.push(files[i]);
 
-        /*var forceReload = false;
-        if ($("#reload").is(':checked'))
-            forceReload = true;*/
-
-        // We try to communicate with the server, upload  file (if necessary)
-        //Server.testFile(preprocessing, file, GVB_GLOBAL.forceReload);
-        Server.testFile(file);
+            Server.testFile(files[i]);
+            }
     }
 }
 
@@ -71,7 +73,9 @@ function preprocessing(chromosome)
     if(GVB_GLOBAL.sendFile)
         {
         $('#loadText')[0].innerHTML="uploading file...";
-        Server.sendFile(GVB_GLOBAL.file)
+        for (var i in GVB_GLOBAL.files)
+            Server.sendFile(GVB_GLOBAL.files[i])
+        GVB_GLOBAL.sendFile=false;
         }
     if(typeof(chromosome) === 'undefined')
     {
@@ -79,12 +83,10 @@ function preprocessing(chromosome)
         if (DEBUG_GBV) console.log("chromosome: " + GVB_GLOBAL.track + " (first chromosome found)");
 
         $('#loadText')[0].innerHTML="preprocessing data...";
-        Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filename, GVB_GLOBAL.track, $("#paramWS")[0].value, $("#paramNB")[0].value,
+        Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filenames, GVB_GLOBAL.track, $("#paramWS").val(), $("#paramNB").val(),
             GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value,
             $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value, $("#paramSD").val(),
             GVB_GLOBAL.forceReload);
-
-        //TODO: explore if it can be 'intelligent' given the number of chromosomes?
     }
     else
     {
@@ -111,11 +113,15 @@ function drawingFirstDataLine(processedData, chromosome)
 
     GVB_GLOBAL.forceReload=false;
 
-    $('#loadText')[0].innerHTML=processedData.filename;
     // We create icons chromosomes and bind the click event
     GVB_GLOBAL.chromosomes = processedData.chromosomes;
     if(chromosome == "None")
     {
+        if(processedData.filenames.length>1)
+            $('#loadText')[0].innerHTML=processedData.filenames[0].replace(/\"/g,"")+" et al.";  //replaces ',' by '","';
+        else
+            $('#loadText')[0].innerHTML=processedData.filenames[0].replace(/\"/g,"");  //replaces ',' by '","';
+
         createIconsChromosomes(GVB_GLOBAL.chromosomes);
         GVB_GLOBAL.track    = processedData.chromosomes[0];
     }
@@ -137,16 +143,21 @@ function drawingFirstDataLine(processedData, chromosome)
     if(DEBUG_GBV) console.log("Length of seqServer:"+seqServer.length+" (full length seq="+fullLength+")");
 
     if(typeof(fullLength)=="object")
-        dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength[GVB_GLOBAL.track], seqServer, 0, fullLength[GVB_GLOBAL.track], GVB_GLOBAL.maxSize, mean, stdev, processedData.max, GVB_GLOBAL.ws, processedData.bins);
+        dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength[GVB_GLOBAL.track], seqServer, 0, fullLength[GVB_GLOBAL.track], GVB_GLOBAL.maxSize, mean, stdev, processedData.min, processedData.max, GVB_GLOBAL.ws, processedData.bins);
     else
-        dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength, seqServer, 0, fullLength, GVB_GLOBAL.maxSize, mean, stdev, processedData.max, GVB_GLOBAL.ws, processedData.bins);
+        dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength, seqServer, 0, fullLength, GVB_GLOBAL.maxSize, mean, stdev, processedData.min, processedData.max, GVB_GLOBAL.ws, processedData.bins);
 
     if(processedData.hasOwnProperty("search") && processedData.search.points.hasOwnProperty(chromosome))
         {
         console.log("There's a search!")
         drawSearch(processedData.search.points, processedData.search.sizePattern);
         }
-}
+    if(processedData.hasOwnProperty("ego"))
+        {
+        console.log("There's enrichment")
+        drawEnrichment(processedData.ego);
+        }
+    }
 
 
 
@@ -197,10 +208,12 @@ function searchPattern()
             var e = document.getElementById("geo_type");
             geo = e.options[e.selectedIndex].value;
             }
+        var intersect="soft";
+        if(document.getElementById('paramIntersect').checked)
+            intersect="hard"
 
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
-//        Server.search(drawSearch, pattern,d, geo, GVB_GLOBAL.intersect);
-        Server.search(searchResults, pattern,d, geo, "soft", GVB_GLOBAL.softMutations);
+        Server.search(searchResults, pattern,d, geo, intersect, GVB_GLOBAL.softMutations);
     }
 }
 
@@ -219,13 +232,76 @@ function searchResults(result)
     //----------------------------------
     drawSearch(result.points, result.sizePattern);
 
-
+    exportPositions(result.points)
     // ENRICHMENT
     //----------------------------------
     if (DEBUG_GBV) console.log("\n----- ENRICHMENT -----");
     getAllAnnotations(result.points, result.sizePattern);
+
 }
 
+
+function exportPositions(points)
+    {
+    var text="pos\tchromosome\n";
+    for(var ch in points)
+        {
+        var pch = JSON.parse(points[ch]);
+        for(var p in pch)
+            {
+            text = text + pch[p] + "\t" + ch +"\n";
+            }
+        }
+    var data = new Blob([text], {type: 'text/plain'});
+    var URL = this.URL || this.webkitURL;
+    var textURL;
+    if (textURL !== null)   URL.revokeObjectURL(textURL);
+
+    var textURL = URL.createObjectURL(data);
+    globalDL1.posURL=textURL;
+    }
+
+function exportGenes(annotations)
+{
+    var text="id\tpos\tstart\tend\tsense\tchromosome\tname\n";
+    for(var a in annotations)
+    {
+        var aa=annotations[a]
+        text=text+a+"\t"+aa.pos+"\t"+aa.start+"\t"+aa.end+"\t"+aa.sense+"\t"+aa.chromosome+"\t"+aa.name+"\n";
+    }
+    var data = new Blob([text], {type: 'text/plain'});
+    var URL = this.URL || this.webkitURL;
+    var textURL;
+    // If we are replacing a previously generated file we need to
+    // manually revoke the object URL to avoid memory leaks.
+    if (textURL !== null) {
+        URL.revokeObjectURL(textURL);
+    }
+
+    var textURL = URL.createObjectURL(data);
+    globalDL1.genesURL=textURL;
+}
+
+function exportGO(annotations)
+{
+    var text="id\tname\t#gis\t#go\tp-value\tgis\n";
+    for(var a in annotations)
+    {
+        var aa=annotations[a]
+        text=text+a+"\t"+aa.go_name+"\t"+aa.ngis+"\t"+aa.ngo+"\t"+aa.pval+"\t"+aa.gis+"\n";
+    }
+    var data = new Blob([text], {type: 'text/plain'});
+    var URL = this.URL || this.webkitURL;
+    var textURL;
+    // If we are replacing a previously generated file we need to
+    // manually revoke the object URL to avoid memory leaks.
+    if (textURL !== null) {
+        URL.revokeObjectURL(textURL);
+    }
+
+    var textURL = URL.createObjectURL(data);
+    globalDL1.goURL=textURL;
+}
 
 // GET ALL ANNOTATIONS
 ////////////////////////////////
@@ -262,7 +338,12 @@ function getEnrichment(gis, annotations)
     console.log("REAL TIME IN ANNOTATIONS: "+(new Date()-globalTime));
     setAnnotations(gis, annotations);
 
+    //Prepare file for export
+    exportGenes(annotations);
+
     Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
+
+
 }
 
 
@@ -328,6 +409,11 @@ function createIconsChromosomes(chromosomes)
 
 function destroyAll(clear)
 {
+    if(globalDL1.drawn)
+        globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm-tip").remove();
+    if(globalDL2.drawn)
+        globalDL2.cv.svg.selectAll("."+globalDL2.cv.classSVG+".annotation-tip").remove();
+
     // Empty all SVG images (of the array)
     var images = ["lineSeq", "lineSeq2", "lineSeq3"];
     for(var i=0;i<images.length;i++)
@@ -336,6 +422,7 @@ function destroyAll(clear)
         if(image.html() != "")
             image.empty();
     }
+
 
     // Empty all icons of chromosomes
     $("#imagesChromosomes").empty();

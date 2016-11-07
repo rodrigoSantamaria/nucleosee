@@ -25,6 +25,7 @@ import re
 import pickle #i tried cPickle but is way slower!
     
 
+
     
 
 
@@ -101,13 +102,10 @@ def testUpload():
     filename=""+request.args.get("filename") 
     print("Testing upload of ",filename)
     cpath=os.path.join(app.config['UPLOAD_FOLDER'],user)
-    print cpath
     if os.path.exists(cpath) and filename in os.listdir(cpath):
         #.wig exists
         filename=re.sub(r"\..*$", "", filename)
-        print("Path exists")
         for f in os.listdir(cpath):
-            print f
             try:
                 if(f.startswith(filename) and f.endswith(".pic")):
                     #.pic exists
@@ -123,7 +121,7 @@ def testUpload():
                     f=re.sub("nb"+str(nb), "", f)
                     interpol=re.sub(".pic$", "", re.sub("^i","",f))
                     
-                    print(clip," ",ws," ",nb, " ", interpol, " ", org)
+                    #print(clip," ",ws," ",nb, " ", interpol, " ", org)
                     return jsonify(response="file exists", clip=clip, ws=ws, nb=nb, interpol=interpol, org=org)
             except:
                 continue
@@ -146,6 +144,162 @@ def loadSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/d
     session=pickle.load(f)
     return session
     
+#%%
+@app.route("/preprocess")
+def batchPreprocess(filenames=[], windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", organism="Saccharomyces cerevisiae", interpolation="mean"):
+    global data
+    global session
+#
+#    
+    import time
+    import re  
+    import os, pickle        
+    import numpy as np
+    import helpers
+
+    t00=time.clock()
+#    
+#    #0) getting parameter
+    print('Parameters...')
+    t0=time.clock()
+    basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    filenames=eval(request.args.get("filenames"))
+    track=request.args.get("track")
+    organism=request.args.get("organism")
+    windowSize=int(request.args.get("windowSize"))
+    numBins=int(request.args.get("numBins"))
+    maxSize=int(request.args.get("maxSize"))
+    interpolation=request.args.get("interpolation")
+    stdev=float(request.args.get("stdev"))
+
+    data={}
+    print("Files are: ",filenames)
+    
+    #TODO: check that all batch files have same tracks and sizes
+    #3) annotations (same for all batch files? - hard to do with pickles)
+    t0=time.clock()
+    dataGO=ann.go()
+    dataGOA=[]
+
+    try:
+        dataGOA=ann.goa(organism)
+        print("GO loaded")
+    except:
+        print("organism",organism,"'s annotations missing or failing")
+    print("done! ... GO annotations takes",(time.clock()-t0))
+    
+    data["go"]=dataGO
+    data["goa"]=dataGOA
+    data["windowSize"]=windowSize
+
+    basePath="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/"
+    print("organism:",organism)
+        
+    #------------ Preprocess each file
+    for filename in filenames: #for each file
+        f=re.sub(r"\..*$", "", filename)+"c"+str(stdev)+"ws"+str(windowSize)+"nb"+str(numBins)+"i"+interpolation+"org"+organism.replace(" ", "_")+".pic"
+        picklePath=os.path.join(basePath,f)
+        picklePath=os.path.join(f)
+        path=os.path.join(basePath,filename)
+
+        savePickle=False
+        
+        print("---------------- FILE: "+f+" ------------------")
+        
+        genome={}
+        
+        #1A) Preprocessed data (.pic data) exist
+        if os.path.isfile(picklePath):
+            f=open(picklePath)
+            data[filename]=pickle.load(f)[filename]
+            print("pickle loaded!", data[filename].keys())
+            
+            if track=="None":
+                track=sorted(data[filename]["maximum"].keys())[0]
+                    
+        #1B) Preprocessing must be done     
+        else: #no previous preprocessing -> do it now
+            if(path.endswith("bw")):
+                tbw=time.clock()
+                data[filename]=helpers.processBigWig(path=path, track=track, windowSize=windowSize, numBins=numBins, percentile=True, maxSize=maxSize, stdev=stdev, organism=organism, picklePath=picklePath)
+                print("process bw done in ",(time.clock()-tbw))
+                genome=data[filename]["seq"]
+    
+            else:
+                genome=helpers.readWig(path, method=interpolation)
+                data[filename]=helpers.processWig(genome, stdev=stdev, windowSize=windowSize, numBins=numBins, maxSize=maxSize, percentile=True, organism=organism, track=track)
+    
+            if track=="None":
+                track=sorted(genome.keys())[0]
+            savePickle=True
+    
+        
+        print("load data takes",(time.clock()-t0))
+       
+        if(len(data[filename]["gff"].keys())!=len(data[filename]["seq"].keys())):
+            print("One or more chromosome tracks do not match with GFF names:")
+        
+        if(savePickle):
+            tpickle=time.clock()
+            print("saving pickle in path:", picklePath)
+            
+            f=open(picklePath, 'w')
+            pickle.dump(data,f)
+            print("serialize data takes",(time.clock()-tpickle))
+
+   
+    #--------------- COMPILE BATCH
+    data["batch"]={"min":{}, "max":{}}
+    meanBatch={}
+    if(len(filenames)>1):
+        for k in data[filenames[0]]["seq"].keys():
+            data["batch"]["min"][k]=np.minimum(data[filenames[0]]["seq"][k], data[filenames[1]]["seq"][k])
+            data["batch"]["max"][k]=np.maximum(data[filenames[0]]["seq"][k], data[filenames[1]]["seq"][k])
+            temp=np.ndarray(shape=(len(filenames), len(data[filenames[0]]["seq"][k])))
+            temp[0]=data[filenames[0]]["seq"][k]
+            temp[1]=data[filenames[1]]["seq"][k]
+            for i in range(2,len(filenames)):
+                data["batch"]["min"][k]=np.minimum(data["batch"]["min"][k], data[filenames[i]]["seq"][k])
+                data["batch"]["max"][k]=np.maximum(data["batch"]["max"][k], data[filenames[i]]["seq"][k])
+                temp[i]=data[filenames[i]]["seq"][k]
+            meanBatch[k]=np.mean(temp,axis=0)  
+        data["batch"]["processed"]=helpers.processWig(meanBatch, stdev, windowSize, numBins, maxSize, True, organism, k)
+    else:
+        data["batch"]["processed"]=data[filenames[0]]
+        data["batch"]["min"]=data[filenames[0]]["seq"]
+        data["batch"]["max"]=data[filenames[0]]["seq"]
+        
+    session[user]=data
+    print('file preprocess takes ',(time.clock()-t00),"s")
+    
+    return jsonify(seq=data["batch"]["processed"]["res"][track], 
+                   fullLength=data["batch"]["processed"]["fullLength"],#len(genome[track]), 
+                   maximum=(float)(data["batch"]["processed"]["maximum"][track]),
+                   minimum=(float)(data["batch"]["processed"]["minimum"][track]), 
+                    mean=(float)(data["batch"]["processed"]["mean"][track]), 
+                stdev=(float)(data["batch"]["processed"]["stdev"][track]), 
+                dseq=data["batch"]["processed"]["dseq"][track], 
+                chromosomes=sorted(data["batch"]["processed"]["maximum"].keys()),
+                bins=data["batch"]["processed"]["bins"][track])
+#    return data
+   
+#batch=["MN-Damien-WT-1_S1_wlt_mean.wig", "MN-Damien-WT-2_S2_wlt_mean.wig"]                
+#data=batchPreprocess(filenames=batch, windowSize=100, numBins=3, maxSize=100000, stdev=3, track="None", organism="Schizosaccharomyces pombe", interpolation="mean")
+     
+#%%
+#data["batch"]={"min":{}, "max":{}, "mean":{}}
+#for k in data[batch[0]]["seq"].keys():
+#    data["batch"]["min"][k]=np.minimum(data[batch[0]]["seq"][k], data[batch[1]]["seq"][k])
+#    data["batch"]["max"][k]=np.maximum(data[batch[0]]["seq"][k], data[batch[1]]["seq"][k])
+#    temp=np.ndarray(shape=(len(batch), len(data[batch[0]]["seq"][k])))
+#    temp[0]=data[batch[0]]["seq"][k]
+#    temp[1]=data[batch[1]]["seq"][k]
+#    for i in range(2,len(batch)):
+#        data["batch"]["min"][k]=np.minimum(data["batch"]["min"][k], data[batch[i]]["seq"][k])
+#        data["batch"]["max"][k]=np.maximum(data["batch"]["max"][k], data[batch[i]]["seq"][k])
+#        temp[i]=data[batch[i]]["seq"][k]
+#    data["batch"]["mean"][k]=np.mean(temp,axis=0)  
+#data["batch"]["processed"]=helpers.processWig(data["batch"]["mean"], stdev=3, windowSize=100, numBins=3, maxSize=100000, percentile=True, organism="Schizosaccharomyces pombe", track=k)
     
 #%%
 """
@@ -163,8 +317,7 @@ retorna    objeto JSON con los siguientes campos:
                maximum,minimum,mean,sdev   medidas estadísticas de los datos normalizados
                dseq        datos discretizados por la función discretize()
 """
-#%%#TODO: select and pass organism to 
-@app.route("/preprocess")
+#%%#
 def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", recharge="False", organism="Saccharomyces cerevisiae", interpolation="mean"):
     global data
     global session
@@ -238,8 +391,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     t0=time.clock()
     dataGO=ann.go()
     dataGOA=[]
-    #dataGFF=[] #GFF and FASTA now in the preprocess/.pic
-   
+
     try:
         dataGOA=ann.goa(organism)
         print("GO loaded")
@@ -247,17 +399,8 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         print("organism",organism,"'s annotations missing or failing")
     print("done! ... GO annotations takes",(time.clock()-t0))
     
-    #if(bigWig==False):
-        #data["fullLength"]
-        #data={"seq":seqd, "fullLength":len(seq), "maximum":maximum, "minimum":minimum,
-        #      "mean":m, "stdev":sd, "dseq":dseq, "bwt":t, "gff":dataGFF, "res":res,
-        #      "go":dataGO, "goa":dataGOA, "fasta":dataFASTA, "bins":bins, "windowSize":windowSize}
-        #already done above
-    #else:#add missing fields to the data structure given by processBigWig
-    print ("Data keys:" ,data.keys())
     data["go"]=dataGO
     data["goa"]=dataGOA
-   # data["gff"]=dataGFF
     data["windowSize"]=windowSize
        
     print("Setting session data")
@@ -277,17 +420,18 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     print('whole preprocess takes ',(time.clock()-t00),"s")
     
     print('returning track',track)
-    print('max values are',data["maximum"])
+    print('bins are',data["bins"][track])
+    #data["bins"][track]=[abs(x) for x in data["bins"][track]]
     
     return jsonify(seq=data["res"][track], 
                    fullLength=data["fullLength"],#len(genome[track]), 
-                   maximum=(float)(data["maximum"][track]), 
+                   maximum=(float)(data["maximum"][track]),
                    minimum=(float)(data["minimum"][track]), 
                     mean=(float)(data["mean"][track]), 
                 stdev=(float)(data["stdev"][track]), 
                 dseq=data["dseq"][track], 
-                bins=data["bins"][track], 
-                chromosomes=sorted(data["maximum"].keys()))
+                chromosomes=sorted(data["maximum"].keys()),
+                bins=data["bins"][track])
 
 #%%preprocess(filename="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/dwtMini2.wig")
 
@@ -303,8 +447,10 @@ def getTrack(track="None"):
 
     if( ("search" in data.keys()) == False):
         data["search"]={"points":{}, "sizePattern":0}
-    print data["search"]
-    return jsonify(seq=data["res"][track], fullLength=len(data["seq"][track]), maximum=(float)(data["maximum"][track]), minimum=(float)(data["minimum"][track]), mean=(float)(data["mean"][track]), stdev=(float)(data["stdev"][track]), dseq=data["dseq"][track], bins=data["bins"][track], chromosomes=sorted(data["res"].keys()), search=data["search"])
+    if( ("ego" in data.keys()) == False):
+        data["ego"]={}
+    
+    return jsonify(seq=data["batch"]["processed"]["res"][track], fullLength=len(data["batch"]["processed"]["seq"][track]), maximum=(float)(data["batch"]["processed"]["maximum"][track]), minimum=(float)(data["batch"]["processed"]["minimum"][track]), mean=(float)(data["batch"]["processed"]["mean"][track]), stdev=(float)(data["batch"]["processed"]["stdev"][track]), dseq=data["dseq"][track], bins=data["batch"]["processed"]["bins"][track], chromosomes=sorted(data["batch"]["processed"]["res"].keys()), search=data["search"], ego=data["ego"])
 
 #%% -------------- SEARCHES -----------
 
@@ -337,17 +483,15 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
         if(interval!=-1):
             print("NUMERICAL RANGE")
             points={}
-            for k in data["seq"].keys():
-                #points[k]=(str)([(int)(interval["start"]/ws)] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
-                points[k]=(str)([(int)(interval["start"])] if (interval["start"]+interval["length"])<len(data["seq"][k]) else [])
+            for k in data["batch"]["processed"]["seq"].keys():
+                points[k]=(str)([(int)(interval["start"])] if (interval["start"]+interval["length"])<len(data["batch"]["processed"]["seq"][k]) else [])
             data["search"]={'points':points, 'sizePattern':((int)(interval["length"]/ws))}
             return jsonify(points=points, sizePattern=((int)(interval["length"]/ws)));
     
     #CASE 2) gene/go name pattern
-    t=data["bwt"][data["seq"].keys()[0]]
+    t=data["batch"]["processed"]["bwt"][data["batch"]["processed"]["seq"].keys()[0]]
     
-    #patternLetters=t["firstOccurrence"].keys()#Sometimes might happen that the text does not have some of the letters! (on very skewed data)
-    patternLetters=[chr(x) for x in range(ord('a'), ord('a')+len(data["bins"][data["bins"].keys()[0]])-1)]
+    patternLetters=[chr(x) for x in range(ord('a'), ord('a')+len(data["batch"]["processed"]["bins"][data["batch"]["processed"]["bins"].keys()[0]])-1)]
 
     patternSymbols=patternLetters
     patternSymbols.append('+')
@@ -360,13 +504,13 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
         print("GENE OR TERM")      
         points={}
         sizes={}
-        for k in data["seq"].keys():
+        for k in data["batch"]["processed"]["seq"].keys():
             if(string.find(pattern,"go:")==-1):
                 print("GENE")
-                oc=ann.searchGene(pattern, data["gff"][k])
+                oc=ann.searchGene(pattern, data["batch"]["processed"]["gff"][k])
             else:
                 print("TERM")
-                oc=ann.searchGO(pattern.replace("go:", ""), data["goa"], data["go"], data["gff"][k])
+                oc=ann.searchGO(pattern.replace("go:", ""), data["goa"], data["go"], data["batch"]["processed"]["gff"][k])
             points[k]=(str)([(int)(y["start"]) for y in oc])
             sizes[k]=(str)([(int)((y["end"]-y["start"])/ws) for y in oc])
         data["search"]={'points':points, 'sizePattern':sizes}
@@ -376,15 +520,15 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     pattern=helpers.convertString(pattern)
     print("BWT ON ",pattern)
     search={}
-    for k in data["seq"].keys():
+    for k in data["batch"]["processed"]["seq"].keys():
          if(False in [x in patternLetters for x in set(pattern)]):
             #return jsonify(response="error", msg="{}: There are characters in pattern that do not correspond to the sequence characters: {}".format(k, t["firstOccurrence"].keys()))
             search[k]=[] #instead of returning an error
          else:
             t0=time.clock()
-            t=data["bwt"][k]
-            search[k]=(ss.bwMatchingV8("".join(data["dseq"][k]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d))
-            print(len("".join(data["dseq"][k])))
+            t=data["batch"]["processed"]["bwt"][k]
+            search[k]=(ss.bwMatchingV8("".join(data["batch"]["processed"]["dseq"][k]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d))
+            print(len("".join(data["batch"]["processed"]["dseq"][k])))
             print("Search ",k,"takes",(time.clock()-t0), "and finds",len(search[k]), "occurences")
             if(len(search[k])>10000):
                 return jsonify(response="error", msg="Too many occurrences, please narrow your search", points={}, sizePattern=len(pattern))
@@ -395,40 +539,38 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     
     if(softMutations=="true"):
         ti=time.clock()
-        for k in data["seq"].keys():
-            search[k]=helpers.filterHard(search[k], data["dseq"][k], pattern)
+        for k in data["batch"]["processed"]["seq"].keys():
+            search[k]=helpers.filterHard(search[k], data["batch"]["processed"]["dseq"][k], pattern)
         print("Soft mutation filtering takes ", (time.clock()-ti))
     
-    for k in data["seq"].keys():
+    for k in data["batch"]["processed"]["seq"].keys():
         search[k]=[x*ws for x in search[k]]        
         
     #geo filtering
     if(geo!="none"):
         if(geo!="intergenic"):
-            for k in data["seq"].keys():
+            for k in data["batch"]["processed"]["seq"].keys():
                 sk=search[k]
                 
                 if(geo!="RNA_gene"):
                     tt=[geo]
                 else:
                     tt=["ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene"]
-                if(len(sk)>0 and (k in data["gff"].keys())):
-                    annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["gff"][k], types=tt, onlyIDs="False", intersect=intersect)
+                if(len(sk)>0 and (k in data["batch"]["processed"]["gff"].keys())):
+                    annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["batch"]["processed"]["gff"][k], types=tt, onlyIDs="False", intersect=intersect)
                     p=[(int)(x) for x in annot.keys()];
                     search[k]=p
                 else:
                     search[k]=[]
         else:   #intergenic regions, by now without any annotations
-            for k in data["seq"].keys():
+            for k in data["batch"]["processed"]["seq"].keys():
                 sk=search[k]
                 ws=data["windowSize"]
                 
-                if(len(sk)>0 and (k in data["gff"].keys())):
-                    #p=[x*ws for x in sk]
+                if(len(sk)>0 and (k in data["batch"]["processed"]["gff"].keys())):
                     
-                    annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect)
+                    annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["batch"]["processed"]["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect)
                     p1=set(sk)-set(annot.keys())
-                    #p=[x/ws for x in p1];
                     p=[(int)(x) for x in p1];
                     search[k]=list(p)
                 else:
@@ -451,9 +593,11 @@ def getPartSeq(start=0, end=0, track="None"):
     start=int(request.args.get("start"))
     end=int(request.args.get("end"))
     track=str(request.args.get("track"))
-    seq=data["seq"][track]
+    seq=data["batch"]["processed"]["seq"][track]
     part=np.array(seq[start:end],dtype=float)
-    return jsonify(partSeq=list(part))
+    partMax=np.array(data["batch"]["max"][track][start:end],dtype=float)
+    partMin=np.array(data["batch"]["min"][track][start:end],dtype=float)
+    return jsonify(partSeq=list(part), minimum=list(partMin), maximum=list(partMax))
 
 
 
@@ -470,10 +614,10 @@ def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs=
 
     print("---------------------------------------")
     print("Retrieving annotations on track", track)
-    print(data["gff"].keys())
+    print(data["batch"]["processed"]["gff"].keys())
     
-    if(track in data["gff"].keys()):
-        res=annotationsLocal(positions=pos, gff=data["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
+    if(track in data["batch"]["processed"]["gff"].keys()):
+        res=annotationsLocal(positions=pos, gff=data["batch"]["processed"]["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
     else:
         res=[]
     return jsonify(response=res)
@@ -504,8 +648,8 @@ def nucleotides(start=0, end=10, track="None"):
     start=int(request.args.get("start"))
     end=int(request.args.get("end"))
     track=str(request.args.get("track"))
-    print(data["fasta"].keys())
-    return jsonify(response=data["fasta"][track][start:end])
+    print(data["batch"]["processed"]["fasta"].keys())
+    return jsonify(response=data["batch"]["processed"]["fasta"][track][start:end])
  
 #%%
 '''
@@ -519,26 +663,27 @@ Originally, this method aligned profiles but that was very costly computationall
 k-motif (currently also limited to 6-mers)
 '''
 @app.route("/nucProfile")
-def nucProfile(positions=[], size=10, track="None"):
+def nucProfile(positions=[], size=10, track="None", k=6):
     global data
     import time
     t00=time.clock()
     pos=eval(request.args.get("positions"))
     size=int(request.args.get("size"))
     track=str(request.args.get("track"))
+    k=int(request.args.get("k"))
     #align=str(request.args.get("align"))
     
     #basic operations (prof and c might not be very useful)
     seqs={}
     for p in pos:
-        seqs[p]=data["fasta"][track][p:p+size].upper()
+        seqs[p]=data["batch"]["processed"]["fasta"][track][p:p+size].upper()
     c=ms.consensus(seqs.values())
     prof=ms.profile(seqs.values())
 
     #gibbs sampling for motif search
     if(len(seqs)>1):
         t0=time.clock()
-        for x in range(6,7,1): #for different k
+        for x in range(k,k+1,1): #for different k
             for i in range(1):
                 bm=ms.gibbsSampler(seqs.values(),x,1000)
                 print(i,")",x, bm["score"], bm["score"]/len(seqs))
@@ -585,19 +730,14 @@ def enrichmentGO(annotations={}, correction="none", alpha=0.01):
     gis=set(eval(request.args.get("annotations")))
     alpha=float(request.args.get("alpha"))
     correction=request.args.get("correction")
-    
-    #print gis
-#    gis=set()
-#    for x in annotations.keys(): #TODO here
-#        for y in annotations[x]:
-#            gis.add(y["id"])
+
     ego={}
     ego=ann.enrichmentFisher(gis, data["goa"], alpha, correction)
     for k in ego.keys():
         if(data["go"].has_key(k) and data["go"][k]!="undefined"):
             ego[k]["go_name"]=data["go"][k]
+    data["ego"]=ego
     return jsonify(response=ego)
-
 
 #%%from http://mortoray.com/2014/04/09/allowing-unlimited-access-with-cors/
 @app.after_request
@@ -633,8 +773,8 @@ def load_passport():
     
 @app.route("/test")
 def test():
-    d={"a":[1,2,3], "b":[4,5,6]}
-    return jsonify(d)
+    import numpy as np
+    return jsonify(a=np.abs([-0.80176, -0.098632812, 0.09375, 0.8017578125]))
 
 #-------------------- LAUNCH -----------------
 if __name__ == '__main__':
