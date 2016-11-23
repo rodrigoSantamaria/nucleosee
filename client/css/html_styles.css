@@ -1,0 +1,11 @@
+#modalSelectOptions{
+    top:1%;
+    right:75%;
+    outline: none;
+}
+
+
+@media screen and (min-width: 768px) {
+
+    #modalSelectOptions .modal-dialog  {width:300px;}
+}

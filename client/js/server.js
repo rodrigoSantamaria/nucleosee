@@ -77,14 +77,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         {
             var startTime = new Date();
 
-            // Show the image of "loading..."
-            //showImageLoading("imgLoadingFile", true);
-
-
-            /*var _forceReload = "";
-            if(forceReload) _forceReload = "True";
-            else            _forceReload = "False";*/
-
             var requestAJAX = $.ajax(
                 {
                     //url: _serverPath+"/testUpload?user="+_user+"&password="+_password+"&filename="+file.name+"&forceReload="+_forceReload,
@@ -188,7 +180,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          *                      10,9,10 will be coded as 'c' and another one with values 16,20,12 will be coded as 'e' and so
          *                      on.
          */
-        Server.preprocess = function (callback, filenames, track, ws, nb, maxSize, organism, interpolation, stdev, recharge)
+        Server.preprocess = function (callback, filenames, track, ws, nb, maxSize, organism, interpolation, stdev, description)
         {
             var startTime = new Date();
 
@@ -200,7 +192,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/preprocess?user="+_user+"&password="+_password+"&filenames=["+filenames+"]&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&stdev="+stdev+"&recharge="+recharge+"&organism="+organism+"&interpolation="+interpolation,
+                    url: _serverPath+"/preprocess?user="+_user+"&password="+_password+"&filenames=["+filenames+"]&track="+track+"&windowSize="+ws+"&numBins="+nb+"&maxSize="+maxSize+"&stdev="+stdev+"&dataName="+description+"&organism="+organism+"&interpolation="+interpolation,
                     type: "GET",
                     datatype: "json"
                 });
@@ -247,6 +239,86 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 });
         };
 
+
+        /**
+         * Lists available data in the server
+         */
+        Server.listData = function (callback)
+        {
+            var startTime = new Date();
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/listData?user="+_user+"&password="+_password,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var response = result.response;
+
+                    if(_DEBUG) console.log("preprocress(): discretization done...");
+                    if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
+
+                    callback(response);
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    if(_DEBUG) console.log("listData(): listing failed...");
+                    javascript_abort("listData() failed: possibly due to corruption in the server, ask your administrator");
+                });
+        };
+
+
+
+        /**
+         * Selects available preprocessed data in the server
+         */
+        Server.selectData = function (callback, dataName, index)
+        {
+            var startTime = new Date();
+            showImageLoading("imgLoadingFile", true);
+            $('#loadText')[0].innerHTML="loading data...";
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/loadData?user="+_user+"&password="+_password+"&dataName="+dataName,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var response = [];
+                    response.seq=result.seq; // this is only a sample, as it is too large to show as a whole and to send via REST
+                    response.max=result.maximum;
+                    response.min=result.minimum;
+                    response.mean=result.mean;
+                    response.stdev=result.stdev;
+                    response.dseq=result.dseq;
+                    response.fullLength=result.fullLength;
+                    response.chromosomes=result.chromosomes;
+                    response.bins=result.bins;
+                    //response.filenames=result.filenames;
+
+                    // Hide the image of "loading..."
+                    showImageLoading("imgLoadingFile", false);
+                    $('#loadText')[0].innerHTML=dataName;
+
+                    if(_DEBUG) console.log("preprocress(): discretization done...");
+                    if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
+
+                    callback(response, "None", index);
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    if(_DEBUG) console.log("listData(): listing failed...");
+                    javascript_abort("listData() failed: possibly due to corruption in the server, ask your administrator");
+                });
+        };
 
         /**
          * Calls the REST service available to a data summary and characterization of a particular chromosome

@@ -77,24 +77,6 @@ from flask import send_from_directory
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
       
-#Tests if there's a pickle version of the file      
-#@app.route('/testUpload', methods=['GET'])
-#def testUpload():
-#    filename=""+request.args.get("filename") 
-#    filename=re.sub(r"\..*$", ".pic", filename)
-#    print("Testing upload of ",filename)
-#    cpath=os.path.join(app.config['UPLOAD_FOLDER'],user)
-#    if os.path.exists(cpath) and filename in os.listdir(cpath):
-#        codeEx=request.args.get("forceReload")
-#        if(codeEx=="True"):
-#            print("-> outdated version")
-#            return jsonify(response='outdated version')
-#        else:
-#            print("-> file exists")
-#            return jsonify(response="file exists")
-#    else:
-#        print("-> not found")
-#        return jsonify(response='not found')
 #%%
 @app.route('/testUpload', methods=['GET'])
 def testUpload():
@@ -143,16 +125,163 @@ def loadSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/d
     f=open(path, "r")
     session=pickle.load(f)
     return session
-    
 #%%
+@app.route("/loadData")
+def loadData(dataName="Test", track="None"):
+    import time
+    import os
+    import annotations as ann
+    import pickle #i tried cPickle but is way slower!
+    
+    dataName=request.args.get("dataName")
+    t00=time.clock()
+    
+    #0) Get info from the track file
+    basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    #basePath="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/"
+    f=open(os.path.join(basePath,"tracks.txt"))
+    for l in f.readlines():
+        if(l.split("\t")[0].strip()==dataName):
+            break
+
+    chars=l.split("\t") 
+    picklePaths=chars[1].strip().split(",")
+    if(len(picklePaths)>1):
+        picklePath=chars[0].strip()+".pic"
+    else:
+        picklePath=picklePaths[0]
+   
+    windowSize=chars[2].strip()
+    organism=chars[4].strip()
+    
+    #----Load the corresponding pickle
+    data={}
+    
+    #1) annotations
+#    t0=time.clock()
+#    dataGO=ann.go()
+#    dataGOA=[]
+#
+#    try:
+#        dataGOA=ann.goa(organism)
+#        print("GO loaded")
+#    except:
+#        print("organism",organism,"'s annotations missing or failing")
+#    print("done! ... GO annotations takes",(time.clock()-t0))
+#    
+#    data["go"]=dataGO
+#    data["goa"]=dataGOA
+#    data["windowSize"]=windowSize
+
+    t0=time.clock()
+    print("---------------- FILE: "+picklePath+" ------------------")
+    f=open(os.path.join(basePath,picklePath))
+    pdata=pickle.load(f)
+    print("KEYS", pdata.keys())
+    
+    filenames=filter(lambda x:x.endswith(".wig"),pdata.keys())
+    if(len(filenames)>0):
+        filename=filenames[0]
+    else: #batch data
+        filename="processed"
+    
+    if track=="None":
+        track=sorted(pdata[filename]["maximum"].keys())[0]
+    if(len(pdata[filename]["gff"].keys())!=len(pdata[filename]["seq"].keys())):
+            print("One or more chromosome tracks do not match with GFF names:")      
+   
+    print("load data takes",(time.clock()-t0))
+    
+    #--------------- COMPILE BATCH
+    data["batch"]={}
+    data["batch"]["processed"]=pdata[filename]
+    if(len(filenames)==1): #  (single file)
+        data["batch"]["min"]=pdata[filename]["seq"]
+        data["batch"]["max"]=pdata[filename]["seq"]
+        data["go"]=pdata["go"]
+        data["goa"]=pdata["goa"]
+        data["windowSize"]=pdata["windowSize"]
+    else:               # multiple files
+        data["batch"]["min"]=pdata["max"]
+        data["batch"]["max"]=pdata["min"]
+        
+        #here we require to get the go/goa data (can be fixed)
+        t0=time.clock()
+        dataGO=ann.go()
+        dataGOA=[]
+    
+        try:
+            dataGOA=ann.goa(organism)
+            print("GO loaded")
+        except:
+            print("organism",organism,"'s annotations missing or failing")
+        print("done! ... GO annotations takes",(time.clock()-t0))
+        
+        data["go"]=dataGO
+        data["goa"]=dataGOA       
+        data["windowSize"]=pdata["processed"]["windowSize"]
+           
+    session[user]=data
+    print('file preprocess takes ',(time.clock()-t00),"s")
+    
+    dbp=data["batch"]["processed"]
+    return jsonify(seq=dbp["res"][track], 
+                   fullLength=dbp["fullLength"],
+                   maximum=(float)(dbp["maximum"][track]),
+                   minimum=(float)(dbp["minimum"][track]), 
+                    mean=(float)(dbp["mean"][track]), 
+                stdev=(float)(dbp["stdev"][track]), 
+                dseq=dbp["dseq"][track], 
+                chromosomes=sorted(dbp["maximum"].keys()),
+                bins=dbp["bins"][track])
+                #filenames=[filename])
+#    return data
+
+#ret=loadData("Test")
+#%%
+@app.route("/listData")
+def listData():
+    f=open(os.path.join(app.config['UPLOAD_FOLDER'],user,"tracks.txt"))
+    #f=open("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/tracks.txt")
+    tracks=[l.split("\t")[0] for l in f.readlines()]
+    return jsonify(response=tracks)
+
+#%%
+"""
+Preprocess as wig or bw file
+filenames  array with file names (to be found in the user folder under UPLOAD_FOLDER)
+dataName   name of the resulting preprocessed data (def "None")
+windowSize size of the discretization window (def 100)
+numBins    number of discretization bins (def 5). 
+            E.g. if windowSize=100 and numBins=5, the method takes 100 nucleotides
+            computes their average level and assign them a discrete level out of
+            5 possible levels (which in the default mode implies 5 percentile ranges)
+maxSize    maximum length of the returning array (to avoid bandwidth overload). Default 100K
+            It will sample the data to fit this value. E.g. if maxSize=100K and
+            total size is 200K it will return an array with the average level of
+            every 2 original values.
+stdev      outlier clipping. It will clip levels above/below this number of 
+            standard deviations from the mean. Default 3
+track      in the case of several tracks (usually chromosomes), which one to return. 
+            Default 'None' returns the first track on alphabetic order
+organism   species name for the organism (standard names such as 'Saccharomyces cerevisiae')
+            It will be used for annotations' (GFF, GOA, FASTA) preloading
+interpolation In the case of bigWig files with missing (variableStep) values,
+            this value indicates how to impute them. Defalult "mean"
+returns    a JSON object with the following fields:
+               result   valores normalizados (sin discretizar) sampleados hasta maxSize
+               fullLength  longitud total de los datos iniciales/normaliados
+               maximum,minimum,mean,sdev   medidas estadísticas de los datos normalizados
+               dseq        datos discretizados por la función discretize()
+"""
 @app.route("/preprocess")
-def batchPreprocess(filenames=[], windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", organism="Saccharomyces cerevisiae", interpolation="mean"):
+def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", organism="Saccharomyces cerevisiae", interpolation="mean"):
     global data
     global session
 #
 #    
     import time
-    import re  
+    import re
     import os, pickle        
     import numpy as np
     import helpers
@@ -171,6 +300,7 @@ def batchPreprocess(filenames=[], windowSize=100, numBins=5, maxSize=100000, std
     maxSize=int(request.args.get("maxSize"))
     interpolation=request.args.get("interpolation")
     stdev=float(request.args.get("stdev"))
+    dataName=request.args.get("dataName")
 
     data={}
     print("Files are: ",filenames)
@@ -192,26 +322,28 @@ def batchPreprocess(filenames=[], windowSize=100, numBins=5, maxSize=100000, std
     data["goa"]=dataGOA
     data["windowSize"]=windowSize
 
-    basePath="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/"
+    #basePath="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/"
     print("organism:",organism)
         
+    pickleFiles=[]
     #------------ Preprocess each file
     for filename in filenames: #for each file
-        f=re.sub(r"\..*$", "", filename)+"c"+str(stdev)+"ws"+str(windowSize)+"nb"+str(numBins)+"i"+interpolation+"org"+organism.replace(" ", "_")+".pic"
-        picklePath=os.path.join(basePath,f)
-        picklePath=os.path.join(f)
+        pickleFile=re.sub(r"\..*$", "", filename)+"c"+str(stdev)+"ws"+str(windowSize)+"nb"+str(numBins)+"i"+interpolation+"org"+organism.replace(" ", "_")+".pic"
+        picklePath=os.path.join(basePath,pickleFile)
         path=os.path.join(basePath,filename)
+        pickleFiles.append(pickleFile)
 
         savePickle=False
         
-        print("---------------- FILE: "+f+" ------------------")
-        
+        print("---------------- FILE: "+filename+" ------------------")
         genome={}
-        
         #1A) Preprocessed data (.pic data) exist
         if os.path.isfile(picklePath):
             f=open(picklePath)
-            data[filename]=pickle.load(f)[filename]
+#            if(len(filenames)==1):
+#                data[filename]=pickle.load(f)[filename]
+#            else:    
+            data[filename]=pickle.load(f)
             print("pickle loaded!", data[filename].keys())
             
             if track=="None":
@@ -238,39 +370,55 @@ def batchPreprocess(filenames=[], windowSize=100, numBins=5, maxSize=100000, std
        
         if(len(data[filename]["gff"].keys())!=len(data[filename]["seq"].keys())):
             print("One or more chromosome tracks do not match with GFF names:")
-        
         if(savePickle):
             tpickle=time.clock()
             print("saving pickle in path:", picklePath)
-            
             f=open(picklePath, 'w')
             pickle.dump(data,f)
-            print("serialize data takes",(time.clock()-tpickle))
-
-   
+            f.close()
+     
+       
     #--------------- COMPILE BATCH
     data["batch"]={"min":{}, "max":{}}
     meanBatch={}
     if(len(filenames)>1):
-        for k in data[filenames[0]]["seq"].keys():
-            data["batch"]["min"][k]=np.minimum(data[filenames[0]]["seq"][k], data[filenames[1]]["seq"][k])
-            data["batch"]["max"][k]=np.maximum(data[filenames[0]]["seq"][k], data[filenames[1]]["seq"][k])
-            temp=np.ndarray(shape=(len(filenames), len(data[filenames[0]]["seq"][k])))
-            temp[0]=data[filenames[0]]["seq"][k]
-            temp[1]=data[filenames[1]]["seq"][k]
-            for i in range(2,len(filenames)):
-                data["batch"]["min"][k]=np.minimum(data["batch"]["min"][k], data[filenames[i]]["seq"][k])
-                data["batch"]["max"][k]=np.maximum(data["batch"]["max"][k], data[filenames[i]]["seq"][k])
-                temp[i]=data[filenames[i]]["seq"][k]
-            meanBatch[k]=np.mean(temp,axis=0)  
-        data["batch"]["processed"]=helpers.processWig(meanBatch, stdev, windowSize, numBins, maxSize, True, organism, k)
+        if(dataName+".pic" in os.listdir(basePath))==False:
+            print("Computing and saving batch data")
+            tpickle=time.clock()
+            for k in data[filenames[0]]["seq"].keys():
+                data["batch"]["min"][k]=np.minimum(data[filenames[0]]["seq"][k], data[filenames[1]]["seq"][k])
+                data["batch"]["max"][k]=np.maximum(data[filenames[0]]["seq"][k], data[filenames[1]]["seq"][k])
+                temp=np.ndarray(shape=(len(filenames), len(data[filenames[0]]["seq"][k])))
+                temp[0]=data[filenames[0]]["seq"][k]
+                temp[1]=data[filenames[1]]["seq"][k]
+                for i in range(2,len(filenames)):
+                    data["batch"]["min"][k]=np.minimum(data["batch"]["min"][k], data[filenames[i]]["seq"][k])
+                    data["batch"]["max"][k]=np.maximum(data["batch"]["max"][k], data[filenames[i]]["seq"][k])
+                    temp[i]=data[filenames[i]]["seq"][k]
+                meanBatch[k]=np.mean(temp,axis=0) 
+            data["batch"]["processed"]=helpers.processWig(meanBatch, stdev, windowSize, numBins, maxSize, True, organism, k)
+            f=open(os.path.join(basePath,dataName+".pic"), 'w')
+            pickle.dump(data["batch"],f)
+            f.close()
+            print("serialize data takes",(time.clock()-tpickle))
+        else:
+            print("Loading batch data")
+            f=open(os.path.join(basePath,dataName+".pic"), 'r')
+            data["batch"]=pickle.load(f)
+            
     else:
         data["batch"]["processed"]=data[filenames[0]]
         data["batch"]["min"]=data[filenames[0]]["seq"]
         data["batch"]["max"]=data[filenames[0]]["seq"]
-        
+    
+    #add entry on listing file 
+    if(savePickle):
+        f=open(os.path.join(basePath,"tracks.txt"), 'a')
+        f.write(dataName+"\t"+",".join(pickleFiles)+"\t"+str(windowSize)+"\t"+str(numBins)+"\t"+organism+"\n")
+        f.close()
+    
     session[user]=data
-    print('file preprocess takes ',(time.clock()-t00),"s")
+    print('FILE PREPROCESS TAKES ',(time.clock()-t00),"s")
     
     return jsonify(seq=data["batch"]["processed"]["res"][track], 
                    fullLength=data["batch"]["processed"]["fullLength"],#len(genome[track]), 
@@ -450,7 +598,13 @@ def getTrack(track="None"):
     if( ("ego" in data.keys()) == False):
         data["ego"]={}
     
-    return jsonify(seq=data["batch"]["processed"]["res"][track], fullLength=len(data["batch"]["processed"]["seq"][track]), maximum=(float)(data["batch"]["processed"]["maximum"][track]), minimum=(float)(data["batch"]["processed"]["minimum"][track]), mean=(float)(data["batch"]["processed"]["mean"][track]), stdev=(float)(data["batch"]["processed"]["stdev"][track]), dseq=data["dseq"][track], bins=data["batch"]["processed"]["bins"][track], chromosomes=sorted(data["batch"]["processed"]["res"].keys()), search=data["search"], ego=data["ego"])
+#    return jsonify(seq=data["batch"]["processed"]["res"][track], fullLength=len(data["batch"]["processed"]["seq"][track]), maximum=(float)(data["batch"]["processed"]["maximum"][track]), minimum=(float)(data["batch"]["processed"]["minimum"][track]), mean=(float)(data["batch"]["processed"]["mean"][track]), stdev=(float)(data["batch"]["processed"]["stdev"][track]), dseq=data["dseq"][track], bins=data["batch"]["processed"]["bins"][track], chromosomes=sorted(data["batch"]["processed"]["res"].keys()), search=data["search"], ego=data["ego"])
+    dbp=data["batch"]["processed"]
+    return jsonify(seq=dbp["res"][track], fullLength=len(dbp["seq"][track]), 
+            maximum=(float)(dbp["maximum"][track]), minimum=(float)(dbp["minimum"][track]), 
+            mean=(float)(dbp["mean"][track]), stdev=(float)(dbp["stdev"][track]),
+             dseq=dbp["dseq"][track], bins=dbp["bins"][track], chromosomes=sorted(dbp["res"].keys()),
+             search=data["search"], ego=data["ego"])
 
 #%% -------------- SEARCHES -----------
 
@@ -491,6 +645,7 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     #CASE 2) gene/go name pattern
     t=data["batch"]["processed"]["bwt"][data["batch"]["processed"]["seq"].keys()[0]]
     
+    pattern=pattern.lower()
     patternLetters=[chr(x) for x in range(ord('a'), ord('a')+len(data["batch"]["processed"]["bins"][data["batch"]["processed"]["bins"].keys()[0]])-1)]
 
     patternSymbols=patternLetters

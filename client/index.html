@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="css/libs/main.css">
 
     <link rel="stylesheet" href="css/d3_styles.css">
+    <link rel="stylesheet" href="css/html_styles.css">
     <!--=========================================================-->
 
     <!--=========================  JS  ==========================-->
@@ -86,19 +87,8 @@
             <div style="margin-top:5px;">
 
                 <div style="float:left;margin-left: 30px;margin-right:5px;">
-                   <input type="button" id="loadOptions" value="Load file" title="Load wig or bigwig file"><br>
+                   <input type="button" id="selectFile" value="Select data" title="Select preloaded data"><br>
                 </div>
-
-                <!--<div style="float:left;margin-left: 30px;margin-right:5px;">
-                    <input type="file" id="files" name="files[]" multiple style="float:left" title="Select any .wig file (first you must select your organism or None at the right Options link)" disabled/>
-                    <script src="js/upload-file.js"></script>
-                </div>
-
-                <div style="float:left;margin-left:5px;margin-right:5px;margin-top:-3px">
-                    <input type="button" id="loadOptions" value="Options" title="Load options related to organism and interpolation and discretization parameters" class="options"><br>
-                </div>-->
-
-
 
                 <!-- ICON OF "LOADING..." -->
                 <div style="float:left;margin-left:5px;margin-right:5px;">
@@ -149,8 +139,11 @@
         <div style="float:left;margin-left:36px;" id="imagesChromosomes"></div>
 
         <!-- LOGOUT -->
-        <div style="float:right;margin-left:10px;margin-right:100px;margin-top:5px;">
+        <!--<div style="float:right;margin-left:10px;margin-right:100px;margin-top:5px;">
             <button type="button" id="btLogout">Logout</button>
+        </div>-->
+        <div style="float:right;margin-left: 10px;margin-right:100px;margin-top:5px;height:20px;width:50px">
+            <input type="button" id="loadOptions" value="Load file" title="Load wig or bigwig file" class="options"><br>
         </div>
 
 
@@ -162,70 +155,17 @@
     </div>
 
 
-    <!-- Modal -->
-    <div class="modal fade" id="modalConfigParams" tabindex="-1" role="dialog">
-        <div class="modal-dialog">
-            <div class="modal-content">
 
-                <!-- Modal: header -->
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h3 class="modal-title">Modify parameters of preprocess</h3>
-                </div>
-
-                <!-- Modal: body -->
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-sm-7 col-sm-offset-1">
-                            <label class="control-label" for="paramWS" title="Number of positions to use for each bin. E.g. with a size of 30, each letter correspond to the percentile interval corresponding to the average level of 30 nucleotides">Window size</label>
-                        </div>
-                        <div class="col-sm-2">
-                            <input class="form-control" type="text" id="paramWS">
-                        </div>
-                    </div>
-                    <div class="row" style="padding-top:10px;">
-                        <div class="col-sm-7 col-sm-offset-1">
-                            <label class="control-label" for="paramNB" title="Number of percentile bins into which the quantitative levels will be divided. E .g. 5 bins will use percentiles 0,20,40,60,80,100 to set bins a,b,c,d,e respectively">Number of bins</label>
-                        </div>
-                        <div class="col-sm-2">
-                            <input class="form-control" type="text" id="paramNB">
-                        </div>
-                    </div>
-                   <!-- <div class="row" style="padding-top:10px;">
-                        <div class="col-sm-7 col-sm-offset-1">
-                            <label class="control-label" for="paramMaxSize">Maximum number of normalized data</label>
-                        </div>
-                        <div class="col-sm-3">
-                            <input class="form-control" type="text" id="paramMaxSize">
-                        </div>
-                    </div>-->
-                </div>
-
-                <!-- Modal: footer -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                    <button type="button" id="btConfigParamsSave" class="btn btn-primary">Save changes</button>
-                </div>
-
-            </div>
-        </div>
-    </div>
-
-
-
-
-    <!-- Modal -->
+    <!-- SEARCH OPTIONS -->
     <div class="modal fade" id="searchOptions" tabindex="-1" role="dialog">
         <div class="modal-dialog">
             <div class="modal-content">
 
-                <!-- Modal: header -->
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
                     <h3 class="modal-title">Search options</h3>
                 </div>
 
-                <!-- Modal: body -->
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-sm-3 col-sm-offset-1">
@@ -234,9 +174,6 @@
                     <div class="col-sm-3">
                         <label title="Soft mutations consider only 1-letter distance mutations, in the case that parameter d>0"><input type="checkbox" id="paramMutations" checked>Soft mutations<br></label>
                     </div>
-                    <!--<div class="col-sm-3">
-                        <label title="Annotations are considered only if they partially/totally include a pattern-matched area"><input type="checkbox" id="paramIntersect">Hard intersect<br></label>
-                    </div>-->
                     </div>
 
                     <div class="row">
@@ -253,10 +190,25 @@
                                 <option value="intergenic">Intergenic regions</option>
                             </select>
                         </div>
+                        <div class="col-sm-3">
+                            <label title="If checked, only patterns fully inside the selected regions are reported"><input type="checkbox" id="paramIntersect" >Fully inside<br></label>
+                        </div>
+
+
+                    </div>
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-sm-2 col-sm-offset-1">
+                            <label class="control-label" for="paramKmotif" title="Select the size (k) of the sequences that will be reported as most similar">Motif size</label>
+                        </div>
+                        <div class="col-sm-2">
+                            <input class="form-control" type="text" value="6" id="paramKmotif">
+                        </div>
+
                     </div>
                 </div>
 
-                <!-- Modal: footer -->
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                     <button type="button" id="btConfigSearchSave" class="btn btn-primary">Save</button>
@@ -268,7 +220,39 @@
 
 
 
+    <!-- SELECT OPTIONS -->
+    <div class="modal fade" id="modalSelectOptions" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
 
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h3 class="modal-title">Selection options</h3>
+                </div>
+
+                <div class="modal-body">
+
+                <div class="row">
+                    <div class="col-sm-9 col-sm-offset-1">
+                        <b>Available data: </b> select one.
+                    </div>
+                    <div class="col-sm-9 col-sm-offset-1">
+                        <select id="selectionList" size="0" multiple onchange="if (this.selectedIndex==undefined || this.selectedIndex.length>2)  btSelectOptions.disabled=true; else  btSelectOptions.disabled=false;">
+                            </select>
+                    </div>
+                </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="button" id="btSelectOptions" class="btn btn-primary" disabled="true">Select</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- LOAD OPTIONS -->
     <div class="modal fade" id="modalLoadOptions" tabindex="-1" role="dialog">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -287,24 +271,33 @@
                         <div class="col-sm-9 col-sm-offset-1">
                             <b>File: </b> select your .wig or .bw file.
                             <div style="float:left;margin-left: 30px;margin-right:5px;">
-                            <input type="file" id="files" name="files[]" accept=".wig,.bw" multiple style="float:left" title="Select any .wig file (first you must select your organism or None at the right Options link)"/>
-                            <script src="js/upload-file.js"></script>
+                                <input type="file" id="files" name="files[]" accept=".wig,.bw" multiple style="float:left" title="Select any .wig file(s) (if you select several ones, all must have the same tracks, and average values will be used)"/>
+                                <script src="js/upload-file.js"></script>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-8 col-sm-offset-1">
+                            <b>Data description:</b> describe your data for posterior usage<br>
+                        </div>
+                        <div class="col-sm-9 col-sm-offset-1">
+                            <input class="form-control" type="text" value="" id="paramDescription">
                         </div>
                     </div>
                     <hr>
                     <!--SPECIES-->
                     <div class="row">
                         <div class="col-sm-9 col-sm-offset-1">
-                        <b>Organism: </b> select your .wig organism or 'None' if unavailable.
+                            <b>Organism: </b> select your .wig organism or 'None' if unavailable.
                             <label title="Select the organism for your .wig data, or None if unavailable (no functional or sequence data will load)">
                                 <select id="speciesList" onchange="if (this.selectedIndex!=0) btLoadOptions.disabled=false; else btLoadOptions.disabled=true">
-                                <option value="null" SELECTED>Select organism...</option>
-                                <option value="Drosophila melanogaster">Drosophila melanogaster</option>
-                                <option value="Mus musculus">Mus musculus</option>
-                                <option value="Saccharomyces cerevisiae">Saccharomyces cerevisiae</option>
-                                <option value="Schizosaccharomyces pombe">Schizosaccharomyces pombe</option>
-                                <option value="none">None</option>
+                                    <option value="null" SELECTED>Select organism...</option>
+                                    <option value="Drosophila melanogaster">Drosophila melanogaster</option>
+                                    <option value="Mus musculus">Mus musculus</option>
+                                    <option value="Saccharomyces cerevisiae">Saccharomyces cerevisiae</option>
+                                    <option value="Schizosaccharomyces pombe">Schizosaccharomyces pombe</option>
+                                    <option value="none">None</option>
                                 </select>
                             </label>
                         </div>
@@ -342,7 +335,7 @@
                     <hr>
                     <div class="row">
                         <div class="col-sm-9 col-sm-offset-1">
-                            <b>Discretization: </b>searches are made based on a discretized version of .wig data. Mean values in a <i>window size</i> range are set into an alphanumerical bin depending on its percentile.<br>
+                            <b>Discretization: </b>searches are made based on a discretized version of .wig data. Mean values in a <i>window size</i> range are set into an alphanumerical <i>bin</i> depending on its percentile.<br>
                         </div>
                     </div>
                     <div class="row">
@@ -364,7 +357,7 @@
                 </div>
 
 
-                    <!-- Modal: footer-->
+                <!-- Modal: footer-->
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                     <button type="button" id="btLoadOptions" class="btn btn-primary" disabled="true">Load</button>
@@ -373,6 +366,7 @@
             </div>
         </div>
     </div>
+
 
 
     <!-- Bootstrap core JavaScript
@@ -388,18 +382,6 @@
         // This part of the code is executed automatically when the page is ready
         $(window).ready(function()
         {
-            // CHANGE PARAMS (WITH RELOAD)
-            ////////////////////////////////////////////
-            reloadParams(false);
-
-            $('#reload').change(function()
-            {
-                if($(this).is(":checked"))
-                {
-                    reloadParams(false);
-                    $('#modalConfigParams').modal();
-                }
-            });
 
             $('#btConfigSearchSave').click(function()
             {
@@ -415,45 +397,21 @@
                 drawGrid();
             });
 
-            $('#btConfigParamsSave').click(function()
-            {
-                reloadParams(true);
-            });
-
             $('#btLoadOptions').click(function()
             {
-                $('#modalLoadOptions').modal('hide');
-                GVB_GLOBAL.ws       = $('#paramWS').val();
-                GVB_GLOBAL.nb       = $('#paramNB').val();
-                //preprocessing("undefined");
-                preprocessing();
+                if($('#paramDescription').val()==undefined)
+                    alert("Please type a description for your data");
+                else {
+                    $('#modalLoadOptions').modal('hide');
+                    preprocessing();
+                    }
             });
 
-            function reloadParams(saveParams)
+            $('#btSelectOptions').click(function()
             {
-                var IParamWS        = $('#paramWS');
-                var IParamNB        = $('#paramNB');
-                //var IParamMaxSize   = $('#paramMaxSize');
-
-
-                if(saveParams)
-                    {
-                    GVB_GLOBAL.ws       = IParamWS.val();
-                    GVB_GLOBAL.nb       = IParamNB.val();
-                    GVB_GLOBAL.forceReload = true;
-//                    GVB_GLOBAL.maxSize  = IParamMaxSize.val();
-                    }
-                else
-                    {
-                    GVB_GLOBAL.forceReload=false;
-                    }
-
-                IParamWS.val(GVB_GLOBAL.ws);
-                IParamNB.val(GVB_GLOBAL.nb);
-               // IParamMaxSize.val(GVB_GLOBAL.maxSize);
-
-                $('#modalConfigParams').modal('hide');
-            }
+                $('#modalSelectOptions').modal('hide');
+                selectData();
+            });
 
             // CHANGE SEARCH PARAMS
             /////////////////////////////////////////////
@@ -463,11 +421,15 @@
             });
             $('#loadOptions').click(function()
             {
-                $('#modalLoadOptions').modal();
-
+                $('#modalLoadOptions').modal('show');
             });
 
-
+            $('#selectFile').click(function()
+            {
+            if($('#selectionList')[0].size==0)
+                Server.listData(populateDataList)
+            $('#modalSelectOptions').modal('show');
+            });
 
             // LOGIN and LOGOUT
             ////////////////////////////////////////////
@@ -515,7 +477,7 @@
             ////////////////////////////////////////////////
                 //$('#patternSearch').val("aaaaabcba");
                 //$('#patternSearch').val("a*5+abcba*2");
-                $('#patternSearch').val("a*5+abcba"); // esta es la buena con enrichment
+                $('#patternSearch').val("a*5"); // esta es la buena con enrichment
                 $('#username').val("jpiriz");
                 $('#password').val("alguna");
                 $('#btLogin').click();
@@ -523,5 +485,6 @@
 
         });
     </script>
+
 </body>
 </html>

@@ -638,7 +638,7 @@ Parses a text which may contain + and * operations (no parenthesis allowed)
 """   
 def convertString(text):
     print("Initial text is ",text)
-    s=parse(text)
+    s=parse(text.lower())
     if(len(s)==1):
         return s[0]
     #solve *

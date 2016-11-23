@@ -19,10 +19,10 @@ var marginDL =
 var dimDL =
 {
     graphWidth : screen.width,
-    graphHeight : 200,
+    graphHeight : 150,//TODO: testing, prev 200
 
     width : screen.width-marginDL.right-marginDL.left,
-    height : 200-marginDL.top-marginDL.bottom
+    height : 150-marginDL.top-marginDL.bottom
 };
 
 var dimDLAnnotation =

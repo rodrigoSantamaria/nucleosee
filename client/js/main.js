@@ -64,6 +64,30 @@ function checkFile(files)
     }
 }
 
+/**
+ * Asks the server for available preprocessed data
+ */
+function populateDataList(data)
+    {
+    var elSel = document.getElementById('selectionList');
+    elSel.size=data.length;
+
+    for(var i in data)
+        {
+            var elOptNew = document.createElement('option');
+            elOptNew.text = data[i];
+            elOptNew.value = data[i];
+            elSel.add(elOptNew, null);
+        }
+    }
+
+function selectData()
+    {
+    for(var i=0; i<$("#selectionList option:selected").length; i++)
+        {
+        Server.selectData(drawingFirstDataLine, $("#selectionList option:selected")[i].value, i);
+        }
+    }
 
 // PREPROCESSING: NORMALIZE, STATISTICAL DESCRIPTORS, DISCRETIZE...
 /////////////////////////////////////////////////////////////////////////
@@ -86,7 +110,7 @@ function preprocessing(chromosome)
         Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filenames, GVB_GLOBAL.track, $("#paramWS").val(), $("#paramNB").val(),
             GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value,
             $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value, $("#paramSD").val(),
-            GVB_GLOBAL.forceReload);
+            $("#paramDescription").val());
     }
     else
     {
@@ -99,7 +123,13 @@ function preprocessing(chromosome)
 
 // DRAWING: DATALINE 1
 ////////////////////////////////
-function drawingFirstDataLine(processedData, chromosome)
+/**
+ *
+ * @param processedData - data to draw
+ * @param chromosome - track (usually chromosome) to be drawn in foreground
+ * @param index - in de case that several processedData are to be loaded, which one is this one
+ */
+function drawingFirstDataLine(processedData, chromosome, index)
 {
     /**
      * @typedef {Object} processedData
@@ -117,11 +147,13 @@ function drawingFirstDataLine(processedData, chromosome)
     GVB_GLOBAL.chromosomes = processedData.chromosomes;
     if(chromosome == "None")
     {
-        if(processedData.filenames.length>1)
-            $('#loadText')[0].innerHTML=processedData.filenames[0].replace(/\"/g,"")+" et al.";  //replaces ',' by '","';
+    if(processedData.filenames!=undefined)
+        {
+        if (processedData.filenames.length > 1)
+            $('#loadText')[0].innerHTML = processedData.filenames[0].replace(/\"/g, "") + " et al.";  //replaces ',' by '","';
         else
-            $('#loadText')[0].innerHTML=processedData.filenames[0].replace(/\"/g,"");  //replaces ',' by '","';
-
+            $('#loadText')[0].innerHTML = processedData.filenames[0].replace(/\"/g, "");  //replaces ',' by '","';
+        }
         createIconsChromosomes(GVB_GLOBAL.chromosomes);
         GVB_GLOBAL.track    = processedData.chromosomes[0];
     }
