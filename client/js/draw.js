@@ -33,158 +33,135 @@ var dimDLAnnotation =
 };
 
 
-var globalSeq =
+//________________________ SEQUENCE OBJECTS DEFINITION _____________________________
+
+//This object compiles the summay information for a given wig sequence
+//globalDL1,2 and 3 contain the information of different detail levels
+function globalSeqObject()
+    {
+    this.scaleSeqServ = null;//Scale between sequence and server
+    this.seqServ = null;//Sequence for current track as provided by the server (sampled to screen width)
+    this.mean = null;//Mean value for current track
+    this.stdev = null;//Standard deviation for current track
+    this.max=null;//Maximum value for current track
+    this.min=null;//Minimum value for current track
+
+    //The following parameters should be the same for all the sequence to be loaded
+    this.fullLength = null;//number of nucleotides for current track
+    this.bins=null;//number of bins for BWT discretization
+    this.ws = null;//window size for BWT discretization
+    this.tracks = null;//all track names
+    this.track = null;//current track
+
+    this.dataName = null; //Dataset name to which this sequence belongs
+    };
+var globalSeqs=[]
+//In drawSearch, drawEnrichment, and dataLine2, any sequence will do (ref to globalSeqs[0]) as they only use ws, bins, track(s)
+
+
+function marginObject()
+    {
+    this.top=marginDL.top;
+    this.bottom=marginDL.bottom; //bottom should be smaller if several DL1 tracks are drawn
+    this.left=marginDL.left;
+    this.right=marginDL.right;
+    }
+
+function dimObject()
+    {
+        this.graphWidth = dimDL.graphWidth;
+        this.graphHeight = dimDL.graphHeight;
+        this.width = dimDL.width;
+        this.height = dimDL.height;
+    }
+function dimAnnotationObject()
+    {
+        this.x0 = dimDLAnnotation.x0;
+        this.y0 = dimDLAnnotation.y0;
+        this.lineHeight =dimDLAnnotation.lineHeight;
+    }
+function customViewObject(name, className, bracketHeight)
+    {
+        this.nameSVG = name;    //SVG name for the HTML
+        this.classSVG = className;       //class name for the CSS
+
+        this.svg = null;             //svg object with the image
+        this.scaleSeqScreen = null;  //scale ratio between compressed sequence and screen width
+        this.scaleServScreen = null; //scale ratio between full (server) sequence and screen width
+        this.data = null;            //
+        this.xScale = null;          //scaling function for X
+        this.yScale = null;          //scaling function for Y
+
+        this.margin = new marginObject();          //pixels on each side
+        this.dim = new dimObject();              //graph dimensions
+        this.dimAnnotation = new dimAnnotationObject();    //annotations dimensions (for enriched GO terms)
+
+        this.bracketHeight=bracketHeight; //actually only used in DL2
+    }
+
+//Saves information about a set of sequences
+function sequencesObject()
 {
-    seqServ : null,
-    fullLength : null,
-    mean : null,
-    stdev : null,
-    ws : null,
-    scaleSeqServ : null,
-    tracks : null,
-    track : null
-};
+    this.seqs=null; //actual nucleotide sequences
+    this.alignment=null;    //alignment proposed (currently not used as it's computationally costly)
+    this.aconsensus=null;   //consensus sequence
+    this.aprofile=null; //consensus profile
+    this.consensus=null;
+    this.profile=null;
+
+    this.motifs=null;   //motifs matching the consensus alignment
+    this.locations=null;    //locations of the motifs on the sequence
+    this.motifConsensus=null;   //consensus of all the motifs
+    this.motifProfile=null; //
+}
 
 
-// Chromosome level
-var globalDL1 =
+// Chromosome level. Level 1 saves information about the chromosome level, mostly visual information in cv
+// (margins, scales, init point) and metainfo for searches (match points, gis, annotations)
+function globalDL1Object(id)
 {
     // Core variables (used in the core)
-    cv :
-    {
-        nameSVG : "lineSeq",
-        classSVG : "dl1",
+    this.cv= new customViewObject(id, "dl1", null);
+    this.drawn = false;
 
-        svg : null,
-        scaleSeqScreen : null,
-        scaleServScreen : null,
-        data : null,
-        xScale : null,
-        yScale : null,
+    //this.seqPoints = null;   //In the case of a search, the array of matching points (UNUSED)
+    this.pointTip = null;
 
-        margin :
-        {
-            top: marginDL.top,
-            bottom:marginDL.bottom,
-            left:marginDL.left,
-            right:marginDL.right
-        },
-        dim :
-        {
-            graphWidth : dimDL.graphWidth,
-            graphHeight : dimDL.graphHeight,
-            width : dimDL.width,
-            height : dimDL.height
-        },
-        dimAnnotation :
-        {
-            x0 : dimDLAnnotation.x0,
-            y0 : dimDLAnnotation.y0,
-            lineHeight : dimDLAnnotation.lineHeight
-        }
-    },
-
-    drawn : false,
-    seqPoints : null,
-    pointTip : null,
-
-    gis : null,
-    annotations : {},
-    genesURL: "http://www.usal.es",
-    posURL: "http://www.usal.es",
-    goURL: "http://www.usal.es"
-
-};
+    this.gis = null;         //In the case of a search, the genes that include matching positions
+    this.annotations = {};   //In the case of a search, the enriched annotation for the genes that include matching positions
+    this.genesURL= "http://www.usal.es"; //URLs for raw text to matching positions, genes and GO terms.
+    this.posURL= "http://www.usal.es";//TODO: default to usal.es is ugly
+    this.goURL= "http://www.usal.es";
+}
 
 
-// Nucleosome level
-var globalDL2 =
+// Nucleosome level (level 2) saves information at nucleosome level, usualy 1:1 scale respect to real data
+function globalDL2Object(id)
 {
+
     // Core variables (used in the core)
-    cv :
-    {
-        nameSVG : "lineSeq2",
-        classSVG : "dl2",
+    this.cv= new customViewObject(id, "dl2", 40);
+    this.drawn=false;
 
-        svg : null,
-        scaleSeqScreen : null,
-        scaleServScreen : null,
-        data : null,
-        xScale : null,
-        yScale : null,
-
-        margin :
-        {
-            top: marginDL.top,
-            bottom:marginDL.bottom,
-            left:marginDL.left,
-            right:marginDL.right
-        },
-        dim :
-        {
-            graphWidth : dimDL.graphWidth,
-            graphHeight : dimDL.graphHeight,
-            width : dimDL.width,
-            height : dimDL.height
-        },
-        dimAnnotation :
-        {
-            lineHeight : dimDLAnnotation.lineHeight
-        },
-        bracketHeight: 40
-    },
-
-    drawn: false,
-    startSeq : null,
-    endSeq : null
+    this.startSeq=null;//starting and ending positions respect to real data (defines the interval)
+    this.endSeq=null;
 };
 
 
-// Nucleotide level
-var globalDL3 =
+// Nucleotide level (level 3) saves information about the actual sequences as retrieved from FASTA files. Should
+//consider enough pixel width to make letters readable
+function globalDL3Object()
 {
     // Core variables (used to draw)
-    cv :
-    {
-        nameSVG : "lineSeq3",
-        classSVG : "dl3",
-
-        svg : null,
-        data : null,
-
-
-        margin :
-        {
-            top: marginDL.top,
-            bottom:marginDL.bottom,
-            left:marginDL.left,
-            right:marginDL.right
-        },
-        dim :
-        {
-            graphWidth : dimDL.graphWidth,
-            graphHeight : dimDL.graphHeight,
-            width : dimDL.width,
-            height : dimDL.height
-        },
-        bracketHeight: dimDL.height
-    },
-
-    sequences :
-    {
-        seqs: null,
-        alignment: null,
-        aconsensus: null,
-        aprofile: null,
-        consensus: null,
-        profile: null,
-
-        motifs: null,
-        locations: null,
-        motifConsensus: null,
-        motifProfile: null
-    }
+    this.cv= new customViewObject("lineSeq3", "dl3", dimDL.height);
+    this.sequences=new sequencesObject();
 };
+
+var dl1=[];//aray of dl1 elements
+//var globalDL1=new globalDL1Object();
+//var globalDL2=new globalDL2Object();
+var dl2=[]
+var globalDL3=new globalDL3Object();
 
 
 
@@ -192,38 +169,57 @@ var globalDL3 =
 //          DATALINE 1
 //-------------------------------------------------------------
 
-
-function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize, mean, stdev, min, max, ws, bins)
+//function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize, mean, stdev, min, max, ws, bins)
+function dataLine_1(processedData, startSeq, endSeq)
 {
     var startTime = new Date();
+    var globalSeq = new globalSeqObject();
+
+    var fullLength=processedData.fullLength[GVB_GLOBAL.track];
 
     // Save information of the genomic sequence
-    globalSeq.tracks        = tracks; // all chromosomes
-    globalSeq.track         = track; // chromosome or wig track it refers to
-    globalSeq.seqServ       = seqServ;
-    globalSeq.mean          = mean;
-    globalSeq.stdev         = stdev;
-    globalSeq.max           = max;
-    globalSeq.min           = min;
-    globalSeq.bins          = bins;
-    globalSeq.ws            = ws;
+    globalSeq.tracks        = processedData.chromosomes; // all chromosomes
+    globalSeq.track         = GVB_GLOBAL.track; // chromosome or wig track it refers to
+    globalSeq.seqServ       = processedData.seq;
+    globalSeq.mean          = processedData.mean;
+    globalSeq.stdev         = processedData.stdev;
+    globalSeq.max           = processedData.max;
+    globalSeq.min           = processedData.min;
+    globalSeq.bins          = processedData.bins;
+    globalSeq.dataName      = processedData.dataName;
+    globalSeq.ws            = GVB_GLOBAL.ws;
     globalSeq.scaleSeqServ  = 1;
-    if(Math.floor(fullLength/maxSize) >= 1)
-        globalSeq.scaleSeqServ = Math.floor(fullLength/maxSize);
+    if(Math.floor(fullLength/GVB_GLOBAL.maxSize) >= 1)
+        globalSeq.scaleSeqServ = Math.floor(fullLength/GVB_GLOBAL.maxSize);
 
+    globalSeqs.push(globalSeq);
+
+    var globalDL1=new globalDL1Object("lineSeq_"+dl1.length);
+    dl1.push(globalDL1);
+    var globalDL2=new globalDL2Object("lineSeq2_"+dl2.length);
+    dl2.push(globalDL2);
 
     // We use the core function
-    dataLine_core(false, globalDL1,
-        globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
+    dataLine_core(globalDL1, globalSeq, globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
 
-        // We confirm that we have finished
+    // We confirm that we have finished
     globalDL1.drawn = true;
 
     if(DEBUG_GBV) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
 }
 
+function getDL1(dataName)
+    {
+    for(var i in globalSeqs)
+        if(globalSeqs[i].dataName==dataName)
+            return dl1[i]
+    return null;
+    }
 function drawSearch(allPoints, sizePattern)
 {
+    var globalSeq=globalSeqs[0];//any seq should do for searches, enrichment and data_line2
+    var globalDL1=dl1[0];
+
     var track = globalSeq.track;
     var tracks = globalSeq.tracks;
     var points = JSON.parse(allPoints[track]);
@@ -236,7 +232,6 @@ function drawSearch(allPoints, sizePattern)
     var seqPoints=[];
     for(var i=0; i<points.length; i++)
     {
-    //    seqPoints.push(points[i] * globalSeq.ws);
         seqPoints.push(points[i]);
     }
 
@@ -266,7 +261,6 @@ function drawSearch(allPoints, sizePattern)
                     selected: false
                 });
             }
-
     }
 
 
@@ -279,22 +273,20 @@ function drawSearch(allPoints, sizePattern)
             var point = d.real_pos;
 
             // We round to the nearest hundred from sizePattern. E.g. 270 --> 300,  540 --> 500
-            //var focusLine = Math.round(sizePattern*globalSeq.ws/100)*100;
             var focusLine = Math.round(d.size*globalSeq.ws/100)*100;
-            if(focusLine>globalDL2.cv.dim.width)
+            if(focusLine>dl2[0].cv.dim.width)
                 numNucleotidesDraw=focusLine*1.1;//make it a 10% larger than the thing to draw
             else
-                numNucleotidesDraw=globalDL2.cv.dim.width;  //1:1 scale in the rest of cases
+                numNucleotidesDraw=dl2[0].cv.dim.width;  //1:1 scale in the rest of cases
             var startSeq = point-(numNucleotidesDraw/2)+(focusLine/2);
             var endSeq   = point+(numNucleotidesDraw/2)+(focusLine/2);
 
             // Save information of dataLine2
-            globalDL2.startSeq = startSeq;
-            globalDL2.endSeq = endSeq;
+            dl2[0].startSeq = startSeq;
+            dl2[0].endSeq = endSeq;
 
             // Draw dataLine2
-            //Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, sizePattern);
-            Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, d.size);
+            Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, d.size, globalSeq.dataName);
 
             return "<strong>"+d3.format(",")(point) + ":</strong> " + d3.format(".2f")(d.value); // e.g. "307,770 : 0.79"
         });
@@ -360,23 +352,23 @@ function drawSearch(allPoints, sizePattern)
 
 
     // Save information of dataLine1
-    globalDL1.seqPoints = seqPoints;
+    //globalDL1.seqPoints = seqPoints;//TODO: not used afterwards, maybe remove
 
 
     //GET SEQUENCES, MOTIFS, (ALIGNMENT), CONSENSUS
     //NOTE: alignment takes more than 1s if there's >50 sequences! (using the fastest method: kalign)
     //NOTE: by now searches in seq are only possible with equal lengths
-    if(typeof(sizePattern)=="number")
+    if(typeof(sizePattern)=="number" && points.length>0)
          { //only in the case that all the searches have the same size (not for gene searches, etc. as align is costly
-        Server.nucProfile(saveSequences, globalSeq.track, "[" + points + "]", sizePattern * globalSeq.ws, document.getElementById("paramKmotif").value);
+        Server.nucProfile(saveSequences, globalSeq.track, "[" + points + "]", sizePattern * globalSeq.ws, document.getElementById("paramKmotif").value, globalSeq.dataName);
         }
 }
 
 
 function drawPoints(dataPoints)
     {
+    var globalDL1=dl1[0];
     globalDL1.cv.svg.selectAll(".point").remove();
-
 
     // Create all new points
     globalDL1.cv.svg.selectAll(".data")
@@ -400,6 +392,11 @@ function drawPoints(dataPoints)
     });
     }
 
+/**
+ * Draws the names of enriched GO terms for the genes that contains the searched positions.
+ * The terms are drawn with a size (inverselly) proportional to their p-value, and they can be hovered and clicked
+ * @param enrichment
+ */
 function drawEnrichment(enrichment)
 {
 
@@ -407,6 +404,7 @@ function drawEnrichment(enrichment)
     exportGO(enrichment);
 
     // Remove all goterm (previous)
+    var globalDL1=dl1[dl1.length-1];
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm").remove();
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm-tip").remove();
 
@@ -512,12 +510,11 @@ function drawEnrichment(enrichment)
             for(var i in d["gis"])
                 {
                 var annot=globalDL1.annotations[d["gis"][i]];
+                var globalSeq=globalSeqs[0];
                 if (annot["chromosome"] == globalSeq.track)
                     gis.push(annot["pos"]);
                 }
 
-            //globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".point").remove();
-            //globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".point.pressed").remove();
             var dataPoints=globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".point").data();
             if(d3.select(this).classed("selected")==true)
                 {
@@ -545,6 +542,10 @@ function drawEnrichment(enrichment)
 }
 
 
+function drawLevel2()
+    {
+    }
+
 //-------------------------------------------------------------
 //          DATALINE 2
 //-------------------------------------------------------------
@@ -552,28 +553,31 @@ function drawEnrichment(enrichment)
 // numNucleotides - number of nucleotides to draw (?) (should be equal to partSeq.length?)
 // point - starting point of the drawing
 // sizePattern - size of the searched pattern (to highlight over the whole seq)
-function dataLine_2(seq, numNucleotides, point, sizePattern)
+function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
 {
-    /*var partSeq=seq.partSeq;
-    var partMin=seq.partMin;
-    var partMax=seq.partMax;*/
+
+
+    var globalDL2=dl2[0];
 
     // DRAWING DATALINE 2
     //-------------------------------------------------
     var startSeq = globalDL2.startSeq;
     var endSeq   = globalDL2.endSeq;
 
+    //var globalSeq=globalSeqs[0];
+    var globalSeq;
+    for(var i in globalSeqs)
+        {
+        if(globalSeqs[i].dataName==dataName)
+            globalSeq=globalSeqs[i];
+        }
     globalDL2.scale=1;
     if(Math.floor((sizePattern*globalSeq.ws)/(endSeq-startSeq)) > 1)
         globalDL2.scale= Math.ceil((sizePattern*globalSeq.ws)/(endSeq-startSeq));
 
 
-
-
     // We use the core function
-    dataLine_core(false, globalDL2,
-        seq, 1/globalDL2.scale, 0, numNucleotides, startSeq,
-        point, sizePattern);
+    dataLine_core(globalDL2,globalSeq, seq, 1/globalDL2.scale, 0, numNucleotides, startSeq,  point, sizePattern);
 
 
     // We confirm that we have finished
@@ -581,7 +585,7 @@ function dataLine_2(seq, numNucleotides, point, sizePattern)
 
     // DRAWING ANNOTATIONS
     //-------------------------------------------------
-    Server.annotationsGenes(drawAnnotations, point,"[\"any\"]",globalDL2.cv.dim.width, "center", globalSeq.track, "False");
+    Server.annotationsGenes(drawAnnotations, point,"[\"any\"]",globalDL2.cv.dim.width, "center", globalSeq.track, "False", globalSeq.dataName);
 
 
     // DRAWING NUCLEOTIDES (DATALINE 3)
@@ -600,24 +604,18 @@ function dataLine_2(seq, numNucleotides, point, sizePattern)
 
         // DRAWING NUCLEOTIDES
         var start = startSeq + line_x0-len; // taking the left bracket as start
-        //var start=startSeq+d3.event.layerX-marginDL.left; // by now just taking the matched sequence.
-        Server.nucleotides(drawNucleotides, globalSeq.track, startSeq, endSeq, start, point);
+        Server.nucleotides(drawNucleotides, globalSeq.track, startSeq, endSeq, start, point, globalSeq.dataName);
     });
 }
 
-function drawVariation(partMin, partMax)
-    {
-    //var data=scalePoints(partMin,...)
-    //data.push(scalePoints(partMax,...))
-    }
 
 function drawAnnotations(annotations)
 {
+    var globalDL2=dl2[0];
+
     var startSeq = globalDL2.startSeq;
     var endSeq = globalDL2.endSeq;
-    //var factor = globalDL2.cv.scaleSeqScreen*globalDL2.cv.scaleServScreen; // De momento queremos que el factor sea 1:1 siempre
     var factor = globalDL2.cv.scaleSeqScreen;
-    //var factor = globalDL2.cv.scaleSeqServ;
     var lineHeight = globalDL2.cv.dimAnnotation.lineHeight;
 
     //gene line
@@ -720,6 +718,7 @@ function drawAnnotations(annotations)
 
 
     // Mouseover tip and show the information of genes
+    var globalDL1=dl1[0];
     var tip = d3.tip()
         .attr('class', globalDL2.cv.classSVG+' annotation tip')
         .html(function(d,i)
@@ -799,6 +798,13 @@ function drawNucleotides(start, point, nuc)
     // First, we delete the image, if this exist
     var image = $("#"+nameSVG);
     if (image.length) { image.empty(); }
+    else
+    {
+        var core=document.getElementById("core");
+        image=document.createElement("div");
+        image.setAttribute("id", nameSVG);
+        core.appendChild(image);
+    }
 
 
     // Image SVG: image
@@ -824,6 +830,8 @@ function drawNucleotides(start, point, nuc)
     drawBrackets(globalDL3, x0 - 5, width + 5, height/2);
 
 
+
+    var globalDL2=dl2[0];
 
     var startWholeSeq = globalDL2.startSeq;
     var wholeSeq = nuc.seq;
@@ -980,9 +988,7 @@ startSeq: first position we want to draw
 endSeq: last position we want to draw
 seqServ: sequence of points in the above range that we dispose of to draw.
 */
-function dataLine_core(DEBUG, globalDL,
-                       seqServ, scaleSeqServ, startSeq, endSeq, initialPoint,
-                       point, sizePattern)
+function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, endSeq, initialPoint, point, sizePattern)
 {
     // Default values
     point       || ( point = 0 );
@@ -1002,9 +1008,16 @@ function dataLine_core(DEBUG, globalDL,
     var margin      = globalDL.cv.margin;
 
 
-    // First, we delete the image, if this exist
+    // First, we empy the div, if this exist, or create it
     var image = $("#"+nameSVG);
     if ( image.length) { image.empty(); }
+    else
+        {
+        var core=document.getElementById("core");
+        image=document.createElement("div");
+        image.setAttribute("id", nameSVG);
+        core.appendChild(image);
+        }
 
 
     /*SCALE: There are three ranges:
@@ -1039,10 +1052,6 @@ function dataLine_core(DEBUG, globalDL,
     var scaleSeqScreen=1;
     scaleSeqScreen=scaleSeqServ*scaleServScreen;
 
-    /*if(DEBUG) console.log("dataLine("+classSVG+"): startSeq: "+startSeq+" - endSeq: "+endSeq+" - sizeSeq: "+sizeSeq+" - width(pixels): "+width);
-    if(DEBUG) console.log("            startData: "+startData+" - endData: "+endData+" - sizeData: "+sizeData);
-    if(DEBUG) console.log("            scaleSeqScreen (nucleotides/pixel): "+scaleSeqScreen+" - scaleServScreen: "+scaleServScreen+" - scaleSeqServ: "+scaleSeqServ);
-*/
     var ymin = globalSeq.min;
     var ymax=globalSeq.max;
 
@@ -1067,11 +1076,9 @@ function dataLine_core(DEBUG, globalDL,
 
     // Axis labels
     var xAxis = d3.svg.axis().scale(xScale).orient("bottom")
-       // .tickFormat(function(d) {return roundTickFormat(d,scaleSeqScreen,initialPoint, startSeq,endSeq)})
-       // .tickValues(getTicks(sizeSeq, scaleSeqScreen));
      .tickFormat(function(d) {return roundTickFormat(d,Math.max(scaleSeqScreen, scaleServScreen),initialPoint, startSeq,endSeq)})
      .tickValues(getTicks(sizeSeq, Math.max(scaleSeqScreen, scaleServScreen)));
-    var yAxis = d3.svg.axis().scale(yScale).orient("left");
+    var yAxis = d3.svg.axis().scale(yScale).ticks(8).orient("left");
 
     // Function to draw the line
     var line = d3.svg.line()
@@ -1123,21 +1130,7 @@ function dataLine_core(DEBUG, globalDL,
                 .attr("class", classSVG+" line shadow")
                 .datum(dataShadow)
                 .append("path")
-                //.attr("d", path);
                 .attr("d", line);
-
-/*            svg.append("g")
-                .attr("class", classSVG+" line shadow")
-                .datum(dataMin)
-                .append("path")
-                .attr("d", line);
-
-            // The image SVG: line
-            svg.append("g")
-                .attr("class", classSVG+" line shadow")
-                .datum(dataMax)
-                .append("path")
-                .attr("d", line);*/
         }
 
     // The image SVG: line
@@ -1217,6 +1210,8 @@ function scalePoints(seqServ, startSeq, endSeq, scaleSeqServ, globalDL)    // Cr
     var scaleServScreen = sizeData/globalDL.cv.dim.width;
     var scaleSeqScreen=1;
     scaleSeqScreen=scaleSeqServ*scaleServScreen;
+
+    var globalSeq=globalSeqs[0];
 
     var data = [];
 
@@ -1335,6 +1330,7 @@ function saveSequences(response)
 
 function setAnnotations(gis, annotations)
 {
+    var globalDL1=dl1[0];
     globalDL1.gis = gis;  // list of gene ids (NOTE: just a string, might contain duplicates, by now unused)
     if (!$.isEmptyObject(annotations))
     {
@@ -1344,15 +1340,16 @@ function setAnnotations(gis, annotations)
 
 
 function setGOterms(genes, goterms)
-{
-for(var i in genes)
     {
-    var gene=genes[i];
-    if (globalDL1.annotations[gene] == undefined)
-        globalDL1.annotations[gene] = {};
-    globalDL1.annotations[gene]["goterms"] = goterms[gene];
+    var globalDL1=dl1[0];
+    for(var i in genes)
+        {
+        var gene=genes[i];
+        if (globalDL1.annotations[gene] == undefined)
+            globalDL1.annotations[gene] = {};
+        globalDL1.annotations[gene]["goterms"] = goterms[gene];
+        }
     }
-}
 
 /** DRAW GRID
  * For datalines 1 and 2 in case the option to see how bands are determined is selected
@@ -1361,22 +1358,32 @@ function drawGrid() {
 
     if ($("#paramGrid").is(':checked') == false)    //No order to draw
     {
-        if (globalDL1.drawn)
+        for(var i in dl1)
             {
-            globalDL1.cv.svg.selectAll(".dl1.band").remove();
-            globalDL1.cv.svg.selectAll(".dl1.band.letter").remove();
+            var globalDL1 = dl1[i];
+            if (globalDL1.drawn)
+                {
+                globalDL1.cv.svg.selectAll(".dl1.band").remove();
+                globalDL1.cv.svg.selectAll(".dl1.band.letter").remove();
+                }
             }
-        if (globalDL2.drawn)
+        for(var i in dl2)
             {
-            globalDL2.cv.svg.selectAll(".dl1.band").remove();
-            globalDL2.cv.svg.selectAll(".dl1.band.letter").remove();
+            var globalDL2=dl2[i]
+            if (globalDL2.drawn)
+                {
+                globalDL2.cv.svg.selectAll(".dl1.band").remove();
+                globalDL2.cv.svg.selectAll(".dl1.band.letter").remove();
+                }
             }
         return;
     }
 
+    var globalDL1=dl1[0];
+    var globalDL2=dl2[0];
+    var globalSeq=globalSeqs[0];
 
     var bands = globalSeq.bins;
-    //bands.push(globalSeq.max);
     var y0 = 0;
     var margin = globalDL1.cv.margin;
     var scale = (dimDL.graphHeight - margin.top - margin.bottom) / (Math.max(globalSeq.max,bands[bands.length-1]) - bands[0])
@@ -1394,7 +1401,6 @@ function drawGrid() {
     }
 
     //1) BANDS IN LINE 1
-
     if(globalDL1.drawn && globalDL1.cv.svg.selectAll(".dl1.band")[0].length<=1)    //If not already drawn
     {
         globalDL1.cv.svg.selectAll("bands")
@@ -1441,7 +1447,6 @@ function drawGrid() {
                 return String.fromCharCode(code);
             });
     }
-
 
     //2) BANDS IN LINE 2
     if(globalDL2.drawn && globalDL2.cv.svg.selectAll(".dl1.band")[0].length<=1)    //If not already drawn
@@ -1495,18 +1500,3 @@ function drawGrid() {
 
         }
     }
-
-/**
- * Draws help messages close to each visual element
- * TODO
- */
-function drawHelp()
-    {
-
-    }
-
-
-
-
-
-

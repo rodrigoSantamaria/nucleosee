@@ -83,8 +83,13 @@ function populateDataList(data)
 
 function selectData()
     {
+    //0) Remove previous elements
+    destroyAll(false);
+
+        //1) Get and print data
     for(var i=0; i<$("#selectionList option:selected").length; i++)
         {
+        console.log("Adding data "+ i);
         Server.selectData(drawingFirstDataLine, $("#selectionList option:selected")[i].value, i);
         }
     }
@@ -162,6 +167,13 @@ function drawingFirstDataLine(processedData, chromosome, index)
         GVB_GLOBAL.track    = chromosome;
     }
 
+    //populate search option lists
+    var elSel = document.getElementById('paramSearchDataset');
+    var elOptNew = document.createElement('option');
+    elOptNew.text = processedData.dataName;
+    elOptNew.value = processedData.dataName;
+    elSel.add(elOptNew, null);
+
 
     var seqServer       = processedData.seq;    // just a sampling of about 400K of the original full length sequence
     var fullLength      = processedData.fullLength;
@@ -175,10 +187,11 @@ function drawingFirstDataLine(processedData, chromosome, index)
     if(DEBUG_GBV) console.log("Length of seqServer:"+seqServer.length+" (full length seq="+fullLength+")");
 
     if(typeof(fullLength)=="object")
-        dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength[GVB_GLOBAL.track], seqServer, 0, fullLength[GVB_GLOBAL.track], GVB_GLOBAL.maxSize, mean, stdev, processedData.min, processedData.max, GVB_GLOBAL.ws, processedData.bins);
+        dataLine_1(processedData, 0, fullLength[GVB_GLOBAL.track]);
     else
-        dataLine_1(GVB_GLOBAL.chromosomes, GVB_GLOBAL.track, fullLength, seqServer, 0, fullLength, GVB_GLOBAL.maxSize, mean, stdev, processedData.min, processedData.max, GVB_GLOBAL.ws, processedData.bins);
+        dataLine_1(processedData, 0, fullLength);
 
+    //In case of switching tracks
     if(processedData.hasOwnProperty("search") && processedData.search.points.hasOwnProperty(chromosome))
         {
         console.log("There's a search!")
@@ -225,10 +238,12 @@ function drawingFirstDataLine(processedData, chromosome, index)
  *
  * 3) Get the real stuff
  * http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&query_key=2&WebEnv=NCID_1_44089431_130.14.22.215_9001_1469092699_175516958_0MetA0_S_MegaStore_F_1&rettype=fasta&retmode=txt
-
  */
 function searchPattern()
 {
+    var selection=$("#paramSearchDataset option:selected")[0].value;
+    var globalDL1=getDL1(selection);
+
     if(globalDL1.drawn)
     {
         var pattern     = $('#patternSearch').val();
@@ -245,7 +260,7 @@ function searchPattern()
             intersect="hard"
 
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
-        Server.search(searchResults, pattern,d, geo, intersect, GVB_GLOBAL.softMutations);
+        Server.search(searchResults, pattern,d, geo, intersect, GVB_GLOBAL.softMutations,globalSeqs[0].dataName,"None","not");
     }
 }
 
@@ -290,6 +305,7 @@ function exportPositions(points)
     if (textURL !== null)   URL.revokeObjectURL(textURL);
 
     var textURL = URL.createObjectURL(data);
+    var globalDL1=dl1[0];
     globalDL1.posURL=textURL;
     }
 
@@ -311,8 +327,11 @@ function exportGenes(annotations)
     }
 
     var textURL = URL.createObjectURL(data);
+
+    var globalDL1=dl1[0];//Over the first of all the level1 lines (usually just one)
     globalDL1.genesURL=textURL;
-}
+    }
+
 
 function exportGO(annotations)
 {
@@ -332,6 +351,7 @@ function exportGO(annotations)
     }
 
     var textURL = URL.createObjectURL(data);
+    var globalDL1=dl1[0];
     globalDL1.goURL=textURL;
 }
 
@@ -359,7 +379,7 @@ function getAllAnnotations(allPoints, sizePattern)
         }
     else
         winS=sizePattern*ws;
-    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", winS, "left", "False", chromosomes, ws, "soft");
+    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", winS, "left", "False", chromosomes, ws, "soft", globalSeqs[0].dataName);
 }
 
 
@@ -441,13 +461,17 @@ function createIconsChromosomes(chromosomes)
 
 function destroyAll(clear)
 {
-    if(globalDL1.drawn)
+   /* if(globalDL1.drawn)
         globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm-tip").remove();
     if(globalDL2.drawn)
         globalDL2.cv.svg.selectAll("."+globalDL2.cv.classSVG+".annotation-tip").remove();
-
+*/
     // Empty all SVG images (of the array)
-    var images = ["lineSeq", "lineSeq2", "lineSeq3"];
+    if(dl1!=undefined)
+        for(var i=0;i<dl1.length;i++)
+            $("#"+dl1[i].cv.nameSVG).empty();
+
+    var images = ["lineSeq2", "lineSeq3"];
     for(var i=0;i<images.length;i++)
     {
         var image = $("#"+images[i]);
@@ -469,4 +493,7 @@ function destroyAll(clear)
         console.log(new Array(15).join("\n"));
         console.log("Reset all (with File APIs)...");
     }
+
+    globalSeqs=[]
+    dl1=[]
 }

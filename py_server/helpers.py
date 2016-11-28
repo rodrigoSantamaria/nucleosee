@@ -753,3 +753,13 @@ def commonName(batch):
     m=seq.find_longest_match(0,len(a),0,len(b))
     return a[m.a:(m.a+m.size)]
 #%%
+    
+def getDataAnnot(data):
+    if("goa" in data.keys()):
+        dg=data
+    else:
+        for k in data.keys():
+            if("goa" in data[k].keys()):
+                dg=data[k]
+                break
+    return dg

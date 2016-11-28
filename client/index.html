@@ -79,7 +79,7 @@
 
 
     <!-- CORE VIEW -->
-    <div class="core-view" style="display:none;">
+    <div id="core" class="core-view" style="display:none;">
 
         <div style="float:left;">
 
@@ -148,9 +148,9 @@
 
 
         <!-- VISUALIZATION -->
-        <div id="lineSeq"></div>
+        <!--<div id="lineSeq"></div>
         <div id="lineSeq2"></div>
-        <div id="lineSeq3"></div>
+        <div id="lineSeq3"></div>-->
 
     </div>
 
@@ -194,6 +194,18 @@
                             <label title="If checked, only patterns fully inside the selected regions are reported"><input type="checkbox" id="paramIntersect" >Fully inside<br></label>
                         </div>
 
+
+                    </div>
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-sm-3 col-sm-offset-1">
+                            <label class="control-label" for="paramSearchDataset" title="Show coincidences in the selected dataset">Coincidences in</label>
+                        </div>
+                        <div class="col-sm-2">
+                            <select id="paramSearchDataset">
+                            </select>
+                        </div>
 
                     </div>
                     <hr>

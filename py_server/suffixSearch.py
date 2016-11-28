@@ -33,7 +33,6 @@ def bwt(text, numCols=1000):
     for x in set(cr["initial"]):
         fo[x]=numpy.searchsorted(cr["initial"], x)
     print('time in getting firstOccurrences:',(time.clock()-t))
-    print(type(cr["final"]))
     cp=checkpoints(cr["final"],numCols)
     #cp=checkpoints((str)(cr["final"]),numCols)
     print('time in getting checkpoints:',(time.clock()-t))
@@ -98,7 +97,6 @@ def count(symbol, pos, text, checkpoints, k=1000):
         if(pos-i<0):
             break
     pos0=max(0,i-1)/k
-    print(pos0)
     count=checkpoints[symbol][pos0]
     for i in xrange(pos0*k, pos):
         if(text[i]==symbol):
@@ -158,12 +156,10 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
     import time
     t00=time.clock()
     step=(int)(round((float)(len(pattern))/(d+1)))
-    print(pattern, d, step)
     matches=[]
     for i in xrange(0, len(pattern), step):
         #1) seed definition
         seed=pattern[i:i+step]
-        print("seed:",seed)
         #2) seed detection
         t0=time.clock()
         result=bwMatchingV7(seed, cf, fo, sa, checkpoints, k)

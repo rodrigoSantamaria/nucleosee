@@ -151,7 +151,6 @@ def loadData(dataName="Test", track="None"):
     else:
         picklePath=picklePaths[0]
    
-    windowSize=chars[2].strip()
     organism=chars[4].strip()
     
     #----Load the corresponding pickle
@@ -220,8 +219,10 @@ def loadData(dataName="Test", track="None"):
         data["go"]=dataGO
         data["goa"]=dataGOA       
         data["windowSize"]=pdata["processed"]["windowSize"]
-           
-    session[user]=data
+    
+      
+    #session[user]=data
+    session[user][dataName]=data#trying to load several datasets at once
     print('file preprocess takes ',(time.clock()-t00),"s")
     
     dbp=data["batch"]["processed"]
@@ -617,18 +618,54 @@ geo        si distinto de "none", filtra las búsquedas que no esten en la zona 
 retorna    las posiciones dentro de dseq donde aparece el patrón
 """
 @app.route("/search")
-def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false"):
+def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false", dataName1="None", dataName2="None", join="not"):
     global data
     
     print("searching..:")
-    t00=time.clock()
     
     d=int(request.args.get("d"))
     pattern=str(request.args.get("pattern"))
     geo=str(request.args.get("geo"))
     intersect=str(request.args.get("intersect"))
     softMutations=str(request.args.get("softMutations"))
+    dataName1=str(request.args.get("dataName1"))
 
+    print("SEARCHING IN DATANAME1", dataName1)   
+    if dataName1=="None":
+        ret=searchLocal(data, pattern, d, geo, intersect, softMutations)
+    else:
+        ret=searchLocal(data[dataName1], pattern, d, geo, intersect, softMutations)
+    search1=ret["points"]
+    sizePattern=ret["sizePattern"]
+    
+    if(dataName2=="None"):
+        search=search1
+    else:
+        ret=searchLocal(data[dataName2], pattern, d, geo, intersect, softMutations)
+        search2=ret["points"]
+        s1=set(search1)
+        s2=set(search2)
+        if(join=="not"):
+            search=s1 - s2
+        if(join=="and"):
+            search=s1 & s2
+        if(join=="or"):
+            search=s1 | s2
+        
+    #for json
+    for k in search.keys():
+        search[k]=(str)(search[k])
+        
+    if("response" in ret.keys()):
+        return jsonify(response=ret["response"], msg=ret["msg"])
+    else:
+        return jsonify(points=search, sizePattern=sizePattern)
+        
+#%%    
+def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutations="false"):
+    import time
+    
+    t00=time.clock()
     ws=data["windowSize"]
                 
     #CASE 1) Numerical range pattern
@@ -640,7 +677,8 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
             for k in data["batch"]["processed"]["seq"].keys():
                 points[k]=(str)([(int)(interval["start"])] if (interval["start"]+interval["length"])<len(data["batch"]["processed"]["seq"][k]) else [])
             data["search"]={'points':points, 'sizePattern':((int)(interval["length"]/ws))}
-            return jsonify(points=points, sizePattern=((int)(interval["length"]/ws)));
+            #return jsonify(points=points, sizePattern=((int)(interval["length"]/ws)));
+            return {"points":points, "sizePattern":((int)(interval["length"]/ws))}
     
     #CASE 2) gene/go name pattern
     t=data["batch"]["processed"]["bwt"][data["batch"]["processed"]["seq"].keys()[0]]
@@ -669,7 +707,8 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
             points[k]=(str)([(int)(y["start"]) for y in oc])
             sizes[k]=(str)([(int)((y["end"]-y["start"])/ws) for y in oc])
         data["search"]={'points':points, 'sizePattern':sizes}
-        return jsonify(points=points, sizePattern=sizes);
+        #return jsonify(points=points, sizePattern=sizes);
+        return {"points":points, "sizePattern":sizes};
         
     #CASE 3) bin pattern    
     pattern=helpers.convertString(pattern)
@@ -677,7 +716,6 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
     search={}
     for k in data["batch"]["processed"]["seq"].keys():
          if(False in [x in patternLetters for x in set(pattern)]):
-            #return jsonify(response="error", msg="{}: There are characters in pattern that do not correspond to the sequence characters: {}".format(k, t["firstOccurrence"].keys()))
             search[k]=[] #instead of returning an error
          else:
             t0=time.clock()
@@ -686,10 +724,9 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
             print(len("".join(data["batch"]["processed"]["dseq"][k])))
             print("Search ",k,"takes",(time.clock()-t0), "and finds",len(search[k]), "occurences")
             if(len(search[k])>10000):
-                return jsonify(response="error", msg="Too many occurrences, please narrow your search", points={}, sizePattern=len(pattern))
+                #return jsonify(response="error", msg="Too many occurrences, please narrow your search", points={}, sizePattern=len(pattern))
+                return {"response":"error", "msg":"Too many occurrences, please narrow your search", "points":{}, "sizePattern":len(pattern)}
     print("Search finished in ",(time.clock()-t00))
-    
-    
     
     
     if(softMutations=="true"):
@@ -731,34 +768,38 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false")
                 else:
                     search[k]=[]
        
-    #for JSON serialization   
-    for k in search.keys():
-        search[k]=(str)(search[k])
-            
-    data["search"]={'points':search, 'sizePattern':len(pattern)}
-    return jsonify(points=search, sizePattern=len(pattern))
+    return {"points":search, "sizePattern":len(pattern)}
 
 
 
 #%%
 @app.route("/getPartSeq")
-def getPartSeq(start=0, end=0, track="None"):
+def getPartSeq(start=0, end=0, track="None", dataName="None"):
     global data
     import numpy as np
     start=int(request.args.get("start"))
     end=int(request.args.get("end"))
     track=str(request.args.get("track"))
-    seq=data["batch"]["processed"]["seq"][track]
-    part=np.array(seq[start:end],dtype=float)
-    partMax=np.array(data["batch"]["max"][track][start:end],dtype=float)
-    partMin=np.array(data["batch"]["min"][track][start:end],dtype=float)
+    dataName=str(request.args.get("dataName"))
+    
+    if(dataName=="None"):
+        seq=data["batch"]["processed"]["seq"][track]
+        part=np.array(seq[start:end],dtype=float)
+        partMax=np.array(data["batch"]["max"][track][start:end],dtype=float)
+        partMin=np.array(data["batch"]["min"][track][start:end],dtype=float)
+    else:
+        seq=data[dataName]["batch"]["processed"]["seq"][track]
+        part=np.array(seq[start:end],dtype=float)
+        partMax=np.array(data[dataName]["batch"]["max"][track][start:end],dtype=float)
+        partMin=np.array(data[dataName]["batch"]["min"][track][start:end],dtype=float)
+        
     return jsonify(partSeq=list(part), minimum=list(partMin), maximum=list(partMax))
 
 
 
 #%%
 @app.route("/annotations")
-def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft"):
+def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft", dataName="None"):
     window=eval(request.args.get("window"))
     pos=eval(request.args.get("positions"))
     types=eval(request.args.get("types"))
@@ -766,13 +807,18 @@ def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs=
     onlyIDs=str(request.args.get("onlyIDs"))
     align=str(request.args.get("align"))
     intersect=str(request.args.get("intersect"))
+    dataName=str(request.args.get("dataName"))
 
     print("---------------------------------------")
     print("Retrieving annotations on track", track)
-    print(data["batch"]["processed"]["gff"].keys())
     
-    if(track in data["batch"]["processed"]["gff"].keys()):
-        res=annotationsLocal(positions=pos, gff=data["batch"]["processed"]["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
+    if(dataName=="None"):
+        dbp=data["batch"]["processed"]
+    else:
+        dbp=data[dataName]["batch"]["processed"]
+        
+    if(track in dbp["gff"].keys()):
+        res=annotationsLocal(positions=pos, gff=dbp["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
     else:
         res=[]
     return jsonify(response=res)
@@ -797,14 +843,19 @@ def annotationsLocal(positions, gff, window=1000, types=["any"], track="None", o
 
 #%%
 @app.route("/nucleotides")
-def nucleotides(start=0, end=10, track="None"):
+def nucleotides(start=0, end=10, track="None", dataName="None"):
     global data
+
+    dataName=str(request.args.get("dataName"))
+    if(dataName=="None"):
+        dbp=data["batch"]["processed"]
+    else:
+        dbp=data[dataName]["batch"]["processed"]
 
     start=int(request.args.get("start"))
     end=int(request.args.get("end"))
     track=str(request.args.get("track"))
-    print(data["batch"]["processed"]["fasta"].keys())
-    return jsonify(response=data["batch"]["processed"]["fasta"][track][start:end])
+    return jsonify(response=dbp["fasta"][track][start:end])
  
 #%%
 '''
@@ -818,7 +869,7 @@ Originally, this method aligned profiles but that was very costly computationall
 k-motif (currently also limited to 6-mers)
 '''
 @app.route("/nucProfile")
-def nucProfile(positions=[], size=10, track="None", k=6):
+def nucProfile(positions=[], size=10, track="None", k=6, dataName="None"):
     global data
     import time
     t00=time.clock()
@@ -826,12 +877,17 @@ def nucProfile(positions=[], size=10, track="None", k=6):
     size=int(request.args.get("size"))
     track=str(request.args.get("track"))
     k=int(request.args.get("k"))
-    #align=str(request.args.get("align"))
+    dataName=str(request.args.get("dataName"))
+
+    if(dataName=="None"):
+        dbp=data["batch"]["processed"]
+    else:
+        dbp=data[dataName]["batch"]["processed"]
     
     #basic operations (prof and c might not be very useful)
     seqs={}
     for p in pos:
-        seqs[p]=data["batch"]["processed"]["fasta"][track][p:p+size].upper()
+        seqs[p]=dbp["fasta"][track][p:p+size].upper()
     c=ms.consensus(seqs.values())
     prof=ms.profile(seqs.values())
 
@@ -869,9 +925,11 @@ def nucProfile(positions=[], size=10, track="None", k=6):
 def annotationsGOA(genes=[], types=["any"]):
     global data
     
+    dg=helpers.getDataAnnot(data)
+            
     a=eval(request.args.get("genes"))
     print('annotation size: ',len(a))
-    agon=ann.annotateGOnames(a, data["goa"], data["go"])
+    agon=ann.annotateGOnames(a, dg["goa"], dg["go"])
     return jsonify(response=agon)
     
 #%%
@@ -886,11 +944,13 @@ def enrichmentGO(annotations={}, correction="none", alpha=0.01):
     alpha=float(request.args.get("alpha"))
     correction=request.args.get("correction")
 
+    dg=helpers.getDataAnnot(data)
+    
     ego={}
-    ego=ann.enrichmentFisher(gis, data["goa"], alpha, correction)
+    ego=ann.enrichmentFisher(gis, dg["goa"], alpha, correction)
     for k in ego.keys():
-        if(data["go"].has_key(k) and data["go"][k]!="undefined"):
-            ego[k]["go_name"]=data["go"][k]
+        if(dg["go"].has_key(k) and dg["go"][k]!="undefined"):
+            ego[k]["go_name"]=dg["go"][k]
     data["ego"]=ego
     return jsonify(response=ego)
 

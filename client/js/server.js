@@ -302,6 +302,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.fullLength=result.fullLength;
                     response.chromosomes=result.chromosomes;
                     response.bins=result.bins;
+                    response.dataName=dataName;
                     //response.filenames=result.filenames;
 
                     // Hide the image of "loading..."
@@ -390,8 +391,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param callback
          * @param pattern
          * @param d
+         * TODO: add dataName
          */
-        Server.search = function (callback, pattern, d, geo, intersect, softMutations)
+        Server.search = function (callback, pattern, d, geo, intersect, softMutations, dataName1,dataName2,join)
         {
             var startTime = new Date();
 
@@ -404,7 +406,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+"&geo="+geo+"&intersect="+intersect+"&softMutations="+softMutations,
+                    url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+
+                        "&geo="+geo+"&intersect="+intersect+"&softMutations="+softMutations+
+                        "&dataName1="+dataName1+"&dataName2="+dataName2+"&join="+join,
                     type: "GET",
                     datatype: "json"
                 });
@@ -464,7 +468,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param numMatches        it's not necessary!!
          */
         Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs, chromosomes, ws, intersect,
-                                               gis, annotations, numChromosome, startTime, numMatches)
+                                               dataName, gis, annotations, numChromosome, startTime, numMatches)
         {
             // Initialize variables first
             if(typeof(gis) === 'undefined')             gis = "";
@@ -485,7 +489,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/annotations?user="+_user+"&password="+_password+
-                    "&positions=["+points+"]&types="+types+"&window="+ws+"&align="+align+"&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+intersect,
+                    "&positions=["+points+"]&types="+types+"&window="+ws+"&align="+align+
+                    "&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+intersect+"&dataName="+dataName,
                     type: "GET",
                     datatype: "json"
                 });
@@ -542,7 +547,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
                         var startWS=new Date()
                         Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False", chromosomes, GVB_GLOBAL.ws, intersect,
-                                                    gis, annotations, numChromosome, (new Date()-startTime), numMatches);
+                                                    gis, annotations, numChromosome, (new Date()-startTime), numMatches, dataName);
                         console.log("Time spent getting annotations: "+ (new Date()-startWS)+"ms");
                     }
                     else
@@ -634,14 +639,16 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param track
          * @param onlyIDs
          */
-        Server.annotationsGenes = function (callback, point, types, window, align, track, onlyIDs)
+        Server.annotationsGenes = function (callback, point, types, window, align, track, onlyIDs, dataName)
         {
             // var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/annotations?user="+_user+"&password="+_password+
-                                    "&positions=["+point+"]&types="+types+"&window="+window+"&align=\""+align+"\"&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+GVB_GLOBAL.intersect,
+                                    "&positions=["+point+"]&types="+types+"&window="+window+"&align=\""+align+
+                                    "\"&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+GVB_GLOBAL.intersect+
+                                    "&dataName="+dataName,
                     type: "GET",
                     datatype: "json"
                 });
@@ -731,13 +738,14 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param point
          * @param sizePattern
          */
-        Server.getPartSeq = function (callback, track, startSeq, endSeq, numNucleotides, point, sizePattern)
+        Server.getPartSeq = function (callback, track, startSeq, endSeq, numNucleotides, point, sizePattern, dataName)
         {
             // var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/getPartSeq?user="+_user+"&password="+_password+"&track="+track+"&start="+startSeq+"&end="+endSeq,
+                    url: _serverPath+"/getPartSeq?user="+_user+"&password="+_password+"&track="+track+
+                        "&start="+startSeq+"&end="+endSeq+"&dataName="+dataName,
                     type: "GET",
                     datatype: "json"
                 });
@@ -751,12 +759,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .done(function(result)
                 {
                     var response = [];
-                    /*response.partSeq = result.partSeq;
-                    response.partMin = result.partMin;
-                    response.partMax = result.partMax;*/
                     response=result;
 
-                    callback(response, numNucleotides, point, sizePattern);
+                    callback(response, numNucleotides, point, sizePattern, dataName);
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
@@ -777,13 +782,14 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param point
          * @returns sequence for that interval
          */
-        Server.nucleotides = function (callback, track, startSeq, endSeq, start, point)
+        Server.nucleotides = function (callback, track, startSeq, endSeq, start, point, dataName)
         {
             // var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/nucleotides?user="+_user+"&password="+_password+"&track="+track+"&start="+startSeq+"&end="+endSeq,
+                    url: _serverPath+"/nucleotides?user="+_user+"&password="+_password+"&track="+
+                    track+"&start="+startSeq+"&end="+endSeq+"&dataName="+dataName,
                     type: "GET",
                     datatype: "json"
                 });
@@ -802,7 +808,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     // console.log("nucleotides(): get nucleotides done...");
                     // console.log("Time spent nucleotides: "+ (new Date()-startTime)+"ms");
 
-                    callback(start, point, response)
+                    callback(start, point, response, dataName)
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
@@ -820,13 +826,14 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param size: length from the starting points
          * @param track: chromosome or track where the sequences must be taken from
          */
-        Server.nucProfile = function (callback, track, positions, size, k)
+        Server.nucProfile = function (callback, track, positions, size, k, dataName)
         {
             // var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/nucProfile?user="+_user+"&password="+_password+"&track="+track+"&positions="+positions+"&size="+size+"&k="+k,
+                    url: _serverPath+"/nucProfile?user="+_user+"&password="+_password+"&track="+track
+                        +"&positions="+positions+"&size="+size+"&k="+k+"&dataName="+dataName,
                     type: "GET",
                     datatype: "json"
                 });
