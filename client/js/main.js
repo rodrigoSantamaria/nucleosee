@@ -43,7 +43,7 @@ function checkFile(files)
      * @property name
      */
 
-    destroyAll(false);
+    destroyAll(false, false);
 
     // We ensure that there is a selected file
     if(typeof(files) != 'undefined')
@@ -84,13 +84,15 @@ function populateDataList(data)
 function selectData()
     {
     //0) Remove previous elements
-    destroyAll(false);
+    destroyAll(false, false);
+
 
         //1) Get and print data
     for(var i=0; i<$("#selectionList option:selected").length; i++)
         {
-        console.log("Adding data "+ i);
-        Server.selectData(drawingFirstDataLine, $("#selectionList option:selected")[i].value, i);
+        showImageLoading("imgLoadingFile", true);
+        $('#loadText')[0].innerHTML="loading data...";
+        Server.selectData(drawingFirstDataLine, $("#selectionList option:selected")[i].value, i, $("#selectionList option:selected").length);
         }
     }
 
@@ -121,7 +123,18 @@ function preprocessing(chromosome)
     {
         GVB_GLOBAL.track = chromosome;
         if (DEBUG_GBV) console.log("chromosome: " + GVB_GLOBAL.track);
-        Server.getTrack(drawingFirstDataLine, GVB_GLOBAL.track);
+       // Server.getTrack(drawingFirstDataLine, GVB_GLOBAL.track, globalSeqs[0].dataName);
+
+        //0) Remove previous elements
+        destroyAll(false, true);
+
+        //1) Get and print data
+        for(var i=0; i<$("#selectionList option:selected").length; i++)
+        {
+            showImageLoading("imgLoadingFile", true);
+            $('#loadText')[0].innerHTML="loading data...";
+            Server.getTrack(drawingFirstDataLine, GVB_GLOBAL.track,  $("#selectionList option:selected")[i].value, i, $("#selectionList option:selected").length);
+        }
     }
 }
 
@@ -134,8 +147,7 @@ function preprocessing(chromosome)
  * @param chromosome - track (usually chromosome) to be drawn in foreground
  * @param index - in de case that several processedData are to be loaded, which one is this one
  */
-function drawingFirstDataLine(processedData, chromosome, index)
-{
+function drawingFirstDataLine(processedData, chromosome, index, total) {
     /**
      * @typedef {Object} processedData
      * @property seq
@@ -145,64 +157,65 @@ function drawingFirstDataLine(processedData, chromosome, index)
      * @property fullLength
      * @property chromosomes
      */
+    if(index>=total-1) {
+        showImageLoading("imgLoadingFile", false);
+        $('#loadText')[0].innerHTML = "Data loaded";
+        }
 
-    GVB_GLOBAL.forceReload=false;
+
+    GVB_GLOBAL.forceReload = false;
 
     // We create icons chromosomes and bind the click event
     GVB_GLOBAL.chromosomes = processedData.chromosomes;
-    if(chromosome == "None")
-    {
-    if(processedData.filenames!=undefined)
-        {
-        if (processedData.filenames.length > 1)
-            $('#loadText')[0].innerHTML = processedData.filenames[0].replace(/\"/g, "") + " et al.";  //replaces ',' by '","';
-        else
-            $('#loadText')[0].innerHTML = processedData.filenames[0].replace(/\"/g, "");  //replaces ',' by '","';
-        }
+    if (chromosome == "None") {
         createIconsChromosomes(GVB_GLOBAL.chromosomes);
-        GVB_GLOBAL.track    = processedData.chromosomes[0];
-    }
-    else
-    {
-        GVB_GLOBAL.track    = chromosome;
-    }
-
-    //populate search option lists
-    var elSel = document.getElementById('paramSearchDataset');
-    var elOptNew = document.createElement('option');
-    elOptNew.text = processedData.dataName;
-    elOptNew.value = processedData.dataName;
-    elSel.add(elOptNew, null);
-
-
-    var seqServer       = processedData.seq;    // just a sampling of about 400K of the original full length sequence
-    var fullLength      = processedData.fullLength;
-    var mean            = processedData.mean;
-    var stdev           = processedData.stdev;
-
-
-    // DATALINE 1 (preprocessed data)
-    //----------------------------------
-    if(DEBUG_GBV) console.log("\n----- DRAWING: DATALINE 1 ("+GVB_GLOBAL.track+")-----");
-    if(DEBUG_GBV) console.log("Length of seqServer:"+seqServer.length+" (full length seq="+fullLength+")");
-
-    if(typeof(fullLength)=="object")
-        dataLine_1(processedData, 0, fullLength[GVB_GLOBAL.track]);
-    else
-        dataLine_1(processedData, 0, fullLength);
-
-    //In case of switching tracks
-    if(processedData.hasOwnProperty("search") && processedData.search.points.hasOwnProperty(chromosome))
-        {
-        console.log("There's a search!")
-        drawSearch(processedData.search.points, processedData.search.sizePattern);
+        GVB_GLOBAL.track = processedData.chromosomes[0];
+        //}
         }
-    if(processedData.hasOwnProperty("ego"))
-        {
-        console.log("There's enrichment")
-        drawEnrichment(processedData.ego);
+        else {
+            GVB_GLOBAL.track = chromosome;
         }
-    }
+
+        //populate search option lists
+        var elSel = document.getElementById('paramSearchDataset');
+        var elOptNew = document.createElement('option');
+        elOptNew.text = processedData.dataName;
+        elOptNew.value = processedData.dataName;
+        elSel.add(elOptNew, null);
+
+        var elSel = document.getElementById('paramSearchDataset2');
+        var elOptNew = document.createElement('option');
+        elOptNew.text = processedData.dataName;
+        elOptNew.value = processedData.dataName;
+        elSel.add(elOptNew, null);
+
+
+        var seqServer = processedData.seq;    // just a sampling of about 400K of the original full length sequence
+        var fullLength = processedData.fullLength;
+        var mean = processedData.mean;
+        var stdev = processedData.stdev;
+
+
+        // DATALINE 1 (preprocessed data)
+        //----------------------------------
+        if (DEBUG_GBV) console.log("\n----- DRAWING: DATALINE 1 (" + GVB_GLOBAL.track + ")-----");
+        if (DEBUG_GBV) console.log("Length of seqServer:" + seqServer.length + " (full length seq=" + fullLength + ")");
+
+        if (typeof(fullLength) == "object")
+            dataLine_1(processedData, 0, fullLength[GVB_GLOBAL.track], total);
+        else
+            dataLine_1(processedData, 0, fullLength, total);
+
+        //In case of switching tracks
+        if (processedData.hasOwnProperty("search") && processedData.search.points.hasOwnProperty(chromosome)) {
+            console.log("There's a search!")
+            drawSearch(processedData.search.points, processedData.search.sizePattern);
+        }
+        if (processedData.hasOwnProperty("ego")) {
+            console.log("There's enrichment")
+            drawEnrichment(processedData.ego);
+        }
+}
 
 
 
@@ -241,8 +254,11 @@ function drawingFirstDataLine(processedData, chromosome, index)
  */
 function searchPattern()
 {
-    var selection=$("#paramSearchDataset option:selected")[0].value;
-    var globalDL1=getDL1(selection);
+    var selection1=$("#paramSearchDataset option:selected")[0].value;
+    var selection2=$("#paramSearchDataset2 option:selected")[0].value;
+    var selectionJoin=$("#paramSearchJoin option:selected")[0].value;
+
+    var globalDL1=getLevel(selection1, "DL1");
 
     if(globalDL1.drawn)
     {
@@ -260,14 +276,15 @@ function searchPattern()
             intersect="hard"
 
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
-        Server.search(searchResults, pattern,d, geo, intersect, GVB_GLOBAL.softMutations,globalSeqs[0].dataName,"None","not");
+        Server.search(searchResults, pattern,d, geo, intersect, GVB_GLOBAL.softMutations,
+            selection1,selection2,selectionJoin);
     }
 }
 
 
 // DRAW POINTS ON DATALINE 1
 ////////////////////////////////
-function searchResults(result)
+function searchResults(result, dataName)
 {
     /**
      * @typedef {Object} result
@@ -277,7 +294,7 @@ function searchResults(result)
 
     // DATALINE 1: DRAW POINTS
     //----------------------------------
-    drawSearch(result.points, result.sizePattern);
+    drawSearch(result.points, result.sizePattern, dataName);
 
     exportPositions(result.points)
     // ENRICHMENT
@@ -375,7 +392,6 @@ function getAllAnnotations(allPoints, sizePattern)
                 winS[i][j]*=ws;
             winS[i]="["+winS[i].join(",")+"]";
             }
-        //winS=3000
         }
     else
         winS=sizePattern*ws;
@@ -459,19 +475,17 @@ function createIconsChromosomes(chromosomes)
 
 }
 
-function destroyAll(clear)
+function destroyAll(clear, tracksOnly)
 {
-   /* if(globalDL1.drawn)
-        globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm-tip").remove();
-    if(globalDL2.drawn)
-        globalDL2.cv.svg.selectAll("."+globalDL2.cv.classSVG+".annotation-tip").remove();
-*/
     // Empty all SVG images (of the array)
     if(dl1!=undefined)
         for(var i=0;i<dl1.length;i++)
             $("#"+dl1[i].cv.nameSVG).empty();
 
-    var images = ["lineSeq2", "lineSeq3"];
+    if(dl2!=undefined)
+        for(var i=0;i<dl2.length;i++)
+            $("#"+dl2[i].cv.nameSVG).empty();
+    var images = ["lineSeq3"];
     for(var i=0;i<images.length;i++)
     {
         var image = $("#"+images[i]);
@@ -479,21 +493,22 @@ function destroyAll(clear)
             image.empty();
     }
 
-
-    // Empty all icons of chromosomes
-    $("#imagesChromosomes").empty();
-
-
-    // Clear console and files configuration
-    if(DEBUG_GBV && clear)
-    {
-        // Reset input files
-        $("#files").val('');
-
-        console.log(new Array(15).join("\n"));
-        console.log("Reset all (with File APIs)...");
-    }
-
     globalSeqs=[]
     dl1=[]
+    dl2=[]
+
+    // Empty all icons of chromosomes
+    if(tracksOnly==false) {
+        $("#imagesChromosomes").empty();
+
+        // Clear console and files configuration
+        if (DEBUG_GBV && clear) {
+            // Reset input files
+            $("#files").val('');
+
+            console.log(new Array(15).join("\n"));
+            console.log("Reset all (with File APIs)...");
+            }
+        }
+
 }

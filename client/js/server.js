@@ -230,7 +230,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
 
-                    callback(response, track);
+                    callback(response, track,0,1);
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
@@ -272,15 +272,37 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         };
 
 
+        Server.getDSeq = function (start,end,track,dataName)
+        {
+            var startTime = new Date();
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/getDSeq?user="+_user+"&password="+_password+"&start="+start+"&end="+end
+                        +"&dataName="+dataName+"&track="+track,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var response = result.response;
+                    console.log("DSEQ("+dataName+")"+response)
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    if(_DEBUG) console.log("getDSeq(): listing failed...");
+                    javascript_abort("getDSeq() failed: possibly due to corruption in the server, ask your administrator");
+                });
+        };
 
         /**
          * Selects available preprocessed data in the server
          */
-        Server.selectData = function (callback, dataName, index)
+        Server.selectData = function (callback, dataName, index, total)
         {
             var startTime = new Date();
-            showImageLoading("imgLoadingFile", true);
-            $('#loadText')[0].innerHTML="loading data...";
 
             var requestAJAX = $.ajax(
                 {
@@ -306,13 +328,13 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     //response.filenames=result.filenames;
 
                     // Hide the image of "loading..."
-                    showImageLoading("imgLoadingFile", false);
-                    $('#loadText')[0].innerHTML=dataName;
+                    //showImageLoading("imgLoadingFile", false);
+                    //$('#loadText')[0].innerHTML=dataName;
 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
 
-                    callback(response, "None", index);
+                    callback(response, "None", index, total);
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
@@ -327,7 +349,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param track
          *
          */
-        Server.getTrack = function (callback, track)
+        Server.getTrack = function (callback, track, dataName, index, total)
         {
             var startTime = new Date();
 
@@ -336,7 +358,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/getTrack?user="+_user+"&password="+_password+"&track="+track,
+                    url: _serverPath+"/getTrack?user="+_user+"&password="+_password+"&track="+track+"&dataName="+dataName,
                     type: "GET",
                     datatype: "json"
                 });
@@ -368,6 +390,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.chromosomes=result.chromosomes;
                     response.search=result.search;
                     response.ego=result.ego;
+                    response.dataName=dataName;
 
                     // Hide the image of "loading..."
                     showImageLoading("imgLoadingFile", false);
@@ -375,7 +398,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(_DEBUG) console.log("getTrack(): get track done...");
                     if(_DEBUG) console.log("Time spent get track: " + (new Date() - startTime) + "ms");
 
-                    callback(response, track);
+                    callback(response, track, index, total);
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
@@ -391,7 +414,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param callback
          * @param pattern
          * @param d
-         * TODO: add dataName
          */
         Server.search = function (callback, pattern, d, geo, intersect, softMutations, dataName1,dataName2,join)
         {
@@ -435,7 +457,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         if(_DEBUG) console.log("search(): search done...");
                         if(_DEBUG) console.log("Time spent searching: "+ (new Date()-startTime)+"ms");
 
-                        callback(response);
+                        callback(response, dataName1);
                     }
                     else
                     {
@@ -533,7 +555,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                                         annotations[rrki["id"]]["start"] = rrki["s"];
                                         annotations[rrki["id"]]["end"] = rrki["e"];
                                         annotations[rrki["id"]]["chromosome"] = track;
-                                       //TODO: Recently published MyGene.info can help a lot in expanding to any organism http://mygene.info/v3/query?q=rp&species=4932&fields=all
                                     }
                                 }
                             }
@@ -547,7 +568,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
                         var startWS=new Date()
                         Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False", chromosomes, GVB_GLOBAL.ws, intersect,
-                                                    gis, annotations, numChromosome, (new Date()-startTime), numMatches, dataName);
+                                                    dataName, gis, annotations, numChromosome, (new Date()-startTime), numMatches, dataName);
                         console.log("Time spent getting annotations: "+ (new Date()-startWS)+"ms");
                     }
                     else
@@ -876,19 +897,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         };
 
 
-        function showImageLoading(idImageLoading, isVisible)
-        {
-            var imageLoading = $("#"+idImageLoading);
-
-            if(isVisible)
-            {
-                imageLoading.css('visibility', 'visible');
-            }
-            else
-            {
-                imageLoading.css('visibility', 'hidden');
-            }
-        }
 
         function removeLastSlash(url)
         {
@@ -916,6 +924,19 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 })(window);
 
+function showImageLoading(idImageLoading, isVisible)
+{
+    var imageLoading = $("#"+idImageLoading);
+
+    if(isVisible)
+    {
+        imageLoading.css('visibility', 'visible');
+    }
+    else
+    {
+        imageLoading.css('visibility', 'hidden');
+    }
+}
 
 
 (function() {

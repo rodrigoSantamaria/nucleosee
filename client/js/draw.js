@@ -91,6 +91,7 @@ function customViewObject(name, className, bracketHeight)
         this.data = null;            //
         this.xScale = null;          //scaling function for X
         this.yScale = null;          //scaling function for Y
+        this.color="steelblue";
 
         this.margin = new marginObject();          //pixels on each side
         this.dim = new dimObject();              //graph dimensions
@@ -157,10 +158,8 @@ function globalDL3Object()
     this.sequences=new sequencesObject();
 };
 
-var dl1=[];//aray of dl1 elements
-//var globalDL1=new globalDL1Object();
-//var globalDL2=new globalDL2Object();
-var dl2=[]
+var dl1=[];//array of dl1 elements
+var dl2=[];//array of dl2 elements
 var globalDL3=new globalDL3Object();
 
 
@@ -168,9 +167,14 @@ var globalDL3=new globalDL3Object();
 //-------------------------------------------------------------
 //          DATALINE 1
 //-------------------------------------------------------------
-
-//function dataLine_1(tracks,track, fullLength, seqServ, startSeq, endSeq, maxSize, mean, stdev, min, max, ws, bins)
-function dataLine_1(processedData, startSeq, endSeq)
+/**
+ *
+ * @param processedData data to draw
+ * @param startSeq  starting point
+ * @param endSeq    ending point
+ * @param numLines  total number of tracks for this level (total number of different data, usually 1 or 2)
+ */
+function dataLine_1(processedData, startSeq, endSeq, numLines)
 {
     var startTime = new Date();
     var globalSeq = new globalSeqObject();
@@ -193,11 +197,26 @@ function dataLine_1(processedData, startSeq, endSeq)
         globalSeq.scaleSeqServ = Math.floor(fullLength/GVB_GLOBAL.maxSize);
 
     globalSeqs.push(globalSeq);
-
     var globalDL1=new globalDL1Object("lineSeq_"+dl1.length);
     dl1.push(globalDL1);
     var globalDL2=new globalDL2Object("lineSeq2_"+dl2.length);
     dl2.push(globalDL2);
+
+    if(dl1.length==1 & numLines>1)//modify a little the margins if it's the first one
+        {
+        dl1[0].cv.margin.bottom=8;
+        globalDL1=dl1[0];
+        }
+    if(dl1.length>1)
+        {
+        //    dl1[dl1.length-1].cv.color="#600060";
+        //dl1[dl1.length-1].cv.color="#965096";
+        //dl2[dl2.length-1].cv.color="#965096";
+        dl1[dl1.length-1].cv.color="#968096";
+        dl2[dl2.length-1].cv.color="#968096";
+        globalDL1=dl1[dl1.length-1];
+        globalDL2=dl2[dl2.length-1];
+        }
 
     // We use the core function
     dataLine_core(globalDL1, globalSeq, globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
@@ -208,17 +227,32 @@ function dataLine_1(processedData, startSeq, endSeq)
     if(DEBUG_GBV) console.log("Time spent dataLine1: "+ (new Date()-startTime)+"ms");
 }
 
-function getDL1(dataName)
+
+
+function getLevel(dataName, level)
     {
     for(var i in globalSeqs)
-        if(globalSeqs[i].dataName==dataName)
-            return dl1[i]
+        if(globalSeqs[i].dataName==dataName) {
+            if (level == "DL1")
+                return dl1[i]
+            if (level == "DL2")
+                return dl2[i]
+            if (level == "Seq")
+                return globalSeqs[i]
+            }
     return null;
     }
-function drawSearch(allPoints, sizePattern)
+
+
+
+function drawSearch(allPoints, sizePattern, dataName)
 {
-    var globalSeq=globalSeqs[0];//any seq should do for searches, enrichment and data_line2
-    var globalDL1=dl1[0];
+    var globalSeq=getLevel(dataName, "Seq");
+    var globalDL1=getLevel(dataName, "DL1");
+
+    for(var i in dl1) {
+        dl1[0].cv.svg.selectAll(".point").remove();
+    }
 
     var track = globalSeq.track;
     var tracks = globalSeq.tracks;
@@ -263,7 +297,6 @@ function drawSearch(allPoints, sizePattern)
             }
     }
 
-
     // Mouseover tip and drawing the corresponding line
     globalDL1.pointTip = d3.tip()
         .attr('class', globalDL1.cv.classSVG+' point-tip')
@@ -271,6 +304,7 @@ function drawSearch(allPoints, sizePattern)
         .html(function(d)
         {
             var point = d.real_pos;
+
 
             // We round to the nearest hundred from sizePattern. E.g. 270 --> 300,  540 --> 500
             var focusLine = Math.round(d.size*globalSeq.ws/100)*100;
@@ -281,12 +315,14 @@ function drawSearch(allPoints, sizePattern)
             var startSeq = point-(numNucleotidesDraw/2)+(focusLine/2);
             var endSeq   = point+(numNucleotidesDraw/2)+(focusLine/2);
 
-            // Save information of dataLine2
-            dl2[0].startSeq = startSeq;
-            dl2[0].endSeq = endSeq;
 
             // Draw dataLine2
-            Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, d.size, globalSeq.dataName);
+            for(var i in globalSeqs) {
+                var globalDL2=getLevel(globalSeqs[i].dataName, "DL2")
+                globalDL2.startSeq = startSeq;
+                globalDL2.endSeq = endSeq;
+                Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, d.size, globalSeqs[i].dataName);
+                }
 
             return "<strong>"+d3.format(",")(point) + ":</strong> " + d3.format(".2f")(d.value); // e.g. "307,770 : 0.79"
         });
@@ -296,20 +332,20 @@ function drawSearch(allPoints, sizePattern)
 
 
     // Remove all occurrences label
-    globalDL1.cv.svg.selectAll(".search-label").remove();
-    globalDL1.cv.svg.selectAll(".export-label").remove();
+    dl1[0].cv.svg.selectAll(".search-label").remove();
+    dl1[0].cv.svg.selectAll(".export-label").remove();
 
 
     //Draw the points
-    drawPoints(dataPoints, globalDL1.pointTip);
+    drawPoints(dataPoints, globalDL1);
 
     // Draw occurrences label
-    globalDL1.cv.svg.append("g")
-        .attr("class", globalDL1.cv.classSVG+" export-label")
+    dl1[0].cv.svg.append("g")
+        .attr("class", dl1[0].cv.classSVG+" export-label")
         .append("text")
         .attr('x', 325)
         .attr('y', -2)
-        .on("click", function() { window.open(globalDL1.posURL); })
+        .on("click", function() { window.open(dl1[0].posURL); })
         .text("matches>");
 
     var matches=[];
@@ -317,11 +353,11 @@ function drawSearch(allPoints, sizePattern)
     var pp = JSON.parse(allPoints[tracks[i]]);
     matches.push(pp.length);
         }
-    globalDL1.cv.svg.selectAll(".searchLabels")
+    dl1[0].cv.svg.selectAll(".searchLabels")
     .data(matches)
     .enter()
     .append("text")
-    .attr("class", globalDL1.cv.classSVG+" search-label")
+    .attr("class", dl1[0].cv.classSVG+" search-label")
     .attr('x', function(d,i){return 380+i*29;})
     .attr('y', -2)
     .style("font-weight", function (d, i) {
@@ -333,26 +369,21 @@ function drawSearch(allPoints, sizePattern)
     });
 
 
-    globalDL1.cv.svg.append("g")
+    dl1[0].cv.svg.append("g")
         .append("text")
-        .attr("class", globalDL1.cv.classSVG+" export-label")
+        .attr("class", dl1[0].cv.classSVG+" export-label")
         .attr('x', 380+29*(matches.length))
         .attr('y', -2)
-        .on("click", function() { window.open(globalDL1.genesURL); })
+        .on("click", function() { window.open(dl1[0].genesURL); })
         .text("genes>");
 
-    globalDL1.cv.svg.append("g")
+    dl1[0].cv.svg.append("g")
         .append("text")
-        .attr("class", globalDL1.cv.classSVG+" export-label")
+        .attr("class", dl1[0].cv.classSVG+" export-label")
         .attr('x', 380+29*(matches.length)+40)
         .attr('y', -2)
-        .on("click", function() { window.open(globalDL1.goURL); })
+        .on("click", function() { window.open(dl1[0].goURL); })
         .text("go>");
-
-
-
-    // Save information of dataLine1
-    //globalDL1.seqPoints = seqPoints;//TODO: not used afterwards, maybe remove
 
 
     //GET SEQUENCES, MOTIFS, (ALIGNMENT), CONSENSUS
@@ -365,11 +396,8 @@ function drawSearch(allPoints, sizePattern)
 }
 
 
-function drawPoints(dataPoints)
+function drawPoints(dataPoints, globalDL1)
     {
-    var globalDL1=dl1[0];
-    globalDL1.cv.svg.selectAll(".point").remove();
-
     // Create all new points
     globalDL1.cv.svg.selectAll(".data")
         .data(dataPoints)
@@ -535,7 +563,7 @@ function drawEnrichment(enrichment)
                 }
 
 
-            drawPoints(dataPoints);
+            drawPoints(dataPoints, $("#paramSearchDataset option:selected")[0].value);
         })
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
@@ -555,22 +583,21 @@ function drawLevel2()
 // sizePattern - size of the searched pattern (to highlight over the whole seq)
 function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
 {
-
-
-    var globalDL2=dl2[0];
+    console.log("DATALINE2 "+dataName)
+    var globalDL2=getLevel(dataName, "DL2")
+    var globalSeq=getLevel(dataName, "Seq");
 
     // DRAWING DATALINE 2
     //-------------------------------------------------
     var startSeq = globalDL2.startSeq;
     var endSeq   = globalDL2.endSeq;
 
+    var gap=(((endSeq-startSeq)/globalSeq.ws-sizePattern)/2)*globalSeq.ws;
+    var dseq=Server.getDSeq(startSeq+gap,startSeq+gap+(sizePattern*globalSeq.ws),globalSeq.track, globalSeq.dataName);
+    console.log("DSEQ ("+dataName+")  "+dseq);
+
+
     //var globalSeq=globalSeqs[0];
-    var globalSeq;
-    for(var i in globalSeqs)
-        {
-        if(globalSeqs[i].dataName==dataName)
-            globalSeq=globalSeqs[i];
-        }
     globalDL2.scale=1;
     if(Math.floor((sizePattern*globalSeq.ws)/(endSeq-startSeq)) > 1)
         globalDL2.scale= Math.ceil((sizePattern*globalSeq.ws)/(endSeq-startSeq));
@@ -585,7 +612,8 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
 
     // DRAWING ANNOTATIONS
     //-------------------------------------------------
-    Server.annotationsGenes(drawAnnotations, point,"[\"any\"]",globalDL2.cv.dim.width, "center", globalSeq.track, "False", globalSeq.dataName);
+    if(globalSeqs[0].dataName==dataName)
+        Server.annotationsGenes(drawAnnotations, point,"[\"any\"]",globalDL2.cv.dim.width, "center", globalSeq.track, "False", globalSeq.dataName);
 
 
     // DRAWING NUCLEOTIDES (DATALINE 3)
@@ -1113,6 +1141,16 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
         .attr("dy", ".71em")
         .style("text-anchor", "end");
 
+    // Image SVG: data name
+    svg.append("g")
+        .attr("class", classSVG+" title")
+        .append("text")
+        .attr("x", -70)
+        .attr("y", -30)
+        .attr("fill",globalDL.cv.color)
+        .attr("transform", "rotate(-90)")
+        .text(globalSeq.dataName);
+
     //Shadow line in case seqServ provides that info
     if(seqServ.minimum!=undefined) //In order to draw variation shade
         {
@@ -1138,6 +1176,7 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
         .attr("class", classSVG+" line")
         .datum(data)
         .append("path")
+        .attr("stroke",globalDL.cv.color)
         .attr("d", line);
 
 
@@ -1163,6 +1202,7 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
         .attr("class", classSVG+" scale")
         .append("text")
         .text("1 : "+Math.max(Math.round(scaleSeqScreen), Math.round(scaleServScreen)))
+        .attr("fill","grey")
         .attr("x", width-margin.left)
         .attr("y", margin.top*0.75);
 
@@ -1220,8 +1260,12 @@ function scalePoints(seqServ, startSeq, endSeq, scaleSeqServ, globalDL)    // Cr
         var numValues = 0;
         for (var j = i; j < i + scaleServScreen; j++)
             {
-            average += seqServ[Math.round(j)];
-            numValues++;
+            if(seqServ[Math.round(j)]!=NaN) {
+                average += seqServ[Math.round(j)];
+                numValues++;
+                }
+            else
+                console.log("NaN Here!!!")
             }
         if (numValues != 0) average = average / numValues;
 
@@ -1379,124 +1423,128 @@ function drawGrid() {
         return;
     }
 
-    var globalDL1=dl1[0];
-    var globalDL2=dl2[0];
-    var globalSeq=globalSeqs[0];
-
-    var bands = globalSeq.bins;
-    var y0 = 0;
-    var margin = globalDL1.cv.margin;
-    var scale = (dimDL.graphHeight - margin.top - margin.bottom) / (Math.max(globalSeq.max,bands[bands.length-1]) - bands[0])
-
-    var bw = []
-    for (var i = bands.length - 1; i >= 1; i--) {
-        var top;
-        if (i == bands.length - 1)
-            top = globalSeq.max;
-        else
-            top = bands[i];
-        top=bands[i];
-        console.log("Adding band width for "+bands[i]+"-"+bands[i-1]+" = "+scale * (top - bands[i - 1]));
-        bw.push(Math.max(0,scale * (top - bands[i - 1])));
-    }
-
-    //1) BANDS IN LINE 1
-    if(globalDL1.drawn && globalDL1.cv.svg.selectAll(".dl1.band")[0].length<=1)    //If not already drawn
+    for(var i in dl1)
     {
-        globalDL1.cv.svg.selectAll("bands")
-            .data(bw)
-            .enter()
-            .append("rect")
-            .attr('class', 'dl1 band')
-            .attr("x", 0)
-            .attr("y", function (d, i) {
-                if (i < bands.length - 1) {
-                    y0 += d;
-                    return y0 - d;
-                }
-                else
-                    return 0;
-            })
-            .attr("fill", function (d, i) {
-                if (i % 2 == 0)
-                    return "#ffc477";
-                else
-                    return "white";
-            })
-            .attr("width", dimDL.graphWidth - margin.right - margin.left)
-            .attr("height", function (d) {
-                return d;
-            });
+        var globalDL1 = dl1[i];
+        var globalDL2 = dl2[i];
+        var globalSeq = globalSeqs[i];
 
-        y0 = 0;
-        var code = 97 + bw.length;
+        var bands = globalSeq.bins;
+        var y0 = 0;
+        var margin = globalDL1.cv.margin;
+        //var scale = (globalDL1.cv.dim.graphHeight - globalDL1.cv.margin.top - globalDL1.cv.margin.top) / (Math.max(globalSeq.max, bands[bands.length - 1]) - bands[0])
+        var scale = (dimDL.height) / (Math.max(globalSeq.max, bands[bands.length - 1]) - bands[0])
 
-        // Draw occurrences label
-        globalDL1.cv.svg.selectAll("band_letters")
-            .data(bw)
-            .enter()
-            .append("text")
-            .attr('class', 'dl1 band letter')
-            .attr('x', 10)
-            .attr("y", function (d, i) {
-                y0 += d;
-                return y0 - d + 10;
-            })
-            .text(function (d, i) {
-                code -= 1;
-                return String.fromCharCode(code);
-            });
-    }
+        var bw = []; //band widths
+        for (var i = bands.length - 1; i >= 1; i--) {
+            var top;
+            if (i == bands.length - 1)
+                top = globalSeq.max;
+            else
+                top = bands[i];
+            top = bands[i];
+            console.log("Adding band width for " + bands[i] + "-" + bands[i - 1] + " = " + scale * (top - bands[i - 1]));
+            bw.push(Math.max(0, scale * (top - bands[i - 1])));
+        }
 
-    //2) BANDS IN LINE 2
-    if(globalDL2.drawn && globalDL2.cv.svg.selectAll(".dl1.band")[0].length<=1)    //If not already drawn
-    //if (globalDL2.drawn)
+        //1) BANDS IN LINE 1
+        if (globalDL1.drawn && globalDL1.cv.svg.selectAll(".dl1.band")[0].length <= 1)    //If not already drawn
         {
-        y0=0;
-        globalDL2.cv.svg.selectAll("bands")
-            .data(bw)
-            .enter()
-            .append("rect")
-            .attr('class', 'dl1 band')
-            .attr("x", 0)
-            .attr("y", function (d, i) {
-                if (i < bands.length - 1) {
+            globalDL1.cv.svg.selectAll("bands")
+                .data(bw)
+                .enter()
+                .append("rect")
+                .attr('class', 'dl1 band')
+                .attr("x", 0)
+                .attr("y", function (d, i) {
+                    if (i < bands.length - 1) {
+                        y0 += d;
+                        return y0 - d;
+                    }
+                    else
+                        return 0;
+                })
+                .attr("fill", function (d, i) {
+                    if (i % 2 == 0)
+                        return "#ffc477";
+                    else
+                        return "white";
+                })
+                .attr("width", dimDL.graphWidth - margin.right - margin.left)
+                .attr("height", function (d) {
+                    return d;
+                });
+
+            y0 = 0;
+            var code = 97 + bw.length;
+
+            // Draw band letters
+            globalDL1.cv.svg.selectAll("band_letters")
+                .data(bw)
+                .enter()
+                .append("text")
+                .attr('class', 'dl1 band letter')
+                .attr('x', 10)
+                .attr("y", function (d, i) {
                     y0 += d;
-                    return y0 - d;
-                }
-                else
-                    return 0;
-            })
-            .attr("fill", function (d, i) {
-                if (i % 2 == 0)
-                    return "#ffc477";
-                else
-                    return "white";
-            })
-            .attr("width", dimDL.graphWidth - margin.right - margin.left)
-            .attr("height", function (d) {
-                return d;
-            });
+                    return y0 - d + 10;
+                })
+                .text(function (d, i) {
+                    code -= 1;
+                    return String.fromCharCode(code);
+                });
+        }
 
-        y0 = 0;
-        var code = 97 + bw.length;
+        //2) BANDS IN LINE 2
+        if (globalDL2.drawn && globalDL2.cv.svg.selectAll(".dl1.band")[0].length <= 1)    //If not already drawn
+        //if (globalDL2.drawn)
+        {
+            y0 = 0;
+            globalDL2.cv.svg.selectAll("bands")
+                .data(bw)
+                .enter()
+                .append("rect")
+                .attr('class', 'dl1 band')
+                .attr("x", 0)
+                .attr("y", function (d, i) {
+                    if (i < bands.length - 1) {
+                        y0 += d;
+                        return y0 - d;
+                    }
+                    else
+                        return 0;
+                })
+                .attr("fill", function (d, i) {
+                    if (i % 2 == 0)
+                        return "#ffc477";
+                    else
+                        return "white";
+                })
+                .attr("width", dimDL.graphWidth - margin.right - margin.left)
+                .attr("height", function (d) {
+                    return d;
+                });
 
-        // Draw occurrences label
-        globalDL2.cv.svg.selectAll("band_letters")
-            .data(bw)
-            .enter()
-            .append("text")
-            .attr('class', 'dl1 band letter')
-            .attr('x', 10)
-            .attr("y", function (d, i) {
-                y0 += d;
-                return y0 - d + 10;
-            })
-            .text(function (d, i) {
-                code -= 1;
-                return String.fromCharCode(code);
-            });
+            y0 = 0;
+            var code = 97 + bw.length;
+
+            // Draw occurrences label
+            globalDL2.cv.svg.selectAll("band_letters")
+                .data(bw)
+                .enter()
+                .append("text")
+                .attr('class', 'dl1 band letter')
+                .attr('x', 10)
+                .attr("y", function (d, i) {
+                    y0 += d;
+                    return y0 - d + 10;
+                })
+                .text(function (d, i) {
+                    code -= 1;
+                    return String.fromCharCode(code);
+                });
 
 
         }
-    }
+    }//for each data line name
+}

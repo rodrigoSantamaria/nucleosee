@@ -586,11 +586,12 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
 
 #%%
 @app.route("/getTrack")
-def getTrack(track="None"):
+def getTrack(track="None", dataName="None"):
     global data
     
     track=request.args.get("track")
-    print("returning chromosome",track)
+    dataName=request.args.get("dataName")
+    print("returning chromosome",track," for ",dataName)
     if track=="None":
         track=data["res"].keys()[0]
 
@@ -600,8 +601,12 @@ def getTrack(track="None"):
         data["ego"]={}
     
 #    return jsonify(seq=data["batch"]["processed"]["res"][track], fullLength=len(data["batch"]["processed"]["seq"][track]), maximum=(float)(data["batch"]["processed"]["maximum"][track]), minimum=(float)(data["batch"]["processed"]["minimum"][track]), mean=(float)(data["batch"]["processed"]["mean"][track]), stdev=(float)(data["batch"]["processed"]["stdev"][track]), dseq=data["dseq"][track], bins=data["batch"]["processed"]["bins"][track], chromosomes=sorted(data["batch"]["processed"]["res"].keys()), search=data["search"], ego=data["ego"])
-    dbp=data["batch"]["processed"]
-    return jsonify(seq=dbp["res"][track], fullLength=len(dbp["seq"][track]), 
+    if(dataName=="None"):
+        dbp=data["batch"]["processed"]
+    else:
+        dbp=data[dataName]["batch"]["processed"]
+        
+    return jsonify(seq=dbp["res"][track], fullLength=dbp["fullLength"],
             maximum=(float)(dbp["maximum"][track]), minimum=(float)(dbp["minimum"][track]), 
             mean=(float)(dbp["mean"][track]), stdev=(float)(dbp["stdev"][track]),
              dseq=dbp["dseq"][track], bins=dbp["bins"][track], chromosomes=sorted(dbp["res"].keys()),
@@ -618,7 +623,8 @@ geo        si distinto de "none", filtra las búsquedas que no esten en la zona 
 retorna    las posiciones dentro de dseq donde aparece el patrón
 """
 @app.route("/search")
-def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false", dataName1="None", dataName2="None", join="not"):
+def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false", 
+           dataName1="None", dataName2="None", pattern2="None", join="not"):
     global data
     
     print("searching..:")
@@ -629,6 +635,9 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
     intersect=str(request.args.get("intersect"))
     softMutations=str(request.args.get("softMutations"))
     dataName1=str(request.args.get("dataName1"))
+    dataName2=str(request.args.get("dataName2"))
+    join=str(request.args.get("join"))
+    pattern2=str(request.args.get("pattern2"))
 
     print("SEARCHING IN DATANAME1", dataName1)   
     if dataName1=="None":
@@ -641,17 +650,30 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
     if(dataName2=="None"):
         search=search1
     else:
-        ret=searchLocal(data[dataName2], pattern, d, geo, intersect, softMutations)
+        if(pattern2=="None"):
+            ret=searchLocal(data[dataName2], pattern, d, geo, intersect, softMutations)
+        else:
+            ret=searchLocal(data[dataName2], pattern2, d, geo, intersect, softMutations)
+            
         search2=ret["points"]
-        s1=set(search1)
-        s2=set(search2)
-        if(join=="not"):
-            search=s1 - s2
-        if(join=="and"):
-            search=s1 & s2
-        if(join=="or"):
-            search=s1 | s2
-        
+        search={}
+        for k in search2.keys():
+            s1=set(search1[k])
+            s2=set(search2[k])
+            if(join=="not"):
+                s12=s1 - s2
+            if(join=="and"):
+                s12=s1 & s2
+            if(join=="or"):
+                s12=s1 | s2
+            if(k=="chromosome1"):
+                print("COINCIDENCES IN CH1:")
+                print("s1", s1)
+                print("s2", s2)
+                print(join, s12)
+            search[k]=list(s12)
+            print("SEARCH SIZES: ", len(s1), " ", len(s2), " ", len(s12))    
+    print("DATA NAMES:" ,dataName1, dataName2)
     #for json
     for k in search.keys():
         search[k]=(str)(search[k])
@@ -795,6 +817,26 @@ def getPartSeq(start=0, end=0, track="None", dataName="None"):
         
     return jsonify(partSeq=list(part), minimum=list(partMin), maximum=list(partMax))
 
+#%%
+@app.route("/getDSeq")
+def getDSeq(start=0, end=0, track="None", dataName="None"):
+    global data
+    import numpy as np
+    start=int(request.args.get("start"))
+    end=int(request.args.get("end"))
+    track=str(request.args.get("track"))
+    dataName=str(request.args.get("dataName"))
+    
+    if(dataName=="None"):
+        seq=data["batch"]["processed"]["dseq"][track]
+        ws=data["batch"]["processed"]["windowSize"]
+        part=seq[int(start/ws):int(end/ws)]
+    else:
+        seq=data[dataName]["batch"]["processed"]["dseq"][track]
+        ws=data[dataName]["batch"]["processed"]["windowSize"]
+        part=seq[int(start/ws):int(end/ws)]
+    print("DSEQ ES", part)    
+    return jsonify(response=list(part))
 
 
 #%%
