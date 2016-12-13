@@ -86,12 +86,32 @@ function selectData()
     //0) Remove previous elements
     destroyAll(false, false);
 
+    if($("#selectionList option:selected").length>=2)
+        {
+        $("#paramSearchDataset2")[0].disabled=false;
+        $("#paramSearchJoin")[0].disabled=false;
+        $("#patternSearch2")[0].disabled=false;
+        }
 
         //1) Get and print data
     for(var i=0; i<$("#selectionList option:selected").length; i++)
         {
         showImageLoading("imgLoadingFile", true);
         $('#loadText')[0].innerHTML="loading data...";
+
+        //populate search option lists
+        var elSel = document.getElementById('paramSearchDataset');
+        var elOptNew = document.createElement('option');
+        elOptNew.text = $("#selectionList option:selected")[i].value;
+        elOptNew.value = $("#selectionList option:selected")[i].value;
+        elSel.add(elOptNew, null);
+
+        var elSel = document.getElementById('paramSearchDataset2');
+        var elOptNew = document.createElement('option');
+        elOptNew.text = $("#selectionList option:selected")[i].value;
+        elOptNew.value = $("#selectionList option:selected")[i].value;
+        elSel.add(elOptNew, null);
+
         Server.selectData(drawingFirstDataLine, $("#selectionList option:selected")[i].value, i, $("#selectionList option:selected").length);
         }
     }
@@ -176,18 +196,6 @@ function drawingFirstDataLine(processedData, chromosome, index, total) {
             GVB_GLOBAL.track = chromosome;
         }
 
-        //populate search option lists
-        var elSel = document.getElementById('paramSearchDataset');
-        var elOptNew = document.createElement('option');
-        elOptNew.text = processedData.dataName;
-        elOptNew.value = processedData.dataName;
-        elSel.add(elOptNew, null);
-
-        var elSel = document.getElementById('paramSearchDataset2');
-        var elOptNew = document.createElement('option');
-        elOptNew.text = processedData.dataName;
-        elOptNew.value = processedData.dataName;
-        elSel.add(elOptNew, null);
 
 
         var seqServer = processedData.seq;    // just a sampling of about 400K of the original full length sequence
@@ -209,7 +217,9 @@ function drawingFirstDataLine(processedData, chromosome, index, total) {
         //In case of switching tracks
         if (processedData.hasOwnProperty("search") && processedData.search.points.hasOwnProperty(chromosome)) {
             console.log("There's a search!")
-            drawSearch(processedData.search.points, processedData.search.sizePattern);
+            var selection1=$("#paramSearchDataset option:selected")[0].value;//should be determined in the search
+
+            drawSearch(processedData.search.points, processedData.search.sizePattern, selection1);
         }
         if (processedData.hasOwnProperty("ego")) {
             console.log("There's enrichment")
@@ -263,6 +273,7 @@ function searchPattern()
     if(globalDL1.drawn)
     {
         var pattern     = $('#patternSearch').val();
+        var pattern2     = $('#patternSearch2').val();
         var d           = $('#dSearch').val();
 
         var geo="none"; //can be gene, 5' UTR, 3' UTR, ncRNA gene, exons or intergene regions (neither gene neither intergene include pseudogenes or ncRNA genes)
@@ -277,7 +288,7 @@ function searchPattern()
 
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
         Server.search(searchResults, pattern,d, geo, intersect, GVB_GLOBAL.softMutations,
-            selection1,selection2,selectionJoin);
+            selection1,selection2,selectionJoin, pattern2);
     }
 }
 
@@ -395,7 +406,8 @@ function getAllAnnotations(allPoints, sizePattern)
         }
     else
         winS=sizePattern*ws;
-    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", winS, "left", "False", chromosomes, ws, "soft", globalSeqs[0].dataName);
+//    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", winS, "left", "False", chromosomes, ws, "soft", globalSeqs[0].dataName);
+    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"any\"]", winS, "left", "False", chromosomes, ws, "soft", globalSeqs[0].dataName);
 }
 
 

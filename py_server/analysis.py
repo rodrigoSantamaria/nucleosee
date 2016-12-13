@@ -191,6 +191,9 @@ def loadData(dataName="Test", track="None"):
    
     print("load data takes",(time.clock()-t0))
     
+    #talg3=pdata[filename]["gff"]["chromosome3"]
+    #print("CDS MATCH: ", talg3[talg3["start"]==115781])
+
     #--------------- COMPILE BATCH
     data["batch"]={}
     data["batch"]["processed"]=pdata[filename]
@@ -341,11 +344,12 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
         #1A) Preprocessed data (.pic data) exist
         if os.path.isfile(picklePath):
             f=open(picklePath)
-#            if(len(filenames)==1):
-#                data[filename]=pickle.load(f)[filename]
-#            else:    
             data[filename]=pickle.load(f)
             print("pickle loaded!", data[filename].keys())
+            print(data.keys())
+            
+            talg3=data[filename]["gff"]["chromosome3"]
+            print("CDS MATCH: ", talg3[talg3["s"]==115781])
             
             if track=="None":
                 track=sorted(data[filename]["maximum"].keys())[0]
@@ -374,6 +378,8 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
         if(savePickle):
             tpickle=time.clock()
             print("saving pickle in path:", picklePath)
+            print("with keys",data.keys())
+            print("with keys",data[filename].keys())
             f=open(picklePath, 'w')
             pickle.dump(data,f)
             f.close()
@@ -647,7 +653,7 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
     search1=ret["points"]
     sizePattern=ret["sizePattern"]
     
-    if(dataName2=="None"):
+    if(dataName2=="None" or join=="None"):
         search=search1
     else:
         if(pattern2=="None"):
@@ -674,6 +680,8 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
             search[k]=list(s12)
             print("SEARCH SIZES: ", len(s1), " ", len(s2), " ", len(s12))    
     print("DATA NAMES:" ,dataName1, dataName2)
+    data["search"]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
+    
     #for json
     for k in search.keys():
         search[k]=(str)(search[k])
@@ -722,7 +730,7 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
         for k in data["batch"]["processed"]["seq"].keys():
             if(string.find(pattern,"go:")==-1):
                 print("GENE")
-                oc=ann.searchGene(pattern, data["batch"]["processed"]["gff"][k])
+                oc=ann.searchGene(pattern, data["batch"]["processed"]["gff"][k], ["gene", "tRNA_gene"])
             else:
                 print("TERM")
                 oc=ann.searchGO(pattern.replace("go:", ""), data["goa"], data["go"], data["batch"]["processed"]["gff"][k])
@@ -814,14 +822,14 @@ def getPartSeq(start=0, end=0, track="None", dataName="None"):
         part=np.array(seq[start:end],dtype=float)
         partMax=np.array(data[dataName]["batch"]["max"][track][start:end],dtype=float)
         partMin=np.array(data[dataName]["batch"]["min"][track][start:end],dtype=float)
-        
+     
     return jsonify(partSeq=list(part), minimum=list(partMin), maximum=list(partMax))
 
 #%%
 @app.route("/getDSeq")
 def getDSeq(start=0, end=0, track="None", dataName="None"):
     global data
-    import numpy as np
+   
     start=int(request.args.get("start"))
     end=int(request.args.get("end"))
     track=str(request.args.get("track"))
@@ -835,7 +843,7 @@ def getDSeq(start=0, end=0, track="None", dataName="None"):
         seq=data[dataName]["batch"]["processed"]["dseq"][track]
         ws=data[dataName]["batch"]["processed"]["windowSize"]
         part=seq[int(start/ws):int(end/ws)]
-    print("DSEQ ES", part)    
+    #print("DSEQ ES", part)    
     return jsonify(response=list(part))
 
 
@@ -864,7 +872,7 @@ def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs=
     else:
         res=[]
     return jsonify(response=res)
-
+#%%
 def annotationsLocal(positions, gff, window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft"):
     import time
     global data

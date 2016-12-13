@@ -18,7 +18,7 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
     
     print("reading GFF csv...")
     f=open(filename)
-    regions=["gene","exon","ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene", "three_prime_UTR", "five_prime_UTR"]
+    regions=["gene","exon","ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene", "three_prime_UTR", "five_prime_UTR", "CDS"]
     fieldnames=["seqid", "source", "type", "start", "end", "score", "sense", "phase", "attributes"]
     reader=csv.DictReader(f, fieldnames=fieldnames, delimiter="\t")
     
@@ -292,14 +292,16 @@ def searchGene(text, dataGFF, types=["gene"]):
     import string
     data=dataGFF
     result=[]
+    print ("Search ",text," in ", types)
     if(types[0]!="any"):
-        wanted_set = set(types)  # Much faster look up than with lists, for larger lists
+        wanted_set = set(types)  #Much faster look up than with lists, for larger lists
         @np.vectorize
         def selected(elmt): return elmt in wanted_set  # Or: selected = numpy.vectorize(wanted_set.__contains__)
         data=dataGFF[selected(dataGFF["type"])]
     for x in data:
-      if(string.find(x["id"],text)>=0 or string.find(x["name"],text)>=0):
+      if(string.find(x["id"].lower(),text)>=0 or string.find(x["name"].lower(),text)>=0):
           result.append({"start":x["start"], "end":x["end"]})
+    print result
     return result
 #searchGene("raf1", dataGFF)    
 #%%

@@ -415,7 +415,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param pattern
          * @param d
          */
-        Server.search = function (callback, pattern, d, geo, intersect, softMutations, dataName1,dataName2,join)
+        Server.search = function (callback, pattern, d, geo, intersect, softMutations, dataName1,dataName2,join,pattern2)
         {
             var startTime = new Date();
 
@@ -430,7 +430,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 {
                     url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+
                         "&geo="+geo+"&intersect="+intersect+"&softMutations="+softMutations+
-                        "&dataName1="+dataName1+"&dataName2="+dataName2+"&join="+join,
+                        "&dataName1="+dataName1+"&dataName2="+dataName2+"&join="+join+"&pattern2="+pattern2,
                     type: "GET",
                     datatype: "json"
                 });

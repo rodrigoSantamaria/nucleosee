@@ -339,11 +339,12 @@ function drawSearch(allPoints, sizePattern, dataName)
     //Draw the points
     drawPoints(dataPoints, globalDL1);
 
+    var startX=150;
     // Draw occurrences label
     dl1[0].cv.svg.append("g")
         .attr("class", dl1[0].cv.classSVG+" export-label")
         .append("text")
-        .attr('x', 325)
+        .attr('x', startX)
         .attr('y', -2)
         .on("click", function() { window.open(dl1[0].posURL); })
         .text("matches>");
@@ -358,7 +359,7 @@ function drawSearch(allPoints, sizePattern, dataName)
     .enter()
     .append("text")
     .attr("class", dl1[0].cv.classSVG+" search-label")
-    .attr('x', function(d,i){return 380+i*29;})
+    .attr('x', function(d,i){return startX+55+i*29;})
     .attr('y', -2)
     .style("font-weight", function (d, i) {
         if(tracks[i]==track) return "bold";
@@ -372,7 +373,7 @@ function drawSearch(allPoints, sizePattern, dataName)
     dl1[0].cv.svg.append("g")
         .append("text")
         .attr("class", dl1[0].cv.classSVG+" export-label")
-        .attr('x', 380+29*(matches.length))
+        .attr('x', startX+55+29*(matches.length))
         .attr('y', -2)
         .on("click", function() { window.open(dl1[0].genesURL); })
         .text("genes>");
@@ -380,7 +381,7 @@ function drawSearch(allPoints, sizePattern, dataName)
     dl1[0].cv.svg.append("g")
         .append("text")
         .attr("class", dl1[0].cv.classSVG+" export-label")
-        .attr('x', 380+29*(matches.length)+40)
+        .attr('x', startX+55+29*(matches.length)+40)
         .attr('y', -2)
         .on("click", function() { window.open(dl1[0].goURL); })
         .text("go>");
@@ -406,7 +407,7 @@ function drawPoints(dataPoints, globalDL1)
         .attr('class', globalDL1.cv.classSVG+' point')
         .attr('cx', function(d) { return globalDL1.cv.xScale(d.pos); })
         .attr('cy', function(d) { return globalDL1.cv.yScale(d.value); })
-        .attr('r', function(d) {return d.selected?3:2;})
+        .attr('r', function(d) {  return d.selected?3:2;      })
         .attr('stroke-width', function(d) {return d.selected?2:1;})
         .on('mouseover', globalDL1.pointTip.show)
         .on('mouseout', globalDL1.pointTip.hide);
@@ -432,7 +433,7 @@ function drawEnrichment(enrichment)
     exportGO(enrichment);
 
     // Remove all goterm (previous)
-    var globalDL1=dl1[dl1.length-1];
+    var globalDL1=dl1[dl1.length-1];//not in the latest of the DL1 lines
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm").remove();
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm-tip").remove();
 
@@ -528,12 +529,18 @@ function drawEnrichment(enrichment)
         })
         .on('click', function(d)
         {
+
             //Underline the selected term
-            if(d3.select(this).classed("selected")==false)
-                globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm").classed("selected", false);
+            //0) first remove previous selection
+            for(var i in dl1)
+                {
+                var gdl = dl1[i];
+                if (d3.select(this).classed("selected") == false)
+                    gdl.cv.svg.selectAll("." + globalDL1.cv.classSVG + ".goterm").classed("selected", false);
+                }
             d3.select(this).classed("selected")?d3.select(this).classed("selected", false):d3.select(this).classed("selected", true);
 
-            //Underline positions with genes annotated with the selected term
+            //1) Determine points selected
             var gis=[];
             for(var i in d["gis"])
                 {
@@ -543,36 +550,32 @@ function drawEnrichment(enrichment)
                     gis.push(annot["pos"]);
                 }
 
-            var dataPoints=globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".point").data();
-            if(d3.select(this).classed("selected")==true)
+            //2) Hightlight it
+            for(var k in dl1)
                 {
-                for (var i in dataPoints)
-                    {
-                    dataPoints[i].selected = false;
-                    for (var j in gis)
-                        {
-                        if (gis[j] > dataPoints[i]["real_pos"] - 50 && gis[j] < dataPoints[i]["real_pos"] + 50)
-                            dataPoints[i].selected = true;
+                var gdl=dl1[k];
+                var dataPoints = gdl.cv.svg.selectAll("." + gdl.cv.classSVG + ".point").data();
+                if (d3.select(this).classed("selected") == true) {
+                    for (var i in dataPoints) {
+                        dataPoints[i].selected = false;
+                        for (var j in gis) {
+                            if (gis[j] > dataPoints[i]["real_pos"] - 50 && gis[j] < dataPoints[i]["real_pos"] + 50)
+                                dataPoints[i].selected = true;
                         }
                     }
                 }
-            else
-                {
-                for(var i in dataPoints)
-                    dataPoints[i].selected=false;
+                else {
+                    for (var i in dataPoints)
+                        dataPoints[i].selected = false;
+                    }
+                drawPoints(dataPoints, gdl);
                 }
 
-
-            drawPoints(dataPoints, $("#paramSearchDataset option:selected")[0].value);
         })
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
 }
 
-
-function drawLevel2()
-    {
-    }
 
 //-------------------------------------------------------------
 //          DATALINE 2
@@ -593,8 +596,11 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
     var endSeq   = globalDL2.endSeq;
 
     var gap=(((endSeq-startSeq)/globalSeq.ws-sizePattern)/2)*globalSeq.ws;
-    var dseq=Server.getDSeq(startSeq+gap,startSeq+gap+(sizePattern*globalSeq.ws),globalSeq.track, globalSeq.dataName);
-    console.log("DSEQ ("+dataName+")  "+dseq);
+    /*if(point!=0)
+        {
+        var dseq = Server.getDSeq(startSeq + gap, startSeq + gap + (sizePattern * globalSeq.ws), globalSeq.track, globalSeq.dataName);
+        console.log("DSEQ (" + dataName + ")  " + dseq);
+        }*/
 
 
     //var globalSeq=globalSeqs[0];
@@ -612,7 +618,7 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
 
     // DRAWING ANNOTATIONS
     //-------------------------------------------------
-    if(globalSeqs[0].dataName==dataName)
+    if(globalSeqs[0].dataName==dataName)//only on the first line
         Server.annotationsGenes(drawAnnotations, point,"[\"any\"]",globalDL2.cv.dim.width, "center", globalSeq.track, "False", globalSeq.dataName);
 
 
@@ -657,7 +663,7 @@ function drawAnnotations(annotations)
         {
         return Math.max(0,(d.s-startSeq)/factor)
         })
-        .attr("y", function(d){  var y=0; y=d.ss=="+"?0:15; y+=(d.t=="gene" || d.t=="transcript")?5:0; return y;})
+        .attr("y", function(d){  var y=0; y=d.ss=="+"?0:15; y+=(d.t=="gene")?5:0; return y;})
         .attr("width", function(d)
             {
             return Math.max(0,Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)/factor)+1, Math.max(0,(d.e-Math.max(startSeq, d.s))/factor)+1))
@@ -670,11 +676,12 @@ function drawAnnotations(annotations)
 
         .attr("height", function(d){
             var h=0;
-            if (d.t=="gene")
+            if (d.t=="gene")// || d.t.indexOf("UTR")>=0)
                 h=lineHeight*.25;
-            else if(d.t.indexOf("gene")>=0 || d.t=="CDS" || d.t.indexOf("UTR")>=0)
-                h=lineHeight;
+            else if(d.t=="CDS" || d.t.indexOf("_gene")>=0)
+                h = lineHeight;
             return h});
+
     //gene arrow
     globalDL2.cv.svg.append("g")
         .selectAll(".dl2.annotation.arrow")
@@ -731,6 +738,7 @@ function drawAnnotations(annotations)
             }
             return "";
         });
+
     var genes=[];
     for (var key in annotations)
         {
@@ -796,7 +804,23 @@ function drawAnnotations(annotations)
             return res;
         })
         .on('mouseover', tip.show)
-        .on('mouseout', tip.hide);
+        .on('mouseout', tip.hide)
+        .on('click', function(d){
+            tip.hide();
+
+            var startSeq = d.s-50;
+            var endSeq   = d.e+50;
+            var numNucleotidesDraw=endSeq-startSeq;
+
+            // Draw dataLine2 centered on this annotation (usually gene) --> TODO: should be great to keep highlighted the fragment searched
+            for(var i in globalSeqs) {
+                var globalDL2=getLevel(globalSeqs[i].dataName, "DL2")
+                globalDL2.startSeq = startSeq;
+                globalDL2.endSeq = endSeq;
+                Server.getPartSeq(dataLine_2, globalSeqs[i].track, startSeq, endSeq, numNucleotidesDraw, startSeq+numNucleotidesDraw *.5, 0, globalSeqs[i].dataName);
+            }
+        });
+
 }
 
 
@@ -1085,12 +1109,12 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
 
     if(seqServ.minimum!=undefined) //In order to draw variation shade
         {
-        var dataMin=scalePoints(seqServ.minimum, startSeq,endSeq, scaleSeqServ, globalDL);
-        var dataMax=scalePoints(seqServ.maximum, startSeq,endSeq, scaleSeqServ, globalDL);
-        var data=scalePoints(seqServ.partSeq, startSeq,endSeq, scaleSeqServ, globalDL);
+        var dataMin=scalePoints(seqServ.minimum, startSeq,endSeq, scaleSeqServ, globalDL, globalSeq);
+        var dataMax=scalePoints(seqServ.maximum, startSeq,endSeq, scaleSeqServ, globalDL, globalSeq);
+        var data=scalePoints(seqServ.partSeq, startSeq,endSeq, scaleSeqServ, globalDL, globalSeq);
         }
     else
-        var data=scalePoints(seqServ, startSeq,endSeq, scaleSeqServ, globalDL);
+        var data=scalePoints(seqServ, startSeq,endSeq, scaleSeqServ, globalDL, globalSeq);
 
     //Scale points for representation
 
@@ -1158,7 +1182,8 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
 
             for(var i=dataMin.length-1;i>=0;i--)
                 {
-                var p = dataMin[i];
+                var p={};
+                p.value = dataMin[i].value;
                 p.pos=i;
                 dataShadow.push(p);
                 }
@@ -1239,7 +1264,7 @@ function getTicks(sizeSeq, scaleSeqScreen)
     return ticks;
 }
 
-function scalePoints(seqServ, startSeq, endSeq, scaleSeqServ, globalDL)    // Create the array
+function scalePoints(seqServ, startSeq, endSeq, scaleSeqServ, globalDL,globalSeq)    // Create the array
     {
     // Define the scales with that we will work
     var sizeSeq = endSeq-startSeq;
@@ -1251,11 +1276,11 @@ function scalePoints(seqServ, startSeq, endSeq, scaleSeqServ, globalDL)    // Cr
     var scaleSeqScreen=1;
     scaleSeqScreen=scaleSeqServ*scaleServScreen;
 
-    var globalSeq=globalSeqs[0];
+    //var globalSeq=globalSeqs[0];
 
     var data = [];
 
-    for (var i = startData, k = 0; i < endData; i = i + scaleServScreen, k++) {
+    for (var i = startData, k = 0; i < endData-Math.ceil(scaleServScreen); i = i + scaleServScreen, k++) {
         var average = 0;
         var numValues = 0;
         for (var j = i; j < i + scaleServScreen; j++)
