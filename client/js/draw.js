@@ -2,7 +2,8 @@
  ┌────────────────────────────────────────────────────────────┐
  │ draw.js                                                    │
  ├────────────────────────────────────────────────────────────┤
- │ Description:                                               │
+ │ Description: View logic for the browser (frontend)         │
+ |  GPL v3 by Rodrigo Santamaría (University of Salamanca)    |
  └────────────────────────────────────────────────────────────┘
  */
 
@@ -209,9 +210,6 @@ function dataLine_1(processedData, startSeq, endSeq, numLines)
         }
     if(dl1.length>1)
         {
-        //    dl1[dl1.length-1].cv.color="#600060";
-        //dl1[dl1.length-1].cv.color="#965096";
-        //dl2[dl2.length-1].cv.color="#965096";
         dl1[dl1.length-1].cv.color="#968096";
         dl2[dl2.length-1].cv.color="#968096";
         globalDL1=dl1[dl1.length-1];
@@ -265,9 +263,7 @@ function drawSearch(allPoints, sizePattern, dataName)
     // We calculate the points found in the sequence
     var seqPoints=[];
     for(var i=0; i<points.length; i++)
-    {
         seqPoints.push(points[i]);
-    }
 
     // Now, with seqPoints, we calculate the points found in the dataLine
     var dataPoints=[];
@@ -467,7 +463,6 @@ function drawEnrichment(enrichment)
     // Mouseover tip and show the information of goterm
     var tip = d3.tip()
         .attr('class', globalDL1.cv.classSVG+' goterm-tip')
-        //.offset([45, 0])   // [top, left] to center the tip
         .offset([60, 0])   // [top, left] to center the tip
         .html(function(d,i)
         {
@@ -586,7 +581,6 @@ function drawEnrichment(enrichment)
 // sizePattern - size of the searched pattern (to highlight over the whole seq)
 function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
 {
-    console.log("DATALINE2 "+dataName)
     var globalDL2=getLevel(dataName, "DL2")
     var globalSeq=getLevel(dataName, "Seq");
 
@@ -596,14 +590,7 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
     var endSeq   = globalDL2.endSeq;
 
     var gap=(((endSeq-startSeq)/globalSeq.ws-sizePattern)/2)*globalSeq.ws;
-    /*if(point!=0)
-        {
-        var dseq = Server.getDSeq(startSeq + gap, startSeq + gap + (sizePattern * globalSeq.ws), globalSeq.track, globalSeq.dataName);
-        console.log("DSEQ (" + dataName + ")  " + dseq);
-        }*/
 
-
-    //var globalSeq=globalSeqs[0];
     globalDL2.scale=1;
     if(Math.floor((sizePattern*globalSeq.ws)/(endSeq-startSeq)) > 1)
         globalDL2.scale= Math.ceil((sizePattern*globalSeq.ws)/(endSeq-startSeq));
@@ -613,13 +600,7 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
     dataLine_core(globalDL2,globalSeq, seq, 1/globalDL2.scale, 0, numNucleotides, startSeq,  point, sizePattern);
 
 
-    // We confirm that we have finished
-    globalDL2.drawn = true;
 
-    // DRAWING ANNOTATIONS
-    //-------------------------------------------------
-    if(globalSeqs[0].dataName==dataName)//only on the first line
-        Server.annotationsGenes(drawAnnotations, point,"[\"any\"]",globalDL2.cv.dim.width, "center", globalSeq.track, "False", globalSeq.dataName);
 
 
     // DRAWING NUCLEOTIDES (DATALINE 3)
@@ -640,7 +621,43 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
         var start = startSeq + line_x0-len; // taking the left bracket as start
         Server.nucleotides(drawNucleotides, globalSeq.track, startSeq, endSeq, start, point, globalSeq.dataName);
     });
+
+    if(globalSeqs[0].dataName==dataName)//only on the first line
+    {
+        //DRAW SHIFT AND ZOOM
+        drawShiftZoom(globalDL2);
+
+        // DRAWING ANNOTATIONS
+        Server.annotationsGenes(drawAnnotations, point, "[\"any\"]", globalDL2.cv.dim.width, "center", globalSeq.track, "False", globalSeq.dataName);
+    }
+    // We confirm that we have finished
+    globalDL2.drawn = true;
+
 }
+
+function getSelectedDataPoint()
+    {
+    var dataPoint=null;
+    for(var i in dl1)
+        if(dl1[i].cv.svg.selectAll("."+dl1[i].cv.classSVG+".point.pressed").data().length>0) {//Take the first (and only) selected point
+            dataPoint = dl1[i].cv.svg.selectAll("." + dl1[i].cv.classSVG + ".point.pressed").data()[0];
+            return dataPoint;
+        }
+    return dataPoint;
+    }
+
+function drawAllDataLine_2(seqs, start, end)
+    {
+    var dataPoint=getSelectedDataPoint();
+    for(var i in seqs)
+        {
+        var globalDL2=getLevel(i,"DL2");
+        var globalSeq=getLevel(i,"Seq");
+        globalDL2.startSeq = start;
+        globalDL2.endSeq = end;
+        dataLine_2(seqs[i],seqs[i].partSeq.length,dataPoint.real_pos,dataPoint.size,globalSeq.dataName)
+        }
+    }
 
 
 function drawAnnotations(annotations)
@@ -695,20 +712,21 @@ function drawAnnotations(annotations)
         })
 
         .attr("points", function(d){
+            if(d.t.indexOf("gene")<0)
+                return "";
+
             var y0=d.ss=="+"?0:15;
             var x0=Math.max(0,(d.s-startSeq)/factor);
-            if(d.ss=="+")
-                x0+=Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)/factor), Math.max(0,d.e-Math.max(startSeq, d.s)/factor));
+            var path="";
+            if(d.ss=="+")//TODO: here there's some glitch
+                x0+=Math.min(globalDL2.cv.dim.width-Math.max(0,(d.s-startSeq)/factor), Math.max(0,(d.e-Math.max(startSeq, d.s))/factor));
             if(d.ss=="+")
                 path=x0+","+y0+ " " +x0+", "+(y0+lineHeight)+" "+(x0+lineHeight *.5)+","+(y0+lineHeight *.5);
             else
                 path=x0+","+y0+ " " +x0+", "+(y0+lineHeight)+" "+(x0-lineHeight *.5)+","+(y0+lineHeight *.5);
             if(d.e<startSeq || d.s>startSeq+globalDL2.cv.dim.width)
                 return "";
-            if(d.t.indexOf("gene")>-1)
-                return path;
-            else
-                return "";
+            return path;
         });
 
     //draw crackers if the annotation goes beyond screen limits
@@ -812,13 +830,9 @@ function drawAnnotations(annotations)
             var endSeq   = d.e+50;
             var numNucleotidesDraw=endSeq-startSeq;
 
-            // Draw dataLine2 centered on this annotation (usually gene) --> TODO: should be great to keep highlighted the fragment searched
-            for(var i in globalSeqs) {
-                var globalDL2=getLevel(globalSeqs[i].dataName, "DL2")
-                globalDL2.startSeq = startSeq;
-                globalDL2.endSeq = endSeq;
-                Server.getPartSeq(dataLine_2, globalSeqs[i].track, startSeq, endSeq, numNucleotidesDraw, startSeq+numNucleotidesDraw *.5, 0, globalSeqs[i].dataName);
-            }
+            var dataPoint= getSelectedDataPoint();
+            Server.getAllPartSeq(drawAllDataLine_2, startSeq, endSeq, dataPoint, dl1,dl2,globalSeqs, 0, {});
+
         });
 
 }
@@ -1024,7 +1038,6 @@ function drawNucleotides(start, point, nuc)
             return (x0 +dimDL.width *.5-letterWidth *.5 + letterWidth * i)
         })
         .attr("y", marginDL.top * 1.7 + separator * 2 + cont * letterHeight);
-
 
     // Save information of dataLine3
     GDL3Seqs.svg = svg;
@@ -1241,6 +1254,96 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
     globalDL.cv.yScale = yScale;
 }
 
+/**
+ * Draws shift (< >) and zoom (+-) elements on a dataline2, plus their logic
+ * @param globalDL2
+ */
+function drawShiftZoom(globalDL2)
+    {
+    //shift R
+    globalDL2.cv.svg.append("g")
+        .attr('class', 'dl2 shift')
+        .append("text")
+        .attr("x", globalDL2.cv.dim.width-20)
+        .attr("y", globalDL2.cv.dim.height*.5)
+        .text(">")
+        .on('mouseover', function(){d3.select(this).attr('fill', '#999')} )
+        .on('mouseout', function(){d3.select(this).attr('fill', '#eee')} )
+        .on("click",function(){shift(200)});
+
+    //shift L
+    globalDL2.cv.svg.append("g")
+            .attr('class', 'dl2 shift')
+            .append("text")
+            .attr("x", 15)
+            .attr("y", globalDL2.cv.dim.height*.5)
+            .text("<")
+            .on('mouseover', function(){d3.select(this).attr('fill', '#999')} )
+            .on('mouseout', function(){d3.select(this).attr('fill', '#eee')} )
+            .on("click",function(){shift(-200)});
+
+
+    //zoom + (2x)
+    globalDL2.cv.svg.append("g")
+        .attr('class', 'dl2 zoom')
+        .append("text")
+        .attr("x", globalDL2.cv.dim.width-65)
+        .attr("y", 8)
+        .text("-")
+        .on("click",function(){zoom(2)});
+
+
+        //zoom - (0.5x)
+    globalDL2.cv.svg.append("g")
+        .attr('class', 'dl2 zoom')
+        .append("text")
+        .attr("x", globalDL2.cv.dim.width-20)
+        .attr("y", 8)
+        .text("+")
+        .on("click",function(){zoom(.5)});
+
+    }
+
+//Zooms current view in DL2 by the factor in amount.
+function zoom(amount)
+    {
+    var start;
+    var end;
+    var globalDL2=getLevel(globalSeqs[0].dataName, "DL2")
+    var interval=(globalDL2.endSeq-globalDL2.startSeq);
+    var newInterval=interval*amount;
+    var scale=Math.max(Math.round(globalDL2.cv.scaleSeqScreen), Math.round(globalDL2.cv.scaleServScreen));
+
+
+    if(amount>=1)//zoom out
+        {
+            start = globalDL2.startSeq - (newInterval - interval) * .5;
+            end = globalDL2.endSeq + (newInterval - interval) * .5;
+        }
+    else{
+        if(scale>1) //zoom in up to scale 1:1
+            {
+                start = globalDL2.startSeq + (interval - newInterval) * .5;
+                end = globalDL2.endSeq - (interval - newInterval) * .5;
+            }
+        else//zooming in after max zoom in performed, just return
+            return;
+        }
+    var dataPoint= getSelectedDataPoint();
+    Server.getAllPartSeq(drawAllDataLine_2, Math.round(start), Math.round(end), dataPoint, dl1,dl2,globalSeqs, 0, {});
+    }
+
+//Shifts current view in DL2 by the number of nucleotides in amount.
+//Calls an iterative sever requests which finally calls the drawing data line methods
+function shift(amount)
+    {
+    var globalDL2=getLevel(globalSeqs[0].dataName, "DL2")
+    var start=Math.round(globalDL2.startSeq+amount);
+    var end=Math.round(globalDL2.endSeq+amount);
+    var dataPoint= getSelectedDataPoint();
+    Server.getAllPartSeq(drawAllDataLine_2, start, end, dataPoint, dl1,dl2,globalSeqs, 0, {});
+    }
+
 function getTicks(sizeSeq, scaleSeqScreen)
 {
     var ticks = [];
@@ -1255,6 +1358,10 @@ function getTicks(sizeSeq, scaleSeqScreen)
     if(sizeSeq/Math.pow(10,numZeroes)<4) numZeroes-=1;
 
     var factorLabel=Math.pow(10, numZeroes);
+
+    //To avoid tick cluttering when multiples of 10 are too many (>20)
+    while(sizeSeq/factorLabel>20)
+        factorLabel+=factorLabel;
 
     for(var i=0; factorLabel <= (sizeSeq-i*factorLabel) ;i++)
     {
@@ -1275,8 +1382,6 @@ function scalePoints(seqServ, startSeq, endSeq, scaleSeqServ, globalDL,globalSeq
     var scaleServScreen = sizeData/globalDL.cv.dim.width;
     var scaleSeqScreen=1;
     scaleSeqScreen=scaleSeqServ*scaleServScreen;
-
-    //var globalSeq=globalSeqs[0];
 
     var data = [];
 
@@ -1308,9 +1413,9 @@ function roundTickFormat(d, scaleSeqScreen, initialPoint, start, end)
 
     if (tickLabel != "0")
     {
-        if(tickLabel/1000000 >= 1 && (end-start)>10000000)
+        if(tickLabel/1000000 >= 1 && (end-start)>10000000)//higher than 10M ranges with 1M labels
             tickLabel=Math.round(tickLabel/1000000)+"M";
-        else if(tickLabel/1000>=1 && (end-start)>10000)
+        else if(tickLabel/1000>=1 && (end-start)>10000) //higher than 10K ranges with 1K labels
             tickLabel=Math.round(tickLabel/1000)+"K";
     }
 
@@ -1568,8 +1673,6 @@ function drawGrid() {
                     code -= 1;
                     return String.fromCharCode(code);
                 });
-
-
         }
     }//for each data line name
 }

@@ -194,6 +194,18 @@ body {
     font-size: 11px;
     fill: #999;
 }
+.dl2.shift {
+    font-family: sans-serif;
+    font-size: 21px;
+    font-weight: bold;
+    fill: #eee;
+}
+.dl2.zoom {
+    font-family: sans-serif;
+    font-size: 14px;
+    fill: #999;
+}
+
 
 /* LINE */
 .dl2.line {

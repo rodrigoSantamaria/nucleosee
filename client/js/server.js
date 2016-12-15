@@ -2,7 +2,8 @@
  ┌────────────────────────────────────────────────────────────┐
  │ server.js                                                  │
  ├────────────────────────────────────────────────────────────┤
- │ Description:                                               │
+ │ Description: Model logic for the browser (backend communication)
+ |  GPL v3 by Rodrigo Santamaría (University of Salamanca)    |
  └────────────────────────────────────────────────────────────┘
  */
 
@@ -761,7 +762,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.getPartSeq = function (callback, track, startSeq, endSeq, numNucleotides, point, sizePattern, dataName)
         {
-            // var startTime = new Date();
+            console.log("GET PART SEQ "+dataName);
 
             var requestAJAX = $.ajax(
                 {
@@ -781,6 +782,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 {
                     var response = [];
                     response=result;
+                    console.log("GET PART SEQ RESPONSE"+dataName);
 
                     callback(response, numNucleotides, point, sizePattern, dataName);
                 })
@@ -792,6 +794,42 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 });
         };
 
+        Server.getAllPartSeq = function (callback, start, end, point, dl1, dl2, globalSeqs, i, seqs)
+        {
+            console.log("GET ALL PART SEQ "+i);
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/getPartSeq?user="+_user+"&password="+_password+"&track="+globalSeqs[i].track+
+                    "&start="+start+"&end="+end+"&dataName="+globalSeqs[i].dataName,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                var response = {};
+                response = result;
+                seqs[globalSeqs[i].dataName]=response;
+
+
+                if(i>=globalSeqs.length-1) {
+                    console.log("GET PART SEQ RESPONSE" + i);
+                    callback(seqs, start, end);//TODO: implement callback on draw.js
+                    }
+                else
+                    {
+                    Server.getAllPartSeq(callback, start, end, point, dl1, dl2, globalSeqs, i+1, seqs)
+                    }
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    if(_DEBUG) console.log("getPartSeq(): getPartSeq failed...");
+                    javascript_abort("getPartSeq() failed");
+
+                });
+        };
 
         /**
          * Calls the REST service available to retrieve a sequence of nucleotides

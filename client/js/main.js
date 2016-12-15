@@ -2,11 +2,10 @@
   ┌────────────────────────────────────────────────────────────┐
   │ main.js                                                    │
   ├────────────────────────────────────────────────────────────┤
-  │ Description:                                               │
+  │ Description: Control logic for the browser                 │
+  |  GPL v3 by Rodrigo Santamaría (University of Salamanca)    |
   └────────────────────────────────────────────────────────────┘
 */
-
-
 
 var DEBUG_GBV = true;
 
@@ -277,14 +276,14 @@ function searchPattern()
         var d           = $('#dSearch').val();
 
         var geo="none"; //can be gene, 5' UTR, 3' UTR, ncRNA gene, exons or intergene regions (neither gene neither intergene include pseudogenes or ncRNA genes)
-        if(GVB_GLOBAL.geo)
+        if(document.getElementById('paramGeo').checked)
             {
             var e = document.getElementById("geo_type");
             geo = e.options[e.selectedIndex].value;
             }
         var intersect="soft";
         if(document.getElementById('paramIntersect').checked)
-            intersect="hard"
+            intersect="hard"//TODO: hard with intergenic regions is not working.
 
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
         Server.search(searchResults, pattern,d, geo, intersect, GVB_GLOBAL.softMutations,
@@ -406,7 +405,6 @@ function getAllAnnotations(allPoints, sizePattern)
         }
     else
         winS=sizePattern*ws;
-//    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", winS, "left", "False", chromosomes, ws, "soft", globalSeqs[0].dataName);
     Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"any\"]", winS, "left", "False", chromosomes, ws, "soft", globalSeqs[0].dataName);
 }
 

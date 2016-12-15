@@ -7,18 +7,18 @@
 
   Frontend
 =============
-  - DONE:  Selección de cromosomas
-  - DONE:  Reloj/barra de espera para cargas y búsquedas
-  - DONE:  Dejar el color interno de un punto al hacer mouseout (quitarlo solo al hacer un nuevo mousein)
-  - DONE:  Estilos de la web (sobre todoo de la parte de arriba)
-  - DONE:  Pantalla de login
-  - DONE:  Poner en cada cromosoma el nombre y el número de ocurrencias
-  - DONE:  Ajustar bien el "line_y0" de la dataLine2
-  - TODOO: cambiar el idioma del componente para subir archivos
-  - TODOO: Permitir sobreimponer sobre DL1 una parrilla explicativa del binarizado, por ejemplo con franjas
-           de colores alternos indicando los rangos de a,b,c,d,e, etc. y quizas tambien el tamaño de la ventana
-  - TODOO: Botón de prueba (no puede pasarse el nombre desde el cliente, fallo de seguridad. Tiene que saberse
-                            ya en el servidor y que al pulsarse, devuelva la información)
+  - DISCARDED: cambiar el idioma del componente para subir archivos. No es posible
+  - TODO: cursor en DL2 para identificar altura y posición
+        TODO: los corchetes salen mal desde los cambios a multilane
+  - TODO: resultado de búsquedas en multilane: ponerlas en el lane adecuado (and -ambas, not-primera, or-cada uno en el suyo?)
+    BORRAR CON NUEVAS BÚSQUEDAS
+  - TODO: ayuda sencilla para entender las búsquedas de patrones
+
+  - TODO: diseñar una búsqueda rápida - tratar de aprovechar al máximo la barra superior.
+  - DISCARD: dl2 annotation, arrow, label y cracker parece que no se borran o se duplican de más
+        arrow se pone (con path="") para toda anotación, sea o no gen
+        lo mismo pasa con las labels y creo que con los crackers.
+        No es muy grave por que no se acumulan entre selecciones.
 
   Backend
 =============
@@ -27,26 +27,10 @@
         DONE: Los dos puntos anteriores están bastante optimizados. Para pombe entero estamos hablando de 10s para todoo
             el proceso ahora, incluyendo lectura, formateo, estadísticas, discretización y bwt.
   - Guardar datos para mayor optimización en cargas posteriores
-        DONE: mediante pickle y con un retardo de 2s en la carga inicial (de 12 a 14s) tenemos luego unas cargas de 4s o menos
         TODOO: explorar pandas como alternativa a pickle, sobre todoo pensando en humano
         TODOO: también pensando en humano se puede pensar en integrar el BWT u otros cálculos en el fichero que se guarde
         TODOO: se puede también pensar en NO guardar el .wig original, sólo nuestros datos, para evitar duplicaciones de memoria en disco
-  - Soporte a la selección de cromosomas
-        En el servidor con los cambios necesarios en cliente.
-        Básicamente, las interfaces incluyen normalmente un argumento nuevo, 'track', que de momento lo estamos poniendo
-        a processedData.chromosomes[0] pero que luego cambiará en función de un combo box.
-  - Crear carpetas y fichero de contraseñas + comprobaciones
-  - Gestión de distintos organismos (ver cómo diseñarlo)
-  - Dar soporte a bigwig
-  - Enriquecimiento: estamos teniendo en cuenta unos GIs que se han escogido en un cromosoma pero usando como universo
-        el genoma entero. O bien debemos tomar todos los GIs del genoma (quizás sería lo suyo, aunque habría que ver
-        cómo responde) o bien tomar como universo sólo los genes de ese cromosoma. De momento lo que hacemos es poner
-        un FDR muy estricto, pero esto no es más que un parche.
-        Ejemplo: a*5+abcba(0) en ch2 de pombe da 281 ocurrencias de las cuales 39 están en genes. El universo completo
-        son 5346 genes con alguna anotación GO --> un FDR de 0.01 no da todavía muchas anotaciones relevantes!
-
-        La idea entonces sería tener preprocesados TODOS los cromosomas? En pombe serían unos 3s por cromosoma, es
-        decir un tiempo adicional de 6s, pasando de 14 a 20s de preprocesamiento. En organismos grandes es inasumible
-        yo creo. También multiplica por el número de cromosomas el tiempo de la búsqueda. Para pombe con búsquedas
-        SIN mutaciones no es un problema pues estmos hablando de 0.016s
-
+  - TODO: revisar búsqueda fully inside o no en regiones intergénicas, va al revés que el resto
+  - TODO: capturas de pantalla
+  - TODO: Descartar toda la parte de usuarios. Gestionar mejor el almacenamiento de archivos
+  - TODO: versión para consola de búsquedas sobre wig/bigwig, con creación de índices... que sea similar a como hace bowtie
