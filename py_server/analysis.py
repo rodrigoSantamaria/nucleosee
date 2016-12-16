@@ -132,13 +132,17 @@ def loadData(dataName="Test", track="None"):
     import os
     import annotations as ann
     import pickle #i tried cPickle but is way slower!
+    global session
+    global user
+    
+    session[user]={}
     
     dataName=request.args.get("dataName")
     t00=time.clock()
     
     #0) Get info from the track file
-    basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
-    #basePath="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/"
+    #basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    basePath=app.config['UPLOAD_FOLDER']
     f=open(os.path.join(basePath,"tracks.txt"))
     for l in f.readlines():
         if(l.split("\t")[0].strip()==dataName):
@@ -156,22 +160,6 @@ def loadData(dataName="Test", track="None"):
     #----Load the corresponding pickle
     data={}
     
-    #1) annotations
-#    t0=time.clock()
-#    dataGO=ann.go()
-#    dataGOA=[]
-#
-#    try:
-#        dataGOA=ann.goa(organism)
-#        print("GO loaded")
-#    except:
-#        print("organism",organism,"'s annotations missing or failing")
-#    print("done! ... GO annotations takes",(time.clock()-t0))
-#    
-#    data["go"]=dataGO
-#    data["goa"]=dataGOA
-#    data["windowSize"]=windowSize
-
     t0=time.clock()
     print("---------------- FILE: "+picklePath+" ------------------")
     f=open(os.path.join(basePath,picklePath))
@@ -191,9 +179,6 @@ def loadData(dataName="Test", track="None"):
    
     print("load data takes",(time.clock()-t0))
     
-    #talg3=pdata[filename]["gff"]["chromosome3"]
-    #print("CDS MATCH: ", talg3[talg3["start"]==115781])
-
     #--------------- COMPILE BATCH
     data["batch"]={}
     data["batch"]["processed"]=pdata[filename]
@@ -224,7 +209,6 @@ def loadData(dataName="Test", track="None"):
         data["windowSize"]=pdata["processed"]["windowSize"]
     
       
-    #session[user]=data
     session[user][dataName]=data#trying to load several datasets at once
     print('file preprocess takes ',(time.clock()-t00),"s")
     
@@ -238,14 +222,12 @@ def loadData(dataName="Test", track="None"):
                 dseq=dbp["dseq"][track], 
                 chromosomes=sorted(dbp["maximum"].keys()),
                 bins=dbp["bins"][track])
-                #filenames=[filename])
-#    return data
 
 #ret=loadData("Test")
 #%%
 @app.route("/listData")
 def listData():
-    f=open(os.path.join(app.config['UPLOAD_FOLDER'],user,"tracks.txt"))
+    f=open(os.path.join(app.config['UPLOAD_FOLDER'],"tracks.txt"))
     #f=open("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/tracks.txt")
     tracks=[l.split("\t")[0] for l in f.readlines()]
     return jsonify(response=tracks)
@@ -295,7 +277,8 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
 #    #0) getting parameter
     print('Parameters...')
     t0=time.clock()
-    basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    #basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    basePath=app.config['UPLOAD_FOLDER']
     filenames=eval(request.args.get("filenames"))
     track=request.args.get("track")
     organism=request.args.get("organism")
@@ -483,7 +466,8 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     #0) getting parameter
     print('Parameters...')
     t0=time.clock()
-    basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+#    basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
+    basePath=app.config['UPLOAD_FOLDER']
     filename=str(request.args.get("filename"))
     path=os.path.join(basePath,filename)
     track=request.args.get("track")
@@ -632,6 +616,7 @@ retorna    las posiciones dentro de dseq donde aparece el patrón
 def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false", 
            dataName1="None", dataName2="None", pattern2="None", join="not"):
     global data
+    data["search"]={}
     
     print("searching..:")
     
@@ -651,7 +636,7 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
     else:
         ret=searchLocal(data[dataName1], pattern, d, geo, intersect, softMutations)
     search1=ret["points"]
-    sizePattern=ret["sizePattern"]
+    #sizePattern=ret["sizePattern"]
     
     if(dataName2=="None" or join=="None"):
         search=search1
@@ -672,24 +657,36 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
                 s12=s1 & s2
             if(join=="or"):
                 s12=s1 | s2
-            if(k=="chromosome1"):
-                print("COINCIDENCES IN CH1:")
-                print("s1", s1)
-                print("s2", s2)
-                print(join, s12)
+                if(len(data["search"].keys())==0):
+                    data["search"][dataName1]={"points":{}, "sizePattern":0}
+                    data["search"][dataName2]={"points":{}, "sizePattern":0}
+                data["search"][dataName1]["points"][k]=list(s1)
+                data["search"][dataName2]["points"][k]=list(s2)
             search[k]=list(s12)
             print("SEARCH SIZES: ", len(s1), " ", len(s2), " ", len(s12))    
     print("DATA NAMES:" ,dataName1, dataName2)
-    data["search"]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
     
+    if(join=="None" or dataName2=="None" or join=="and" or join=="not"):
+        data["search"][dataName1]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
+    if(join=="and" and dataName2!="None"):
+        data["search"][dataName2]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
+    if(join=="or" and dataName2!="None"):
+        data["search"][dataName1]["sizePattern"]=ret["sizePattern"]
+        data["search"][dataName2]["sizePattern"]=ret["sizePattern"]
+    #data["search"]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
+    
+    search=data["search"]
     #for json
     for k in search.keys():
-        search[k]=(str)(search[k])
+        #search[k]=(str)(search[k])
+        for j in search[k]["points"]:
+            search[k]["points"][j]=(str)(search[k]["points"][j])
         
     if("response" in ret.keys()):
         return jsonify(response=ret["response"], msg=ret["msg"])
     else:
-        return jsonify(points=search, sizePattern=sizePattern)
+        #return jsonify(points=search, sizePattern=sizePattern)
+        return jsonify(search)
         
 #%%    
 def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutations="false"):
@@ -713,7 +710,7 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
     #CASE 2) gene/go name pattern
     t=data["batch"]["processed"]["bwt"][data["batch"]["processed"]["seq"].keys()[0]]
     
-    pattern=pattern.lower()
+    pattern=pattern.lower().strip()
     patternLetters=[chr(x) for x in range(ord('a'), ord('a')+len(data["batch"]["processed"]["bins"][data["batch"]["processed"]["bins"].keys()[0]])-1)]
 
     patternSymbols=patternLetters
@@ -1004,6 +1001,18 @@ def enrichmentGO(annotations={}, correction="none", alpha=0.01):
     data["ego"]=ego
     return jsonify(response=ego)
 
+#%% automatic assignment of users (no login/pass protocol)
+@app.route("/assignUser")
+def assignUser():
+    import random
+    import sys
+    
+    global user
+    
+    user=str(random.randrange(0, sys.maxint))
+    session[user]={}
+    return jsonify(response=user)
+    
 #%%from http://mortoray.com/2014/04/09/allowing-unlimited-access-with-cors/
 @app.after_request
 def add_cors(resp):
@@ -1018,6 +1027,7 @@ def add_cors(resp):
         resp.headers['Access-Control-Max-Age'] = '1'
     return resp
     
+        
 #%% session info
 @app.before_request
 def load_passport():
@@ -1026,7 +1036,7 @@ def load_passport():
     global user
     user=str(request.args.get("user"))
     #password=str(request.args.get("password"))
-    #TODO: check password and so on.
+    #DISCARDED: check password and so on.
     if user in session.keys():
         data=session[user]
 
@@ -1045,11 +1055,7 @@ def test():
 if __name__ == '__main__':
     global session
     global data
-    global user
-    user=""
     session={}
-    session["jpiriz"]={}    
-    session["rodri"]={}    
     data={}
     #app.run(debug=True)
     app.run(debug=True, host='0.0.0.0', port=2750)

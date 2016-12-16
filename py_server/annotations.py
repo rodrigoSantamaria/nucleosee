@@ -172,7 +172,7 @@ def roman2arabic(roman):
     return arab
 #roman2arabic("xxxviii")
 #%%  Loads the gene ontology into a dic where keys are go_ids and values are just go names by now
-def go(filename="genomes/annotations/go/go-basic.obo"):
+def go(filename="annotations/go/go-basic.obo"):
     f=open(filename)
     lines=f.readlines()
     data={}
@@ -190,15 +190,17 @@ def go(filename="genomes/annotations/go/go-basic.obo"):
 def goa(org="Schizosaccharomyces pombe"):
     path=org[0]+org[org.find(" ")+1:]
     path=path.lower()
-    if(path=="scerevisiae"):
-        f=open("genomes/annotations/"+path+"/goa/gene_association.sgd")
-    if(path=="spombe"):
-        f=open("genomes/annotations/"+path+"/goa/gene_association.pombase")
-    if(path=="dmelanogaster"):
-        f=open("genomes/annotations/"+path+"/gene_association.fb")
-    if(path=="mmusculus"):
-        f=open("genomes/annotations/"+path+"/goa/gene_association.mgi")
-        
+#    if(path=="scerevisiae"):
+#        f=open("annotations/"+path+"/goa/gene_association.sgd")
+#    if(path=="spombe"):
+#        f=open("annotations/"+path+"/goa/gene_association.pombase")
+#    if(path=="dmelanogaster"):
+#        f=open("annotations/"+path+"/goa/gene_association.fb")
+#    if(path=="mmusculus"):
+#        f=open("annotations/"+path+"/goa/gene_association.mgi")
+    import glob
+    f=open(glob.glob("annotations/"+path+"/goa/*")[0])#expects one and only one file in goa folder
+    
     lines=f.readlines()
     data=[]
     for l in lines:

@@ -50,7 +50,7 @@
     <![endif]-->
 
 
-    <!-- START VIEW -->
+    <!-- START VIEW (login/pass screen - now discarded)-->
     <div class="container start-view">
         <div class="row">
             <div class="col-md-4 col-md-offset-4">
@@ -75,6 +75,7 @@
             </div>
         </div>
     </div>
+
 
 
 
@@ -284,7 +285,7 @@
 
                 <div class="row">
                     <div class="col-sm-9 col-sm-offset-1">
-                        <b>Available data: </b> select one.
+                        <b>Available data: </b> select one or more.
                     </div>
                     <div class="col-sm-9 col-sm-offset-1">
                         <select id="selectionList" size="0" multiple onchange="if (this.selectedIndex==undefined || this.selectedIndex.length>2)  btSelectOptions.disabled=true; else  btSelectOptions.disabled=false;">
@@ -485,12 +486,12 @@
             ////////////////////////////////////////////
             $('#btLogin').click(function()
             {
-                var username = $('#username').val();
-                var password = $('#password').val();
+                //var username = $('#username').val();
+                //var password = $('#password').val();
 
 
                 //Server.connect(true, verifyConnection, username, password, "http://prodiasv21.fis.usal.es:2750/");
-                Server.connect(true, verifyConnection, username, password, "http://127.0.0.1:2750/");
+                Server.connect(true, verifyConnection, "", "", "http://127.0.0.1:2750/");
 
                 return false;
             });
@@ -528,8 +529,8 @@
                 //$('#patternSearch').val("aaaaabcba");
                 //$('#patternSearch').val("a*5+abcba*2");
                 $('#patternSearch').val("abcba*3"); // esta es la buena con enrichment
-                $('#username').val("jpiriz");
-                $('#password').val("alguna");
+                //$('#username').val("jpiriz");
+                //$('#password').val("alguna");
                 $('#btLogin').click();
             ////////////////////////////////////////////////
 

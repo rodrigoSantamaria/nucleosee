@@ -88,6 +88,8 @@ body {
 .dl1.point {
     fill:white;
     stroke:darkred;
+   /* r:2px;
+    stroke-width:1px;*/
 }
 .dl1.point.pressed {
     stroke: steelblue;
@@ -219,7 +221,7 @@ body {
     stroke-width: 2px;
 }
 
-.dl2.line.shadow {
+.dl2.lineshadow {
     fill: #d1e0ff;
     stroke: #d1e0ff;
     stroke-width: 1px;
@@ -261,10 +263,27 @@ body {
 /* BRACKETS */
 .dl2.bracket{
     fill: none;
-    stroke: black;
+    stroke: #999999;
 }
 
+/* HOVER */
+.dl2.hover.point{
+    fill: #999999;
+    r:2px;
+    }
 
+.dl2.hover.vline{
+    fill: black;
+    stroke: black;
+    stroke-dasharray: "5,5";
+}
+
+.dl2.hover.label{
+    fill: #999;
+    font-family: sans-serif;
+    font-size: 10px;
+    text-align: center;
+}
 
 /*--------------------------------------------*/
 /*      NUCLEOTIDES (DATALINE 3)              */

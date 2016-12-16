@@ -8,17 +8,15 @@
   Frontend
 =============
   - DISCARDED: cambiar el idioma del componente para subir archivos. No es posible
-  - TODO: cursor en DL2 para identificar altura y posición
-        TODO: los corchetes salen mal desde los cambios a multilane
-  - TODO: resultado de búsquedas en multilane: ponerlas en el lane adecuado (and -ambas, not-primera, or-cada uno en el suyo?)
-    BORRAR CON NUEVAS BÚSQUEDAS
-  - TODO: ayuda sencilla para entender las búsquedas de patrones
-
-  - TODO: diseñar una búsqueda rápida - tratar de aprovechar al máximo la barra superior.
-  - DISCARD: dl2 annotation, arrow, label y cracker parece que no se borran o se duplican de más
+  - DISCARDED: dl2 annotation, arrow, label y cracker parece que no se borran o se duplican de más
         arrow se pone (con path="") para toda anotación, sea o no gen
         lo mismo pasa con las labels y creo que con los crackers.
         No es muy grave por que no se acumulan entre selecciones.
+  - TODO: un bug esquivo es que hay veces que las DL2 se entremezclan con las DL1, puede que sea sólo en modo depuración
+  - TODO: ayuda sencilla para entender las búsquedas de patrones
+  - TODO: diseñar una búsqueda rápida - tratar de aprovechar al máximo la barra superior.
+  - TODO: nucProfile falla si sólo hay una ocurrencia
+  - MONITOR: a veces un goterm-tip no se elimina correctamente. He hecho un cambio pero no sé si funcionará
 
   Backend
 =============
@@ -32,5 +30,9 @@
         TODOO: se puede también pensar en NO guardar el .wig original, sólo nuestros datos, para evitar duplicaciones de memoria en disco
   - TODO: revisar búsqueda fully inside o no en regiones intergénicas, va al revés que el resto
   - TODO: capturas de pantalla
-  - TODO: Descartar toda la parte de usuarios. Gestionar mejor el almacenamiento de archivos
+  - HECHO: Descartar toda la parte de usuarios.
+        Eliminado del comienzo, se asigna uno aleatorio (assignUser)
+        Eliminado de la referencia en rutas a directorios
+  - TODO: Gestionar mejor el almacenamiento de archivos
+        Facilitar la inclusion de anotaciones poniendo la carpeta adecuada
   - TODO: versión para consola de búsquedas sobre wig/bigwig, con creación de índices... que sea similar a como hace bowtie

@@ -61,11 +61,32 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             _DEBUG          = DEBUG;
 
 
-            // Here you should check the credentials...
-            if(user == "jpiriz")
+            // Here you should check the credentials... --> deprecated
+            /*if(user == "jpiriz")
                 callback(true);
             else
-                callback(false);
+                callback(false);*/
+            // We do just a simple user random assigning to control concurrent accesses
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/assignUser",
+                    type: "GET",
+                    datatype: "json"
+                });
+
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    _user=result.response;
+                    callback(true);
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    if(_DEBUG) console.log("testFile(): testUpload failed...");
+                    javascript_abort("Error assigning user. Server might be down: "+errorThrown+" "+jqXHR.responseText);
+                    callback(false);
+                });
         };
 
 
@@ -448,9 +469,10 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 {
                     if(result.response != "error")
                     {
-                        var response = [];
+                        /*var response = [];
                         response.points = result.points; // points found in all chromosomes
-                        response.sizePattern = result.sizePattern;
+                        response.sizePattern = result.sizePattern;*/
+                        var response=result;
 
                         // Hide the image of "loading..."
                         showImageLoading("imgLoadingSearch", false);
@@ -458,7 +480,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                         if(_DEBUG) console.log("search(): search done...");
                         if(_DEBUG) console.log("Time spent searching: "+ (new Date()-startTime)+"ms");
 
-                        callback(response, dataName1);
+                        callback(response);
                     }
                     else
                     {
@@ -762,8 +784,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.getPartSeq = function (callback, track, startSeq, endSeq, numNucleotides, point, sizePattern, dataName)
         {
-            console.log("GET PART SEQ "+dataName);
-
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/getPartSeq?user="+_user+"&password="+_password+"&track="+track+
@@ -782,8 +802,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 {
                     var response = [];
                     response=result;
-                    console.log("GET PART SEQ RESPONSE"+dataName);
-
                     callback(response, numNucleotides, point, sizePattern, dataName);
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
@@ -796,8 +814,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
         Server.getAllPartSeq = function (callback, start, end, point, dl1, dl2, globalSeqs, i, seqs)
         {
-            console.log("GET ALL PART SEQ "+i);
-
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/getPartSeq?user="+_user+"&password="+_password+"&track="+globalSeqs[i].track+
@@ -815,7 +831,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 
                 if(i>=globalSeqs.length-1) {
-                    console.log("GET PART SEQ RESPONSE" + i);
                     callback(seqs, start, end);//TODO: implement callback on draw.js
                     }
                 else

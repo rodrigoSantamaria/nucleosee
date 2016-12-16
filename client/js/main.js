@@ -294,7 +294,7 @@ function searchPattern()
 
 // DRAW POINTS ON DATALINE 1
 ////////////////////////////////
-function searchResults(result, dataName)
+function searchResults(result)
 {
     /**
      * @typedef {Object} result
@@ -304,13 +304,14 @@ function searchResults(result, dataName)
 
     // DATALINE 1: DRAW POINTS
     //----------------------------------
-    drawSearch(result.points, result.sizePattern, dataName);
+    //drawSearch(result.points, result.sizePattern, dataName);
+    drawSearch(result);
 
     exportPositions(result.points)
     // ENRICHMENT
     //----------------------------------
     if (DEBUG_GBV) console.log("\n----- ENRICHMENT -----");
-    getAllAnnotations(result.points, result.sizePattern);
+    getAllAnnotations(result);
 
 }
 
@@ -384,12 +385,28 @@ function exportGO(annotations)
 
 // GET ALL ANNOTATIONS
 ////////////////////////////////
-function getAllAnnotations(allPoints, sizePattern)
+function getAllAnnotations(matches)
 {
     var chromosomes = GVB_GLOBAL.chromosomes;
     var ws          = GVB_GLOBAL.ws;
 
     globalTime=new Date();
+
+    var allPoints={}
+    var sizePattern=undefined;
+
+    for(var i in matches)
+        if(sizePattern==undefined)
+            sizePattern=matches[i].sizePattern
+        for(var j in matches[i].points) {
+            if (allPoints[j] == undefined)
+                allPoints[j] = matches[i].points[j];
+            else allPoints[j].push(matches[i].points[j]);
+            //allPoints[j]=allPoints[j].filter(function(itm,i,a){
+            //    return i==a.indexOf(itm);
+            //});
+            }
+
 
     var winS;
     if(typeof(sizePattern)=="object")//TODO: allow different sizes for each point
@@ -420,8 +437,6 @@ function getEnrichment(gis, annotations)
     exportGenes(annotations);
 
     Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
-
-
 }
 
 
@@ -519,6 +534,10 @@ function destroyAll(clear, tracksOnly)
             console.log(new Array(15).join("\n"));
             console.log("Reset all (with File APIs)...");
             }
+
+        //Clear data pattern search selection lists
+        document.getElementById('paramSearchDataset').options.length=0;
+        document.getElementById('paramSearchDataset2').options.length=0;
         }
 
 }
