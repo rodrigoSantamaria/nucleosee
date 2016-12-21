@@ -46,9 +46,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * Connect with the server.
          * @param DEBUG
          * @param callback
-         * @param user
+         * @param user      User and password are deprecated
          * @param password
-         * @param serverPath
+         * @param serverPath    Change to your server on index.html call
          */
         Server.connect = function (DEBUG, callback, user, password, serverPath)
         {
@@ -60,12 +60,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             _password       = password;
             _DEBUG          = DEBUG;
 
-
-            // Here you should check the credentials... --> deprecated
-            /*if(user == "jpiriz")
-                callback(true);
-            else
-                callback(false);*/
             // We do just a simple user random assigning to control concurrent accesses
             var requestAJAX = $.ajax(
                 {
@@ -667,7 +661,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("enrichmentGO(): enrichmentGO failed...");
-                    javascript_abort("enrichmentGO() failed");
+                    javascript_abort("enrichmentGO() failed, check that python fisher library is installed in your server");
 
                 });
         };
@@ -847,6 +841,35 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         };
 
         /**
+         * Gets all available organisms in the server
+         * @param callback
+         */
+        Server.availableOrganisms = function (callback) {
+        var requestAJAX = $.ajax(
+            {
+                url: _serverPath+"/availableOrganisms?user="+_user+"&password="+_password,
+                type: "GET",
+                datatype: "json"
+            });
+
+        /**
+         * @typedef {Object} result
+         * @property response
+         */
+        $.when(requestAJAX)
+            .done(function(result)
+            {
+                callback(result.response)
+            })
+            .fail(function(jqXHR, textStatus, errorThrown)
+            {
+                if(_DEBUG) console.log("availableOrganisms(): availableOrganisms failed...");
+                javascript_abort("availableOrganisms() failed");
+            });
+
+    };
+
+            /**
          * Calls the REST service available to retrieve a sequence of nucleotides
          * @param callback
          * @param track

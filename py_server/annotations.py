@@ -5,14 +5,19 @@ Different methods to read annotations
 """
 
 #%% -------------------------- ADDITIONAL ANNOTATIONS ----------------------
-
+def getAnnotationFolders():
+    import glob
+    import os
+    if ("annotations" in glob.glob("*")==False):
+         os.makedirs("annotations")
+    return [os.path.basename(x) for x in glob.glob("annotations/[!^go]*")]
 #%%
 """
 Returns a np table ("single") or a dictionary with np tables (structure="multilple") 
 with genome functional annotations.
 NOTE: for larger GFF files (e.g. dmelanogaster, 600MB, this is not performing at all)
 """
-def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.gff3", structure="single"):
+def gff(filename="annotations/spombe/gff/schizosaccharomyces_pombe.III.gff3", structure="single"):
     import csv
     import time
     
@@ -86,9 +91,9 @@ def gff(filename="genomes/annotations/spombe/gff/schizosaccharomyces_pombe.III.g
         return d
 #import time
 #t0=time.clock()
-#dataGFF=gff("genomes/annotations/dmelanogaster/dmel-all-no-analysis-r6.12.gff", "multiple")    
+#dataGFF=gff("annotations/dmelanogaster/dmel-all-no-analysis-r6.12.gff", "multiple")    
 
-##dataGFF=gff("genomes/annotations/scerevisiae/gff/saccharomyces_cerevisiae.gff", "multiple")
+##dataGFF=gff("annotations/scerevisiae/gff/saccharomyces_cerevisiae.gff", "multiple")
 ###dataGFF["chr01"][100]
 #print("it took",(time.clock()-t0))
 
@@ -120,10 +125,10 @@ def gffData(org="Schizosaccharomyces pombe", tracks=[]):
                 roman+="II"
             elif(k.find("2")>=0 or k.find("II")>=0):
                 roman+="I"
-            ret="genomes/annotations/spombe/gff/"+"schizosaccharomyces_pombe."+roman+".gff3"
+            ret="annotations/spombe/gff/"+"schizosaccharomyces_pombe."+roman+".gff3"
             d[k]=gff(ret, "single")
     if(org=="Saccharomyces cerevisiae"):
-        data=gff("genomes/annotations/"+path+"/gff/saccharomyces_cerevisiae.gff", "multilpe")
+        data=gff("annotations/"+path+"/gff/saccharomyces_cerevisiae.gff", "multilpe")
         print("gff read")
         for k in data.keys():
             k0=k
@@ -137,11 +142,11 @@ def gffData(org="Schizosaccharomyces pombe", tracks=[]):
             k2+=(str)(k)
             d[k2]=data[k0]
     if(org=="Drosophila melanogaster"):
-        contents=os.listdir("genomes/annotations/"+path)
+        contents=os.listdir("annotations/"+path)
         for c in contents:
             if(re.search(".gff$", c)):
                 filename=c
-        data=gff("genomes/annotations/"+path+"/"+filename, "multiple")
+        data=gff("annotations/"+path+"/"+filename, "multiple")
         d=data
         print("gff read")
         
@@ -190,14 +195,6 @@ def go(filename="annotations/go/go-basic.obo"):
 def goa(org="Schizosaccharomyces pombe"):
     path=org[0]+org[org.find(" ")+1:]
     path=path.lower()
-#    if(path=="scerevisiae"):
-#        f=open("annotations/"+path+"/goa/gene_association.sgd")
-#    if(path=="spombe"):
-#        f=open("annotations/"+path+"/goa/gene_association.pombase")
-#    if(path=="dmelanogaster"):
-#        f=open("annotations/"+path+"/goa/gene_association.fb")
-#    if(path=="mmusculus"):
-#        f=open("annotations/"+path+"/goa/gene_association.mgi")
     import glob
     f=open(glob.glob("annotations/"+path+"/goa/*")[0])#expects one and only one file in goa folder
     
@@ -216,9 +213,9 @@ def fasta(ch, org="Schizosaccharomyces pombe"):
     path=org[0]+org[org.find(" ")+1:]
     path=path.lower()
     try:
-        f=open("genomes/annotations/"+path+"/fasta/"+(str)(ch)+".fasta")
+        f=open("annotations/"+path+"/fasta/"+(str)(ch)+".fasta")
     except:  
-        f=open("genomes/annotations/"+path+"/fasta/"+(str)(ch)+".fsa")
+        f=open("annotations/"+path+"/fasta/"+(str)(ch)+".fsa")
     reader=f.readlines()
     reader=reader[1:]
     return "".join(reader).replace("\n","")

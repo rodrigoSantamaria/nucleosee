@@ -14,8 +14,10 @@
         No es muy grave por que no se acumulan entre selecciones.
   - TODO: un bug esquivo es que hay veces que las DL2 se entremezclan con las DL1, puede que sea sólo en modo depuración
   - TODO: ayuda sencilla para entender las búsquedas de patrones
-  - TODO: diseñar una búsqueda rápida - tratar de aprovechar al máximo la barra superior.
-  - TODO: nucProfile falla si sólo hay una ocurrencia
+        ONGOING para toda la herramienta, incluyendo el backend
+  - DISCARDED (BY NOW): en el caso de genes/go las longitudes de cada secuencia son distintas. Habría que hacer un
+        método para buscar motivos en cadenas de longitud variable en ese caso. De momento simplemente no se dibuja la
+        secuencia en estos casos
   - MONITOR: a veces un goterm-tip no se elimina correctamente. He hecho un cambio pero no sé si funcionará
 
   Backend
@@ -25,14 +27,16 @@
         DONE: Los dos puntos anteriores están bastante optimizados. Para pombe entero estamos hablando de 10s para todoo
             el proceso ahora, incluyendo lectura, formateo, estadísticas, discretización y bwt.
   - Guardar datos para mayor optimización en cargas posteriores
-        TODOO: explorar pandas como alternativa a pickle, sobre todoo pensando en humano
+        TODOO: explorar pandas como alternativa a pickle, sobre tout pensando en humano
         TODOO: también pensando en humano se puede pensar en integrar el BWT u otros cálculos en el fichero que se guarde
         TODOO: se puede también pensar en NO guardar el .wig original, sólo nuestros datos, para evitar duplicaciones de memoria en disco
-  - TODO: revisar búsqueda fully inside o no en regiones intergénicas, va al revés que el resto
-  - TODO: capturas de pantalla
+  - TODO: exportar imágenes
   - HECHO: Descartar toda la parte de usuarios.
         Eliminado del comienzo, se asigna uno aleatorio (assignUser)
         Eliminado de la referencia en rutas a directorios
-  - TODO: Gestionar mejor el almacenamiento de archivos
+  - HECHO: Gestionar mejor el almacenamiento de archivos
         Facilitar la inclusion de anotaciones poniendo la carpeta adecuada
+        TODO: quizás falta eliminar los wig del servidor una vez procesados.
+  - TODO: Gestión e instalación del servidor: apache tomcat
+        HECHO: instalado mediante WSGI en Apache. Ver qué pasa con el enriquecimiento -> falta fisher en el servidor
   - TODO: versión para consola de búsquedas sobre wig/bigwig, con creación de índices... que sea similar a como hace bowtie

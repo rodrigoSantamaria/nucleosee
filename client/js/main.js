@@ -73,12 +73,21 @@ function populateDataList(data)
 
     for(var i in data)
         {
-            var elOptNew = document.createElement('option');
+        elSel.options[elSel.options.length]=new Option(data[i],data[i]);
+            /*var elOptNew = document.createElement('option');
             elOptNew.text = data[i];
             elOptNew.value = data[i];
-            elSel.add(elOptNew, null);
+            elSel.add(elOptNew, 0);*/
         }
     }
+
+function populateOrganismList(data)
+{
+    var elSel = document.getElementById('speciesList');
+
+    for(var i in data)
+        elSel.options[elSel.options.length]=new Option(data[i],data[i]);
+}
 
 function selectData()
     {
@@ -142,7 +151,6 @@ function preprocessing(chromosome)
     {
         GVB_GLOBAL.track = chromosome;
         if (DEBUG_GBV) console.log("chromosome: " + GVB_GLOBAL.track);
-       // Server.getTrack(drawingFirstDataLine, GVB_GLOBAL.track, globalSeqs[0].dataName);
 
         //0) Remove previous elements
         destroyAll(false, true);
@@ -214,14 +222,10 @@ function drawingFirstDataLine(processedData, chromosome, index, total) {
             dataLine_1(processedData, 0, fullLength, total);
 
         //In case of switching tracks
-        if (processedData.hasOwnProperty("search") && processedData.search.points.hasOwnProperty(chromosome)) {
-            console.log("There's a search!")
-            var selection1=$("#paramSearchDataset option:selected")[0].value;//should be determined in the search
-
-            drawSearch(processedData.search.points, processedData.search.sizePattern, selection1);
+        if (processedData.hasOwnProperty("search") && processedData.search[globalSeqs[index].dataName].points.hasOwnProperty(chromosome)) {
+            drawSearch(processedData.search);
         }
         if (processedData.hasOwnProperty("ego")) {
-            console.log("There's enrichment")
             drawEnrichment(processedData.ego);
         }
 }
@@ -260,8 +264,10 @@ function drawingFirstDataLine(processedData, chromosome, index, total) {
  *
  * 3) Get the real stuff
  * http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&query_key=2&WebEnv=NCID_1_44089431_130.14.22.215_9001_1469092699_175516958_0MetA0_S_MegaStore_F_1&rettype=fasta&retmode=txt
+ *
+ * id can be 0 if it comes from the quick search or 1 if it comes from the advanced search
  */
-function searchPattern()
+function searchPattern(id)
 {
     var selection1=$("#paramSearchDataset option:selected")[0].value;
     var selection2=$("#paramSearchDataset2 option:selected")[0].value;
@@ -271,23 +277,27 @@ function searchPattern()
 
     if(globalDL1.drawn)
     {
-        var pattern     = $('#patternSearch').val();
-        var pattern2     = $('#patternSearch2').val();
-        var d           = $('#dSearch').val();
 
-        var geo="none"; //can be gene, 5' UTR, 3' UTR, ncRNA gene, exons or intergene regions (neither gene neither intergene include pseudogenes or ncRNA genes)
-        if(document.getElementById('paramGeo').checked)
-            {
+        if(id==1)
+            var pattern = $('#patternSearch').val();
+        else
+            var pattern = $('#patternSearch0').val();
+
+        var pattern2 = $('#patternSearch2').val();
+        var d = $('#dSearch').val();
+
+        var geo = "none"; //can be gene, 5' UTR, 3' UTR, ncRNA gene, exons or intergene regions (neither gene neither intergene include pseudogenes or ncRNA genes)
+        if (document.getElementById('paramGeo').checked) {
             var e = document.getElementById("geo_type");
             geo = e.options[e.selectedIndex].value;
-            }
-        var intersect="soft";
-        if(document.getElementById('paramIntersect').checked)
-            intersect="hard"//TODO: hard with intergenic regions is not working.
+        }
+        var intersect = "soft";
+        if (document.getElementById('paramIntersect').checked)
+            intersect = "hard"//TODO: hard with intergenic regions is not working.
 
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
-        Server.search(searchResults, pattern,d, geo, intersect, GVB_GLOBAL.softMutations,
-            selection1,selection2,selectionJoin, pattern2);
+        Server.search(searchResults, pattern, d, geo, intersect, GVB_GLOBAL.softMutations,
+            selection1, selection2, selectionJoin, pattern2);
     }
 }
 
@@ -312,7 +322,6 @@ function searchResults(result)
     //----------------------------------
     if (DEBUG_GBV) console.log("\n----- ENRICHMENT -----");
     getAllAnnotations(result);
-
 }
 
 

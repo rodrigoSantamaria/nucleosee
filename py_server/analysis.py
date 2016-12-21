@@ -6,7 +6,6 @@ Created on Wed Jun  4 10:41:47 2014
 
 @author: rodri
 """
-"""PRUEBA GIT"""
 # --------------------- LIBRARIES -----------------
 from flask import Flask, jsonify, request
 from flask import redirect, url_for #for uploading files
@@ -24,14 +23,13 @@ import re
 
 import pickle #i tried cPickle but is way slower!
     
-
-
-    
-
+global session
+global data
+session={}
+data={}
 
 #----------------------- UPLOADS -----------------------
 #%%from http://flask.pocoo.org/docs/patterns/fileuploads/
-#UPLOAD_FOLDER = '/Users/rodri/WebstormProjects/seqview/py_server/genomes' #maybe an absolute path??
 UPLOAD_FOLDER = './genomes' #wherever we run analysis.py
 ALLOWED_EXTENSIONS = set(['txt', 'wig', 'bw'])
 
@@ -704,7 +702,6 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
             for k in data["batch"]["processed"]["seq"].keys():
                 points[k]=(str)([(int)(interval["start"])] if (interval["start"]+interval["length"])<len(data["batch"]["processed"]["seq"][k]) else [])
             data["search"]={'points':points, 'sizePattern':((int)(interval["length"]/ws))}
-            #return jsonify(points=points, sizePattern=((int)(interval["length"]/ws)));
             return {"points":points, "sizePattern":((int)(interval["length"]/ws))}
     
     #CASE 2) gene/go name pattern
@@ -730,7 +727,7 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
                 oc=ann.searchGene(pattern, data["batch"]["processed"]["gff"][k], ["gene", "tRNA_gene"])
             else:
                 print("TERM")
-                oc=ann.searchGO(pattern.replace("go:", ""), data["goa"], data["go"], data["batch"]["processed"]["gff"][k])
+                oc=ann.searchGO(pattern.replace("go:", "").strip(), data["goa"], data["go"], data["batch"]["processed"]["gff"][k])
             points[k]=(str)([(int)(y["start"]) for y in oc])
             sizes[k]=(str)([(int)((y["end"]-y["start"])/ws) for y in oc])
         data["search"]={'points':points, 'sizePattern':sizes}
@@ -751,7 +748,6 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
             print(len("".join(data["batch"]["processed"]["dseq"][k])))
             print("Search ",k,"takes",(time.clock()-t0), "and finds",len(search[k]), "occurences")
             if(len(search[k])>10000):
-                #return jsonify(response="error", msg="Too many occurrences, please narrow your search", points={}, sizePattern=len(pattern))
                 return {"response":"error", "msg":"Too many occurrences, please narrow your search", "points":{}, "sizePattern":len(pattern)}
     print("Search finished in ",(time.clock()-t00))
     
@@ -787,8 +783,11 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
                 ws=data["windowSize"]
                 
                 if(len(sk)>0 and (k in data["batch"]["processed"]["gff"].keys())):
-                    
-                    annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["batch"]["processed"]["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect)
+                    if(intersect=="soft"):
+                        intersect2="hard"
+                    else:
+                        intersect2="soft"
+                    annot=annotationsLocal(positions=sk, window=ws*len(pattern), gff=data["batch"]["processed"]["gff"][k], types=["gene", "pseudogene", "ncRNA_gene", "tRNA_gene", "snoRNA_gene", "snRNA_gene"], onlyIDs="False", intersect=intersect2)
                     p1=set(sk)-set(annot.keys())
                     p=[(int)(x) for x in p1];
                     search[k]=list(p)
@@ -1046,17 +1045,22 @@ def load_passport():
 #        session["passport_id"] = g.passport.id
 #    return response
     
-@app.route("/test")
-def test():
+@app.route("/testArray")
+def testArray():
     import numpy as np
     return jsonify(a=np.abs([-0.80176, -0.098632812, 0.09375, 0.8017578125]))
 
+@app.route("/test")
+def test():
+    return "Seqview server correclty configured"
+
+#%%
+@app.route("/availableOrganisms")
+def availableOrganisms():
+    return jsonify(response=a.getAnnotationFolders()) 
+    
 #-------------------- LAUNCH -----------------
 if __name__ == '__main__':
-    global session
-    global data
-    session={}
-    data={}
     #app.run(debug=True)
     app.run(debug=True, host='0.0.0.0', port=2750)
     

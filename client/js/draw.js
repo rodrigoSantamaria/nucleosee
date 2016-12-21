@@ -20,7 +20,7 @@ var marginDL =
 var dimDL =
 {
     graphWidth : screen.width,
-    graphHeight : 150,//TODO: testing, prev 200
+    graphHeight : 150,
 
     width : screen.width-marginDL.right-marginDL.left,
     height : 150-marginDL.top-marginDL.bottom
@@ -155,7 +155,7 @@ function globalDL2Object(id)
 function globalDL3Object()
 {
     // Core variables (used to draw)
-    this.cv= new customViewObject("lineSeq3", "dl3", dimDL.height);
+    this.cv= new customViewObject("lineSeq3", "dl3", 120);
     this.sequences=new sequencesObject();
 };
 
@@ -243,7 +243,6 @@ function getLevel(dataName, level)
 
 
 
-//function drawSearch(allPoints, sizePattern, dataName)
 function drawSearch(allPoints0)
 {
     var matches = [];
@@ -256,13 +255,12 @@ function drawSearch(allPoints0)
     dl1[0].cv.svg.selectAll(".search-label").remove();
     dl1[0].cv.svg.selectAll(".export-label").remove();
 
-    for(var dataName in allPoints0) {//FOR START
+    for(var dataName in allPoints0)
+        {//FOR START
         var allPoints=allPoints0[dataName].points;
         var sizePattern=allPoints0[dataName].sizePattern;
         var globalSeq = getLevel(dataName, "Seq");
         var globalDL1 = getLevel(dataName, "DL1");
-
-
 
 
         var track = globalSeq.track;
@@ -277,7 +275,6 @@ function drawSearch(allPoints0)
             var pp = JSON.parse(allPoints[tracks[i]]);
             if(matches[i]==undefined)   matches[i]=pp.length;
             else                        matches[i]+=pp.length;
-            //matches.push(pp.length);
         }
 
         // We calculate the points found in the sequence
@@ -292,7 +289,6 @@ function drawSearch(allPoints0)
             if (dataPoint >= globalDL1.cv.data.length)
                 console.log("Out of bounds!: " + dataPoint + ", " + seqPoints[i]);
             else {
-                //            dataPoints.push({real_pos: seqPoints[i], pos: (globalDL1.cv.data)[dataPoint].pos, value: (globalDL1.cv.data)[dataPoint].value, selected: false});
                 if (typeof(sizePattern) == "number")//in the case of BWT/interval searches
                     dataPoints.push({
                         real_pos: seqPoints[i],
@@ -344,16 +340,13 @@ function drawSearch(allPoints0)
         // Calls tip
         globalDL1.cv.svg.call(globalDL1.pointTip);
 
-
-
-
         //Draw the points
         drawPoints(dataPoints, globalDL1);
     }//FOR EACH LANE
 
 
     // Draw occurrences label (only on first lane) --------------------
-    var startX = 150;
+    var startX = 200;
     dl1[0].cv.svg.append("g")
         .attr("class", dl1[0].cv.classSVG + " export-label")
         .append("text")
@@ -406,10 +399,10 @@ function drawSearch(allPoints0)
     //GET SEQUENCES, MOTIFS, (ALIGNMENT), CONSENSUS
     //NOTE: alignment takes more than 1s if there's >50 sequences! (using the fastest method: kalign)
     //NOTE: by now searches in seq are only possible with equal lengths
-    if (typeof(sizePattern) == "number" && points.length > 0) { //only in the case that all the searches have the same size (not for gene searches, etc. as align is costly
+    if (typeof(sizePattern) == "number" && points.length > 0)  //only in the case that all the searches have the same size (not for gene searches, etc. as align is costly
         Server.nucProfile(saveSequences, globalSeq.track, "[" + points + "]", sizePattern * globalSeq.ws, document.getElementById("paramKmotif").value, globalSeq.dataName);
-    }
-
+    else
+        saveSequences(null);
 }
 
 
@@ -446,15 +439,19 @@ function drawPoints(dataPoints, globalDL1)
  */
 function drawEnrichment(enrichment)
 {
-
-    //Prepare file for export
-    exportGO(enrichment);
-
     // Remove all goterm (previous)
     var globalDL1=dl1[dl1.length-1];//not in the latest of the DL1 lines
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm").remove();
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm-tip").remove();
     d3.selectAll("."+globalDL1.cv.classSVG+".goterm-tip").remove();//some goterm-tips are not removed, not sure why
+
+    //Return if no enrichment
+    if(Object.getOwnPropertyNames(enrichment).length==0)
+        return;
+
+    //Prepare file for export
+    exportGO(enrichment);
+
 
     // Adjust the scale
     var goSize = d3.scale.log().base(10)
@@ -638,18 +635,18 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
             .range([dl2[0].cv.dim.height, 0]);
 
         var line_y0=-1;
-        var point=null;
+        var pointXY=null;
         for(var i in d)
             if(d[i].pos==line_x0) {
                 line_y0 = yScale(d[i].value);
-                point=d[i];
+                pointXY=d[i];
                 break;
                 }
 
         // Determine the width of the brackets (note: approximate)
         var widthText = getTextWidth("A", "12px Courier New");
         var len = dimDL.width/(widthText*2);
-        drawLocation(globalDL2, line_x0, line_y0, point);
+        drawLocation(globalDL2, line_x0, line_y0, pointXY);
         drawBrackets(globalDL2, line_x0-len, line_x0+len, line_y0);
 
         // DRAWING NUCLEOTIDES
@@ -895,6 +892,8 @@ function drawNucleotides(start, point, nuc)
     var GDL3Seqs    = globalDL3.sequences;
     var letterWidth = getTextWidth("A", "12px Courier New");
 
+    if(GDL3Seqs.seqs==undefined)    //Not drawn in case that there's only 1 seq or sequences with different size in pattern (by now)
+        return;
 
     // First, we delete the image, if this exist
     var image = $("#"+nameSVG);
@@ -925,10 +924,17 @@ function drawNucleotides(start, point, nuc)
         .attr("x", width-margin.left)
         .attr("y", margin.top-5);
 
+    var seq=undefined
+    var motloc=undefined
+    if(GDL3Seqs.seqs!=undefined)
+        {
+        // Draw context brackets
+        var x0 = margin.left - 50;
+        drawBrackets(globalDL3, x0 - 5, width + 5, globalDL3.cv.bracketHeight * .5);
 
-    // Draw context brackets
-    var x0 = margin.left - 50;
-    drawBrackets(globalDL3, x0 - 5, width + 5, height/2);
+        seq=GDL3Seqs.seqs[point];      //searched seq (do not confuse with wholeSeq)
+        motloc=GDL3Seqs.locations[point]; //TODO: point has not the real position!! --> point.pos+conversion
+        }
 
 
 
@@ -941,13 +947,12 @@ function drawNucleotides(start, point, nuc)
     wholeSeq=wholeSeq.toUpperCase();
     var displace=Math.round(Math.max(0,start-point)); //if left bracket is below the first nucleotide of the seq we set to 0
     var numLetters=Math.floor(dimDL.width/letterWidth);
-    var seq=GDL3Seqs.seqs[point];      //searched seq (do not confuse with wholeSeq)
 
     //Draw the sequence
     var letters = []
     for (var i = start-startWholeSeq; i < start-startWholeSeq+numLetters; i++)
         letters.push(wholeSeq[i]);
-    var motloc=GDL3Seqs.locations[point]; //TODO: check -1 values in locations
+
 
     svg.selectAll("mainNucleotides")
         .data(letters)
@@ -976,104 +981,109 @@ function drawNucleotides(start, point, nuc)
         .attr("y", marginDL.top * 1.7);
 
 
-    //Draw the remaining sequences:
-    var cont = 1;
-    var letterHeight = 12;
-    var separator = 5;
-    var shownKeys=[];
-    for (var key in GDL3Seqs.seqs) {
-        if (key != point) {
-            shownKeys.push(key);
-            var letters0 = []
-            var j=0
-            for (var i = 0; i<wholeSeq.length;i++)
-                if(i<point-startWholeSeq || i>=point-startWholeSeq+seq.length)
-                    letters0.push("-");
-                else letters0.push(GDL3Seqs.seqs[key][j++]);
+    //Draw the remaining sequences (if available):
+    if(GDL3Seqs!=undefined) {
+        var cont = 1;
+        var letterHeight = 12;
+        var separator = 5;
+        var shownKeys = [];
+        for (var key in GDL3Seqs.seqs) {
+            if (key != point) {
+                shownKeys.push(key);
+                var letters0 = []
+                var j = 0
+                for (var i = 0; i < wholeSeq.length; i++)
+                    if (i < point - startWholeSeq || i >= point - startWholeSeq + seq.length)
+                        letters0.push("-");
+                    else letters0.push(GDL3Seqs.seqs[key][j++]);
 
-            var letters=[]
-            for (var i = start-startWholeSeq; i < start-startWholeSeq+numLetters; i++)
-                letters.push(letters0[i]);
+                var letters = []
+                for (var i = start - startWholeSeq; i < start - startWholeSeq + numLetters; i++)
+                    letters.push(letters0[i]);
 
-            var motloc=GDL3Seqs.locations[key];
+                var motloc = GDL3Seqs.locations[key];
 
-            svg.selectAll("Nucleotides_"+key)
-                .data(letters)
-                .enter()
-                .append("text")
-                .text(function (d) {
-                    return d
-                })
-                .attr("class", classSVG + " text")
-                .attr("fill", function (d, i) {
-                    if (i+start>=point && i+start<point+seq.length)
-                        return "darkred";
-                    else
-                        return "steelblue";
-                })
-                .style("font-weight", function (d, i) {
-                    if (start+i>=point+motloc && start+i<point+motloc+GDL3Seqs.motifs[point].length)
-                        return "bold";
-                    else
-                        return "";
-                })
-                .attr("x", function (d, i) {
-                    return (x0 + letterWidth * i)
-                })
-                .attr("y", marginDL.top * 1.7 + separator + cont * letterHeight);
+                svg.selectAll("Nucleotides_" + key)
+                    .data(letters)
+                    .enter()
+                    .append("text")
+                    .text(function (d) {
+                        return d
+                    })
+                    .attr("class", classSVG + " text")
+                    .attr("fill", function (d, i) {
+                        if (i + start >= point && i + start < point + seq.length)
+                            return "darkred";
+                        else
+                            return "steelblue";
+                    })
+                    .style("font-weight", function (d, i) {
+                        if (start + i >= point + motloc && start + i < point + motloc + GDL3Seqs.motifs[point].length)
+                            return "bold";
+                        else
+                            return "";
+                    })
+                    .attr("x", function (d, i) {
+                        return (x0 + letterWidth * i)
+                    })
+                    .attr("y", marginDL.top * 1.7 + separator + cont * letterHeight);
 
-            cont += 1;
+                cont += 1;
+            }
+            if (cont > 8)
+                break;
         }
-        if (cont > 8)
-            break;
-    }
 
-    shownKeys.push("consensus");
-    //Draw locations
-    svg.selectAll("Nucleotides_Text"+key)
-        .data(shownKeys)
-        .enter()
-        .append("text")
-        .text(function (d) { return d; })
-        .attr("class", classSVG+" axis y text")
-        .attr("x", x0-45)
-        .attr("y", function(d,i){ return marginDL.top * 1.7 + separator*3.5 + i * letterHeight});
+        shownKeys.push("consensus");
+        //Draw locations
+        svg.selectAll("Nucleotides_Text" + key)
+            .data(shownKeys)
+            .enter()
+            .append("text")
+            .text(function (d) {
+                return d;
+            })
+            .attr("class", classSVG + " axis y text")
+            .attr("x", x0 - 45)
+            .attr("y", function (d, i) {
+                return marginDL.top * 1.7 + separator * 3.5 + i * letterHeight
+            });
 
-    //draw consensus motif
-    var letters = []
-    for (var i in GDL3Seqs.motifConsensus)
-        letters.push(GDL3Seqs.motifConsensus[i])
+        //draw consensus motif
+        var letters = []
+        for (var i in GDL3Seqs.motifConsensus)
+            letters.push(GDL3Seqs.motifConsensus[i])
 
-    var colscale=d3.scale.linear().domain([0,1]).range(["white", "black"]);
+        var colscale = d3.scale.linear().domain([0, 1]).range(["white", "black"]);
 
-    console.log("scale done");
-    svg.selectAll("consensus")
-        .data(letters)
-        .enter()
-        .append("text")
-        .text(function (d) {
-            return d
-        })
-        .attr("class", classSVG + " consensus")
-        .attr("fill", function (d, i) {
-            return colscale(GDL3Seqs.motifProfile[d][i])
-        })
-        .style("font-weight", function (d, i) {
-            //if (globalDL3.motifProfile[d][i] > 0.9)
-            //    return "bold";
-            //else
-            return "bold";
-        })
-        .style("text-decoration", function(d,i){
-            if (GDL3Seqs.motifProfile[d][i] > 0.9)
-                return "underline";
-            else
-                return "";})
-        .attr("x", function (d, i) {
-            return (x0 +dimDL.width *.5-letterWidth *.5 + letterWidth * i)
-        })
-        .attr("y", marginDL.top * 1.7 + separator * 2 + cont * letterHeight);
-
+        svg.selectAll("consensus")
+            .data(letters)
+            .enter()
+            .append("text")
+            .text(function (d) {
+                return d
+            })
+            .attr("class", classSVG + " consensus")
+            .attr("fill", function (d, i) {
+                return colscale(GDL3Seqs.motifProfile[d][i])
+            })
+            .style("font-weight", function (d, i) {
+                //if (globalDL3.motifProfile[d][i] > 0.9)
+                //    return "bold";
+                //else
+                return "bold";
+            })
+            .style("text-decoration", function (d, i) {
+                if (GDL3Seqs.motifProfile[d][i] > 0.9)
+                    return "underline";
+                else
+                    return "";
+            })
+            .attr("x", function (d, i) {
+                return (x0 + dimDL.width * .5 - letterWidth * .5 + letterWidth * i)
+            })
+            .attr("y", marginDL.top * 1.7 + separator * 2 + cont * letterHeight);
+        }
     // Save information of dataLine3
     GDL3Seqs.svg = svg;
 }
@@ -1571,17 +1581,20 @@ function saveSequences(response)
 {
     var sequences = [];
 
-    sequences.seqs=response.seqs;
-    sequences.alignment=response.alignment;
-    sequences.aconsensus=response.aconsensus;
-    sequences.aprofile=response.aprofile;
-    sequences.consensus=response.consensus;
-    sequences.profile=response.profile;
+    if(response!=null) {
 
-    sequences.motifs=response.motifs;
-    sequences.locations=response.locations;
-    sequences.motifConsensus=response.motifConsensus;
-    sequences.motifProfile=response.motifProfile;
+        sequences.seqs = response.seqs;
+        sequences.alignment = response.alignment;
+        sequences.aconsensus = response.aconsensus;
+        sequences.aprofile = response.aprofile;
+        sequences.consensus = response.consensus;
+        sequences.profile = response.profile;
+
+        sequences.motifs = response.motifs;
+        sequences.locations = response.locations;
+        sequences.motifConsensus = response.motifConsensus;
+        sequences.motifProfile = response.motifProfile;
+    }
 
     globalDL3.sequences = sequences;
 }
