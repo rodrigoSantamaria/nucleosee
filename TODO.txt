@@ -20,6 +20,10 @@
         secuencia en estos casos
   - MONITOR: a veces un goterm-tip no se elimina correctamente. He hecho un cambio pero no sé si funcionará
 
+  - TODO: parece que en Firefox pasar por encima de una línea de DL2 no responde.
+  - TODO: brackets en DL2 no concuerdan con el zoom, ojo.
+  - TODO: extraño cruce de máximo y mínimo en Hpr3
+
   Backend
 =============
   - Intentar optimizar el cálculo de estadísticas y discretización (2.5/5s en 2M y  5/7s en 4M)
@@ -38,5 +42,13 @@
         Facilitar la inclusion de anotaciones poniendo la carpeta adecuada
         TODO: quizás falta eliminar los wig del servidor una vez procesados.
   - TODO: Gestión e instalación del servidor: apache tomcat
-        HECHO: instalado mediante WSGI en Apache. Ver qué pasa con el enriquecimiento -> falta fisher en el servidor
+        HECHO: instalado mediante WSGI en Apache.
+
+        TODO: aún con fisher instalado, sigue dando algún error el GOenrichment() --> URI too long, parece*
+  - TODO: eliminar las anotaciones del frontend y dejarlas en el backend. Si no hay problemas en producción*
+
+  - TODO: revisar el tema de las anotaciones, puede ser que no me esté cogiendo siempre bien los CDS (e.g. hrp3 en ch1 tiene 2 CDSs que no aparecen)
+
+
+
   - TODO: versión para consola de búsquedas sobre wig/bigwig, con creación de índices... que sea similar a como hace bowtie

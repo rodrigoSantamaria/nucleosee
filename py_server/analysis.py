@@ -55,14 +55,17 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             root=os.path.join(app.config['UPLOAD_FOLDER'])
-            if (user in os.listdir(root))==False:                 #create directory for this user
-                os.mkdir(os.path.join(root,user))
-            if filename in os.listdir(os.path.join(root,user)):
+            #We decided not to use any 'user' infraestructure
+            #if (user in os.listdir(root))==False:                 #create directory for this user
+            #    os.mkdir(os.path.join(root,user))
+            #if filename in os.listdir(os.path.join(root,user)):
+            if filename in os.listdir(root):
                 print(filename,'already uploaded')    #TODO: by now we avoid resubmissions (for tests)
             else:
                 print('uploading...')
-                file.save(os.path.join(root, user, filename))
-                print("file saved in ",(time.clock-t0),"s")
+                file.save(os.path.join(root, filename))
+                #file.save(os.path.join(root, user, filename))
+                print("file saved in ",(time.clock()-t0),"s")
             #return redirect(url_for('uploaded_file', filename=filename))
             return jsonify(path=os.path.join(app.config['UPLOAD_FOLDER'], filename))
         else:
@@ -125,7 +128,7 @@ def loadSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/d
     return session
 #%%
 @app.route("/loadData")
-def loadData(dataName="Test", track="None"):
+def loadData(dataName="Test", track="None", clear="false"):
     import time
     import os
     import annotations as ann
@@ -133,10 +136,12 @@ def loadData(dataName="Test", track="None"):
     global session
     global user
     
-    session[user]={}
-    
     dataName=request.args.get("dataName")
     t00=time.clock()
+    clear=request.args.get("clear")
+    if (clear=="true"):
+        session[user]={}
+    
     
     #0) Get info from the track file
     #basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
@@ -164,16 +169,17 @@ def loadData(dataName="Test", track="None"):
     pdata=pickle.load(f)
     print("KEYS", pdata.keys())
     
-    filenames=filter(lambda x:x.endswith(".wig"),pdata.keys())
+    filenames=filter(lambda x:x.endswith(".wig") or x.endswith(".bw"),pdata.keys())
     if(len(filenames)>0):
         filename=filenames[0]
     else: #batch data
         filename="processed"
-    
+ 
     if track=="None":
         track=sorted(pdata[filename]["maximum"].keys())[0]
     if(len(pdata[filename]["gff"].keys())!=len(pdata[filename]["seq"].keys())):
             print("One or more chromosome tracks do not match with GFF names:")      
+    
    
     print("load data takes",(time.clock()-t0))
     
@@ -206,11 +212,13 @@ def loadData(dataName="Test", track="None"):
         data["goa"]=dataGOA       
         data["windowSize"]=pdata["processed"]["windowSize"]
     
-      
+  
     session[user][dataName]=data#trying to load several datasets at once
     print('file preprocess takes ',(time.clock()-t00),"s")
+    print("USER KEYS:", session[user].keys())
     
     dbp=data["batch"]["processed"]
+    
     return jsonify(seq=dbp["res"][track], 
                    fullLength=dbp["fullLength"],
                    maximum=(float)(dbp["maximum"][track]),
@@ -219,14 +227,17 @@ def loadData(dataName="Test", track="None"):
                 stdev=(float)(dbp["stdev"][track]), 
                 dseq=dbp["dseq"][track], 
                 chromosomes=sorted(dbp["maximum"].keys()),
-                bins=dbp["bins"][track])
+                bins=dbp["bins"][track],
+                windowSize=data["windowSize"])
 
 #ret=loadData("Test")
 #%%
 @app.route("/listData")
 def listData():
-    f=open(os.path.join(app.config['UPLOAD_FOLDER'],"tracks.txt"))
-    #f=open("/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/tracks.txt")
+    try:
+        f=open(os.path.join(app.config['UPLOAD_FOLDER'],"tracks.txt"))
+    except:
+        return jsonify(response="error", msg="no tracks.txt at {} in {}".format(app.config['UPLOAD_FOLDER'],os.getcwd()))
     tracks=[l.split("\t")[0] for l in f.readlines()]
     return jsonify(response=tracks)
 
@@ -273,9 +284,8 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
     t00=time.clock()
 #    
 #    #0) getting parameter
-    print('Parameters...')
+    print('----------------------- PREPROCESS...')
     t0=time.clock()
-    #basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
     basePath=app.config['UPLOAD_FOLDER']
     filenames=eval(request.args.get("filenames"))
     track=request.args.get("track")
@@ -286,6 +296,7 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
     interpolation=request.args.get("interpolation")
     stdev=float(request.args.get("stdev"))
     dataName=request.args.get("dataName")
+    clear=request.args.get("clear")
 
     data={}
     print("Files are: ",filenames)
@@ -356,6 +367,9 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
        
         if(len(data[filename]["gff"].keys())!=len(data[filename]["seq"].keys())):
             print("One or more chromosome tracks do not match with GFF names:")
+            print(data[filename]["gff"].keys())
+            print(data[filename]["seq"].keys())
+            
         if(savePickle):
             tpickle=time.clock()
             print("saving pickle in path:", picklePath)
@@ -365,7 +379,7 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
             pickle.dump(data,f)
             f.close()
      
-       
+    print("Compiling batch")  
     #--------------- COMPILE BATCH
     data["batch"]={"min":{}, "max":{}}
     meanBatch={}
@@ -407,6 +421,7 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
     
     session[user]=data
     print('FILE PREPROCESS TAKES ',(time.clock()-t00),"s")
+    print("Data KEYS: ",data.keys())
     
     return jsonify(seq=data["batch"]["processed"]["res"][track], 
                    fullLength=data["batch"]["processed"]["fullLength"],#len(genome[track]), 
@@ -617,6 +632,7 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
     data["search"]={}
     
     print("searching..:")
+    print(data.keys())
     
     d=int(request.args.get("d"))
     pattern=str(request.args.get("pattern"))
@@ -844,29 +860,42 @@ def getDSeq(start=0, end=0, track="None", dataName="None"):
 
 
 #%%
+# positions is a dictionary of tracks -> [positions]
+# types filters out annotations not corresponding to these types ("gene", "exon" etc.)
+# onlyIDs if true it only returns gene ids
+# align as positions are only integers, the method takes annotations in a range
+#       defined as [position-window/2,position+window/2] if align="center"
+#       or [position,position+window] if align="left"
+# intersect if "soft" it requires that only a portion of the interval is in the annotation
+#           "hard" requires the full interval to be inside the annotation 
+
 @app.route("/annotations")
-def annotations(positions=[], window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft", dataName="None"):
+def annotations(positions={}, window=1000, types=["any"], onlyIDs="False", align="left", intersect="soft", dataName="None"):
     window=eval(request.args.get("window"))
-    pos=eval(request.args.get("positions"))
     types=eval(request.args.get("types"))
-    track=str(request.args.get("track"))
+    positions=eval(request.args.get("positions"))
     onlyIDs=str(request.args.get("onlyIDs"))
     align=str(request.args.get("align"))
     intersect=str(request.args.get("intersect"))
     dataName=str(request.args.get("dataName"))
-
-    print("---------------------------------------")
-    print("Retrieving annotations on track", track)
     
-    if(dataName=="None"):
-        dbp=data["batch"]["processed"]
-    else:
-        dbp=data[dataName]["batch"]["processed"]
-        
-    if(track in dbp["gff"].keys()):
-        res=annotationsLocal(positions=pos, gff=dbp["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
-    else:
-        res=[]
+    res={}
+    print("---------------------------------------")
+     
+    for track in positions.keys():
+        print("Retrieving annotations on track", track)
+        if(dataName=="None"):
+            dbp=data["batch"]["processed"]
+        else:
+            dbp=data[dataName]["batch"]["processed"]
+        pos=positions[track]
+        if(type(pos)==str):
+            pos=eval(pos)
+            
+        if(track in dbp["gff"].keys()):
+            res[track]=annotationsLocal(positions=pos, gff=dbp["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
+        else:
+            res[track]=[]
     return jsonify(response=res)
 #%%
 def annotationsLocal(positions, gff, window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft"):
@@ -1057,7 +1086,7 @@ def test():
 #%%
 @app.route("/availableOrganisms")
 def availableOrganisms():
-    return jsonify(response=a.getAnnotationFolders()) 
+    return jsonify(response=ann.getAnnotationFolders()) 
     
 #-------------------- LAUNCH -----------------
 if __name__ == '__main__':

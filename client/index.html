@@ -441,7 +441,8 @@
                 else {
 
                     $('#modalLoadOptions').modal('hide');
-                    preprocessing();
+                    //preprocessing();
+                    sendFile();
                     }
             });
 
@@ -480,8 +481,8 @@
 
 
                 //Server.connect(true, verifyConnection, username, password, "http://prodiasv21.fis.usal.es:2750/");
-                //Server.connect(true, verifyConnection, "", "", "http://127.0.0.1:2750/");
-                Server.connect(true, verifyConnection, "", "", "http://vis.usal.es:2750/seqview");
+                Server.connect(true, verifyConnection, "", "", "http://127.0.0.1:2750/");
+                //Server.connect(true, verifyConnection, "", "", "http://vis.usal.es:2750/seqview");
 
                 return false;
             });

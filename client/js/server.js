@@ -77,8 +77,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
-                    if(_DEBUG) console.log("testFile(): testUpload failed...");
-                    javascript_abort("Error assigning user. Server might be down: "+errorThrown+" "+jqXHR.responseText);
+                    if(_DEBUG) console.log("connect(): Connect failed...");
+                    javascript_abort("Connection failed. Server might be down: "+errorThrown+" "+jqXHR.responseText);
                     callback(false);
                 });
         };
@@ -141,11 +141,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 
 
-        Server.sendFile=function(file)
+        Server.sendFile=function(callback, files, i)
             {
             // The FormData object lets you compile a set of key/value pairs to send using XMLHttpRequest (AJAX)
             var fd = new FormData();
-            fd.append('file',file);
+            fd.append('file',files[i]);
 
             var requestAJAX2 = $.ajax(
                 {
@@ -160,13 +160,16 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             $.when(requestAJAX2)
                 .done(function()
                 {
-                    // Hide the image of "loading..."
-                    showImageLoading("imgLoadingFile", false);
 
                     if (_DEBUG) console.log("testFile(): uploaded");
-                    if (_DEBUG) console.log("Time spent sending: " + (new Date() - startTime) + "ms");
 
-                    //callback();
+                    if(i<files.length-1)
+                        Server.sendFile(callback, files, i+1)
+                    else {
+                        // Hide the image of "loading..."
+                        showImageLoading("imgLoadingFile", false);
+                        callback();
+                        }
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
@@ -243,6 +246,10 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     // Hide the image of "loading..."
                     showImageLoading("imgLoadingFile", false);
 
+                    //This is to force updating of data list
+                    document.getElementById('selectionList').options.length=0;
+
+
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
 
@@ -274,6 +281,12 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .done(function(result)
                 {
                     var response = result.response;
+                    if(result.response=="error")
+                        {
+                        javascript_abort(result.msg);
+                        return;
+                        }
+
 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
@@ -316,13 +329,13 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         /**
          * Selects available preprocessed data in the server
          */
-        Server.selectData = function (callback, dataName, index, total)
+        Server.selectData = function (callback, dataName, index, total, clear)
         {
             var startTime = new Date();
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/loadData?user="+_user+"&password="+_password+"&dataName="+dataName,
+                    url: _serverPath+"/loadData?user="+_user+"&password="+_password+"&dataName="+dataName+"&clear="+clear,
                     type: "GET",
                     datatype: "json"
                 });
@@ -341,11 +354,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.chromosomes=result.chromosomes;
                     response.bins=result.bins;
                     response.dataName=dataName;
-                    //response.filenames=result.filenames;
-
-                    // Hide the image of "loading..."
-                    //showImageLoading("imgLoadingFile", false);
-                    //$('#loadText')[0].innerHTML=dataName;
+                    GVB_GLOBAL.ws=result.windowSize;
 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
@@ -355,7 +364,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("listData(): listing failed...");
-                    javascript_abort("listData() failed: possibly due to corruption in the server, ask your administrator");
+                    javascript_abort("listData() failed: possibly due to an error in the server, ask your administrator");
                 });
         };
 
@@ -507,6 +516,86 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param numMatches        it's not necessary!!
          */
         Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs, chromosomes, ws, intersect,
+                                               dataName, gis, annotations)
+        {
+            // Initialize variables first
+            if(typeof(gis) === 'undefined')             gis = "";
+            if(typeof(annotations) === 'undefined')     annotations = {};
+            var startTime = new Date();
+
+            // Calculate points of this track and number of matches
+            //var points = JSON.parse(allPoints);
+            var points = JSON.stringify(allPoints);
+            var ws=window;
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/annotations?user="+_user+"&password="+_password+
+                    "&positions="+points+"&types="+types+"&window="+ws+"&align="+align+
+                    "&onlyIDs="+onlyIDs+"&intersect="+intersect+"&dataName="+dataName,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    var startClient=new Date()
+                    console.log("Received at: "+startClient);
+                    if(gis != "" && result.response != "") gis += ",";
+
+                    if(onlyIDs=="True")
+                        gis += result.response+",";
+                    else
+                    {
+                        var response = result.response;
+                        for (var key in response)//for each chromosome or track
+                        {
+                            // for...in loops over all enumerable properties
+                            // (which is not the same as "all array elements"!)
+                            if(response.hasOwnProperty(key))
+                            {
+                                var rrk = result.response[key];
+                                for (var i in rrk)  //for each position with annotations
+                                {
+                                    if(rrk.hasOwnProperty(i))
+                                    {
+                                        var rrki = result.response[key][i];
+                                        for(var k in rrki) {    //for each annotation at a given position
+                                            var rrkik=rrki[k]
+                                            if(rrkik["t"]=="gene") {
+                                                var id=rrkik["id"]
+                                                gis += id + ",";
+                                                annotations[id] = {};
+                                                annotations[id]["pos"] = i;
+                                                annotations[id]["name"] = rrkik["n"];
+                                                annotations[id]["sense"] = rrkik["ss"];
+                                                annotations[id]["start"] = rrkik["s"];
+                                                annotations[id]["end"] = rrkik["e"];
+                                                annotations[id]["chromosome"] = key;
+                                                }
+                                            }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // While the number of chromosomes is less than or equal, we continue to get more annotations
+                    if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations done...");
+                    if(_DEBUG) console.log("Time spent getting all annotations: "+ (new Date()-startTime)+"ms");
+
+                    callback(gis, annotations);
+
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations failed...");
+                    javascript_abort("allAnnotationsGenes failed");
+
+                });
+        };
+
+        /*Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs, chromosomes, ws, intersect,
                                                dataName, gis, annotations, numChromosome, startTime, numMatches)
         {
             // Initialize variables first
@@ -535,10 +624,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 });
 
             //noinspection JSUnresolvedFunction
-            /**
-             * @typedef {Object} result
-             * @property response
-             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
@@ -603,7 +688,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     javascript_abort("allAnnotationsGenes failed");
 
                 });
-        };
+        };*/
 
 
         /**
@@ -668,51 +753,51 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 
         /**
-         * Get genes of interest of a particular chromosome
+         * Get the annotations for a single point
          * @param callback
-         * @param point
+         * @param point Must be referenced as a dictionary chromosome->[point]
          * @param types
          * @param window
          * @param align
          * @param track
          * @param onlyIDs
          */
-        Server.annotationsGenes = function (callback, point, types, window, align, track, onlyIDs, dataName)
+        Server.annotationsPoint = function (callback, point, types, window, align, onlyIDs, dataName)
         {
-            // var startTime = new Date();
+            var positions=JSON.stringify(point)
+            var p;
+            for(var ch in point)
+                for(var i in point[ch])
+                    {
+                    p = point[ch][i]
+                    break;
+                    }
 
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/annotations?user="+_user+"&password="+_password+
-                                    "&positions=["+point+"]&types="+types+"&window="+window+"&align=\""+align+
-                                    "\"&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+GVB_GLOBAL.intersect+
+                                    "&positions="+positions+"&types="+types+"&window="+window+"&align=\""+align+
+                                    "&onlyIDs="+onlyIDs+"&intersect="+GVB_GLOBAL.intersect+
                                     "&dataName="+dataName,
                     type: "GET",
                     datatype: "json"
                 });
 
-            //noinspection JSUnresolvedFunction
-            /**
-             * @typedef {Object} result
-             * @property response
-             */
             $.when(requestAJAX)
                 .done(function(result)
                 {
                     var annotations = result.response;
 
-                    // console.log("annotationsGenes(): get of gene done...");
-                    // console.log("Time spent annotationsGenes: "+ (new Date()-startTime)+"ms");
-
-                    if(annotations.hasOwnProperty(point)) // if object "annotations" has no the point, don't draw the line annotations
-                    {
-                        callback(annotations[point]);
-                    }
+                    for(var ch in annotations)
+                        {
+                        if (annotations[ch].hasOwnProperty(p)) // if object "annotations" has no the point, don't draw the line annotations
+                            callback(annotations[ch][p]);
+                        }
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
-                    if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
-                    javascript_abort("annotationsGenes() failed");
+                    if(_DEBUG) console.log("annotationsPoint(): annotationsPoint failed...");
+                    javascript_abort("annotationsPoint() failed");
 
                 });
         };
@@ -743,7 +828,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     var annotations = result.response;
 
                     if(false) console.log("Gene2GO(): get of gene done...");
-                    if(false) console.log("Time spent annotationsGenes: "+ (new Date()-startTime)+"ms");
+                    if(false) console.log("Time spent annotationsPoint: "+ (new Date()-startTime)+"ms");
                     var goterms={};
                     for(var i in genes) {
                         var g = genes[i];
@@ -759,8 +844,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
-                    if(_DEBUG) console.log("annotationsGenes(): annotationsGenes failed...");
-                    javascript_abort("annotationGenes() failed");
+                    if(_DEBUG) console.log("Gene2GO(): failed...");
+                    javascript_abort("Gene2GO() failed");
 
                 });
         };

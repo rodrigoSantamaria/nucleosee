@@ -175,7 +175,7 @@ var globalDL3=new globalDL3Object();
  * @param endSeq    ending point
  * @param numLines  total number of tracks for this level (total number of different data, usually 1 or 2)
  */
-function dataLine_1(processedData, startSeq, endSeq, numLines)
+function dataLine_1(processedData, startSeq, endSeq, numLines, annot, gis)
 {
     var startTime = new Date();
     var globalSeq = new globalSeqObject();
@@ -202,6 +202,8 @@ function dataLine_1(processedData, startSeq, endSeq, numLines)
     dl1.push(globalDL1);
     var globalDL2=new globalDL2Object("lineSeq2_"+dl2.length);
     dl2.push(globalDL2);
+    if(dl1.length==1 && annot!=undefined)
+        setAnnotations(gis, annot);
 
     if(dl1.length==1 & numLines>1)//modify a little the margins if it's the first one
         {
@@ -659,8 +661,12 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
         //DRAW SHIFT AND ZOOM
         drawShiftZoom(globalDL2);
 
+        var positions={}
+        positions[globalSeq.track]=[]
+        positions[globalSeq.track].push(point)
+
         // DRAWING ANNOTATIONS
-        Server.annotationsGenes(drawAnnotations, point, "[\"any\"]", globalDL2.cv.dim.width, "center", globalSeq.track, "False", globalSeq.dataName);
+        Server.annotationsPoint(drawAnnotations, positions, "[\"any\"]", globalDL2.cv.dim.width, "center", "False", globalSeq.dataName);
     }
     // We confirm that we have finished
     globalDL2.drawn = true;

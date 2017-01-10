@@ -115,8 +115,9 @@ org - organism for the GFF (currently suppurted sce, spo, dme)
 def gffData(org="Schizosaccharomyces pombe", tracks=[]):    
     import re
     import os
-    path=(org[0]+org[org.find(" ")+1:]).lower()    
-    print path
+    #path is deprecated now, we directly use folder names (i.e. org)
+    #path=(org[0]+org[org.find(" ")+1:]).lower()    
+    #print path
     d={}
     if(org=="Schizosaccharomyces pombe"):
         for k in tracks:
@@ -125,10 +126,10 @@ def gffData(org="Schizosaccharomyces pombe", tracks=[]):
                 roman+="II"
             elif(k.find("2")>=0 or k.find("II")>=0):
                 roman+="I"
-            ret="annotations/spombe/gff/"+"schizosaccharomyces_pombe."+roman+".gff3"
+            ret="annotations/"+org+"/gff/"+"schizosaccharomyces_pombe."+roman+".gff3"
             d[k]=gff(ret, "single")
     if(org=="Saccharomyces cerevisiae"):
-        data=gff("annotations/"+path+"/gff/saccharomyces_cerevisiae.gff", "multilpe")
+        data=gff("annotations/"+org+"/gff/saccharomyces_cerevisiae.gff", "multiple")
         print("gff read")
         for k in data.keys():
             k0=k
@@ -142,11 +143,11 @@ def gffData(org="Schizosaccharomyces pombe", tracks=[]):
             k2+=(str)(k)
             d[k2]=data[k0]
     if(org=="Drosophila melanogaster"):
-        contents=os.listdir("annotations/"+path)
+        contents=os.listdir("annotations/"+org)
         for c in contents:
             if(re.search(".gff$", c)):
                 filename=c
-        data=gff("annotations/"+path+"/"+filename, "multiple")
+        data=gff("annotations/"+org+"/"+filename, "multiple")
         d=data
         print("gff read")
         
@@ -193,10 +194,10 @@ def go(filename="annotations/go/go-basic.obo"):
 
 #%% Loads the gene ontology annotation of a given species into an array which only stores gene_id, gene_name, go_id, go_type and gene_desc
 def goa(org="Schizosaccharomyces pombe"):
-    path=org[0]+org[org.find(" ")+1:]
-    path=path.lower()
+    #path=org[0]+org[org.find(" ")+1:]
+    #path=path.lower()
     import glob
-    f=open(glob.glob("annotations/"+path+"/goa/*")[0])#expects one and only one file in goa folder
+    f=open(glob.glob("annotations/"+org+"/goa/*")[0])#expects one and only one file in goa folder
     
     lines=f.readlines()
     data=[]
@@ -210,12 +211,12 @@ def goa(org="Schizosaccharomyces pombe"):
 #%% Loads the fasta sequence of a given file (by now only working forS pombe files)
 #it takes only 0.125s for the pombe genomw (the three chromosomes)
 def fasta(ch, org="Schizosaccharomyces pombe"):
-    path=org[0]+org[org.find(" ")+1:]
-    path=path.lower()
+    #path=org[0]+org[org.find(" ")+1:]
+    #path=path.lower()
     try:
-        f=open("annotations/"+path+"/fasta/"+(str)(ch)+".fasta")
+        f=open("annotations/"+org+"/fasta/"+(str)(ch)+".fasta")
     except:  
-        f=open("annotations/"+path+"/fasta/"+(str)(ch)+".fsa")
+        f=open("annotations/"+org+"/fasta/"+(str)(ch)+".fsa")
     reader=f.readlines()
     reader=reader[1:]
     return "".join(reader).replace("\n","")
@@ -310,8 +311,9 @@ def searchGO(text, dataGOA, dataGO, dataGFF):
     import numpy as np
     import string
     result=[]
+    #print("Searching GO terms for: |",text,"|")
     for k in dataGO.keys():
-      if(string.find(dataGO[k],text)>=0):
+      if(string.find(dataGO[k].lower(),text)>=0):
           result.append(k)
     result=set(result)
     res2=[]
