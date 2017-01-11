@@ -45,9 +45,10 @@
         HECHO: instalado mediante WSGI en Apache.
 
         TODO: aún con fisher instalado, sigue dando algún error el GOenrichment() --> URI too long, parece*
-  - TODO: eliminar las anotaciones del frontend y dejarlas en el backend. Si no hay problemas en producción*
+  - TODO: eliminar las anotaciones del frontend y dejarlas en el backend. Si no hay problemas en producción* --> debería estar solucionado
 
-  - TODO: revisar el tema de las anotaciones, puede ser que no me esté cogiendo siempre bien los CDS (e.g. hrp3 en ch1 tiene 2 CDSs que no aparecen)
+  - SOLVED: revisar el tema de las anotaciones, puede ser que no me esté cogiendo siempre bien los CDS (e.g. hrp3 en ch1 tiene 2 CDSs que no aparecen)
+        Parece que requieren unas ventanas un poco más grandes, lo he puesto al doble del a anchura (~2400)
 
 
 

@@ -432,6 +432,7 @@ function getAllAnnotations(matches)
                 winS[i][j]*=ws;
             winS[i]="["+winS[i].join(",")+"]";
             }
+        winS=winS[globalSeqs[0].track];
         }
     else
         winS=sizePattern*ws;
@@ -449,7 +450,8 @@ function getEnrichment(gis, annotations)
     //Prepare file for export
     exportGenes(annotations);
 
-    Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
+    //Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
+    Server.enrichmentGO(drawEnrichment, "", "fdr", 0.01)
 }
 
 

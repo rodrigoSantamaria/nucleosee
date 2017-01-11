@@ -759,7 +759,7 @@ def getDataAnnot(data):
         dg=data
     else:
         for k in data.keys():
-            if("goa" in data[k].keys()):
+            if(type(data[k])==dict and "goa" in data[k].keys()):
                 dg=data[k]
                 break
     return dg

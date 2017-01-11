@@ -630,6 +630,8 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
            dataName1="None", dataName2="None", pattern2="None", join="not"):
     global data
     data["search"]={}
+    data["gis"]=set()
+    data["annotations"]={}
     
     print("searching..:")
     print(data.keys())
@@ -871,6 +873,7 @@ def getDSeq(start=0, end=0, track="None", dataName="None"):
 
 @app.route("/annotations")
 def annotations(positions={}, window=1000, types=["any"], onlyIDs="False", align="left", intersect="soft", dataName="None"):
+    global data
     window=eval(request.args.get("window"))
     types=eval(request.args.get("types"))
     positions=eval(request.args.get("positions"))
@@ -882,6 +885,7 @@ def annotations(positions={}, window=1000, types=["any"], onlyIDs="False", align
     res={}
     print("---------------------------------------")
      
+    gis=[]
     for track in positions.keys():
         print("Retrieving annotations on track", track)
         if(dataName=="None"):
@@ -896,11 +900,20 @@ def annotations(positions={}, window=1000, types=["any"], onlyIDs="False", align
             res[track]=annotationsLocal(positions=pos, gff=dbp["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
         else:
             res[track]=[]
+            
+                        
+    if("search" in data.keys()):
+        for ch in res.keys():
+            for x in res[ch].keys():
+                for y in res[ch][x]:
+                    if(y["t"]=="gene"):
+                        gis.append(y["id"])
+        data["annotations"]=res    
+        data["gis"]=gis                       
     return jsonify(response=res)
 #%%
 def annotationsLocal(positions, gff, window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft"):
     import time
-    global data
     t0=time.clock()
     print("Annotating ",len(positions)," positions")
     res=ann.annotate(positions, gff, types, window, align, intersect)
@@ -1019,6 +1032,9 @@ def enrichmentGO(annotations={}, correction="none", alpha=0.01):
     alpha=float(request.args.get("alpha"))
     correction=request.args.get("correction")
 
+    if(len(gis)==0):
+        gis=set(data["gis"])
+    
     dg=helpers.getDataAnnot(data)
     
     ego={}

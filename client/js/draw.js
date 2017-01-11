@@ -666,7 +666,7 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
         positions[globalSeq.track].push(point)
 
         // DRAWING ANNOTATIONS
-        Server.annotationsPoint(drawAnnotations, positions, "[\"any\"]", globalDL2.cv.dim.width, "center", "False", globalSeq.dataName);
+        Server.annotationsPoint(drawAnnotations, positions, "[\"any\"]", globalDL2.cv.dim.width*2, "center", "False", globalSeq.dataName);
     }
     // We confirm that we have finished
     globalDL2.drawn = true;

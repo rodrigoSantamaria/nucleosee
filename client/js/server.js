@@ -527,6 +527,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             //var points = JSON.parse(allPoints);
             var points = JSON.stringify(allPoints);
             var ws=window;
+            if(typeof(window)=="object")
+                ws=window[track];
 
             var requestAJAX = $.ajax(
                 {
@@ -595,100 +597,6 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 });
         };
 
-        /*Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs, chromosomes, ws, intersect,
-                                               dataName, gis, annotations, numChromosome, startTime, numMatches)
-        {
-            // Initialize variables first
-            if(typeof(gis) === 'undefined')             gis = "";
-            if(typeof(annotations) === 'undefined')     annotations = {};
-            if(typeof(numChromosome) === 'undefined')   numChromosome = 1;
-            if(typeof(startTime) === 'undefined')       startTime = new Date();
-            if(typeof(numMatches) === 'undefined')      numMatches = 0;
-
-            // Calculate points of this track and number of matches
-            var track  = chromosomes[numChromosome-1];
-            var points = JSON.parse(allPoints[track]);
-            var ws=window;
-            if(typeof(window)=="object")
-                ws=window[track];
-            numMatches += points.length;
-            if(_DEBUG) console.log(points.length+" matches in track: "+track);
-
-            var requestAJAX = $.ajax(
-                {
-                    url: _serverPath+"/annotations?user="+_user+"&password="+_password+
-                    "&positions=["+points+"]&types="+types+"&window="+ws+"&align="+align+
-                    "&track="+track+"&onlyIDs="+onlyIDs+"&intersect="+intersect+"&dataName="+dataName,
-                    type: "GET",
-                    datatype: "json"
-                });
-
-            //noinspection JSUnresolvedFunction
-            $.when(requestAJAX)
-                .done(function(result)
-                {
-                    var startClient=new Date()
-                    console.log("Received at: "+startClient);
-                    numChromosome++;
-                    if(gis != "" && result.response != "") gis += ",";
-
-                    if(onlyIDs=="True")
-                        gis += result.response+",";
-                    else
-                    {
-                        var response = result.response;
-                        for (var key in response)
-                        {
-                            // for...in loops over all enumerable properties
-                            // (which is not the same as "all array elements"!)
-                            if(response.hasOwnProperty(key))
-                            {
-                                var rrk = result.response[key];
-                                for (var i in rrk)
-                                {
-                                    if(rrk.hasOwnProperty(i))
-                                    {
-                                        var rrki = result.response[key][i];
-                                        gis += rrki["id"]+",";
-                                        annotations[rrki["id"]] = {};
-                                        annotations[rrki["id"]]["pos"] = key;
-                                        annotations[rrki["id"]]["name"] = rrki["n"];
-                                        annotations[rrki["id"]]["sense"] = rrki["ss"];
-                                        annotations[rrki["id"]]["start"] = rrki["s"];
-                                        annotations[rrki["id"]]["end"] = rrki["e"];
-                                        annotations[rrki["id"]]["chromosome"] = track;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    console.log("Time spent in data processing "+(new Date()-startClient)+"ms")
-
-                    // While the number of chromosomes is less than or equal, we continue to get more annotations
-                    if(numChromosome <= chromosomes.length)
-                    {
-
-                        var startWS=new Date()
-                        Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"gene\"]", window, "left", "False", chromosomes, GVB_GLOBAL.ws, intersect,
-                                                    dataName, gis, annotations, numChromosome, (new Date()-startTime), numMatches, dataName);
-                        console.log("Time spent getting annotations: "+ (new Date()-startWS)+"ms");
-                    }
-                    else
-                    {
-                        if(_DEBUG) console.log("Total number of matches: "+numMatches);
-                        if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations done...");
-                        if(_DEBUG) console.log("Time spent getting all annotations: "+ (new Date()-startTime)+"ms");
-
-                        callback(gis, annotations);
-                    }
-                })
-                .fail(function(jqXHR, textStatus, errorThrown)
-                {
-                    if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations failed...");
-                    javascript_abort("allAnnotationsGenes failed");
-
-                });
-        };*/
 
 
         /**
@@ -702,22 +610,26 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         {
             var startTime = new Date();
 
-            //Not sure if this duplicate removal for sending is really healping or not (seems not)
-            var arrayGis0 = gis;
-            arrayGis0 = arrayGis0.split(',');
-            var arrayGis=[]
-            for(var i in arrayGis0)
+            if(gis.length>0)
                 {
-                if(arrayGis.indexOf(arrayGis0[i])<0)
-                    arrayGis.push(arrayGis0[i]);
+                //Not sure if this duplicate removal for sending is really healping or not (seems not)
+                var arrayGis0 = gis;
+                arrayGis0 = arrayGis0.split(',');
+                var arrayGis = []
+                for (var i in arrayGis0) {
+                    if (arrayGis.indexOf(arrayGis0[i]) < 0)
+                        arrayGis.push(arrayGis0[i]);
                 }
-            console.log("Number of gene annotations: "+arrayGis0.length+", of which unique: "+arrayGis.length);
-            gis=arrayGis.join(",");
-            //
+                console.log("Number of gene annotations: " + arrayGis0.length + ", of which unique: " + arrayGis.length);
+                gis = arrayGis.join(",");
+                //
 
-            // Parse 'gis' to convert it to array: a,b,c,d => ["a","b","c","d"]
-            gis = "[\""+gis+"\"]";
-            gis = gis.replace(/,/g,"\",\"");  //replaces ',' by '","'
+                // Parse 'gis' to convert it to array: a,b,c,d => ["a","b","c","d"]
+                gis = "[\"" + gis + "\"]";
+                gis = gis.replace(/,/g, "\",\"");  //replaces ',' by '","'
+                }
+            else
+                gis="[]"
 
 
             var requestAJAX = $.ajax(

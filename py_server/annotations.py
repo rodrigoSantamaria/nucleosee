@@ -17,7 +17,7 @@ Returns a np table ("single") or a dictionary with np tables (structure="multilp
 with genome functional annotations.
 NOTE: for larger GFF files (e.g. dmelanogaster, 600MB, this is not performing at all)
 """
-def gff(filename="annotations/spombe/gff/schizosaccharomyces_pombe.III.gff3", structure="single"):
+def gff(filename="annotations/Schizosaccharomyces pombe/gff/schizosaccharomyces_pombe.III.gff3", structure="single"):
     import csv
     import time
     
@@ -96,6 +96,7 @@ def gff(filename="annotations/spombe/gff/schizosaccharomyces_pombe.III.gff3", st
 ##dataGFF=gff("annotations/scerevisiae/gff/saccharomyces_cerevisiae.gff", "multiple")
 ###dataGFF["chr01"][100]
 #print("it took",(time.clock()-t0))
+#dataGFF=gff("annotations/Schizosaccharomyces pombe/gff/schizosaccharomyces_pombe.I.gff3")
 
 #%%
 """
@@ -267,6 +268,7 @@ def annotate(mm, dataGFF, types=["any"], winSize=1000, align="center", intersect
         else:    
             sel=data2[((data2["end"]>=s1) & (data2["end"]<=e1)) | ((data2["start"]>=s1) & (data2["start"]<=e1)) | ((data2["start"]<=s1) & (data2["end"]>=e1))] #intersecting (more time expensive and not sure it makes a difference)
 
+       
         if(len(sel)>0):     
             em[x]=[]
             for s in sel:
