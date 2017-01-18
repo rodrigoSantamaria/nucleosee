@@ -219,11 +219,12 @@ def loadData(dataName="Test", track="None", clear="false"):
     
     dbp=data["batch"]["processed"]
     
+    
     return jsonify(seq=dbp["res"][track], 
-                   fullLength=dbp["fullLength"],
-                   maximum=(float)(dbp["maximum"][track]),
-                   minimum=(float)(dbp["minimum"][track]), 
-                    mean=(float)(dbp["mean"][track]), 
+                fullLength=dbp["fullLength"],
+                maximum=(float)(dbp["maximum"][track]),
+                minimum=(float)(dbp["minimum"][track]), 
+                mean=(float)(dbp["mean"][track]), 
                 stdev=(float)(dbp["stdev"][track]), 
                 dseq=dbp["dseq"][track], 
                 chromosomes=sorted(dbp["maximum"].keys()),
@@ -341,7 +342,6 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
             print(data.keys())
             
             talg3=data[filename]["gff"]["chromosome3"]
-            print("CDS MATCH: ", talg3[talg3["s"]==115781])
             
             if track=="None":
                 track=sorted(data[filename]["maximum"].keys())[0]

@@ -9,3 +9,8 @@
 
     #modalSelectOptions .modal-dialog  {width:300px;}
 }
+
+a.button{
+    font-size: 10px;
+    color: black;
+    }

@@ -119,6 +119,8 @@ function selectData()
         if(i>0)
             clear="false"
         Server.selectData(drawingFirstDataLine, $("#selectionList option:selected")[i].value, i, $("#selectionList option:selected").length, clear);
+        //Server.getTrack(drawingFirstDataLine, GVB_GLOBAL.track,  $("#selectionList option:selected")[i].value, i, $("#selectionList option:selected").length);
+
         }
     }
 
@@ -144,6 +146,22 @@ function preprocessing(chromosome)
         if (DEBUG_GBV) console.log("chromosome: " + GVB_GLOBAL.track + " (first chromosome found)");
 
         $('#loadText')[0].innerHTML="preprocessing data...";
+
+
+        //populate search option lists
+        var elSel = document.getElementById('paramSearchDataset');
+        var elOptNew = document.createElement('option');
+
+        elOptNew.text = $('#paramDescription').val();
+        elOptNew.value = $('#paramDescription').val();
+        elSel.add(elOptNew, null);
+
+        var elSel = document.getElementById('paramSearchDataset2');
+        var elOptNew = document.createElement('option');
+        elOptNew.text = $('#paramDescription').val();
+        elOptNew.value = $('#paramDescription').val();
+        elSel.add(elOptNew, null);
+
         Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filenames, GVB_GLOBAL.track, $("#paramWS").val(), $("#paramNB").val(),
             GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value,
             $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value, $("#paramSD").val(),
@@ -204,8 +222,6 @@ function drawingFirstDataLine(processedData, chromosome, index, total) {
         else {
             GVB_GLOBAL.track = chromosome;
         }
-
-
 
         var seqServer = processedData.seq;    // just a sampling of about 400K of the original full length sequence
         var fullLength = processedData.fullLength;
@@ -283,9 +299,11 @@ function searchPattern(id)
 
         if(id==1)
             var pattern = $('#patternSearch').val();
-        else
+        else    //simple search (no join), use d as in the complicate search
+            {
             var pattern = $('#patternSearch0').val();
-
+            selectionJoin="None"
+            }
         var pattern2 = $('#patternSearch2').val();
         var d = $('#dSearch').val();
 

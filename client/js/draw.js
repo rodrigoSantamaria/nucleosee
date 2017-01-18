@@ -33,6 +33,7 @@ var dimDLAnnotation =
     lineHeight : 12
 };
 
+var DLcolors=["steelblue", "#968096", "#327A2A", "#70AA00", "#FAB526"];
 
 //________________________ SEQUENCE OBJECTS DEFINITION _____________________________
 
@@ -198,28 +199,47 @@ function dataLine_1(processedData, startSeq, endSeq, numLines, annot, gis)
         globalSeq.scaleSeqServ = Math.floor(fullLength/GVB_GLOBAL.maxSize);
 
     globalSeqs.push(globalSeq);
+
+
     var globalDL1=new globalDL1Object("lineSeq_"+dl1.length);
     dl1.push(globalDL1);
+    //----
+    /*var globalDL1;
+    if(dl1.length==0)
+        {
+        globalDL1 = new globalDL1Object("lineSeq_" + dl1.length);
+        dl1.push(globalDL1);
+        }
+    globalDL1=dl1[0]*/
+    //---
+
     var globalDL2=new globalDL2Object("lineSeq2_"+dl2.length);
     dl2.push(globalDL2);
     if(dl1.length==1 && annot!=undefined)
         setAnnotations(gis, annot);
 
-    if(dl1.length==1 & numLines>1)//modify a little the margins if it's the first one
+    //TODO: replace this with a single DL1 with several lines!! It's just a context view, there's no sense in making 6 when comparing 6 groups
+    //      The only sensitive usage apart from locating searches is to see if there are some large scale variations. You can still see that with a single track-multiple lines
+    /*if(dl1.length==1 & numLines>1)//modify a little the margins if it's the first one
         {
         dl1[0].cv.margin.bottom=8;
         globalDL1=dl1[0];
-        }
+        }*/
     if(dl1.length>1)
         {
-        dl1[dl1.length-1].cv.color="#968096";
-        dl2[dl2.length-1].cv.color="#968096";
+        dl1[dl1.length-1].cv.color=DLcolors[dl1.length-1];
+        dl2[dl2.length-1].cv.color=DLcolors[dl2.length-1];
         globalDL1=dl1[dl1.length-1];
         globalDL2=dl2[dl2.length-1];
         }
 
     // We use the core function
-    dataLine_core(globalDL1, globalSeq, globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
+    //if(globalDL1.drawn==false)
+    if(dl1.length==1)
+        dataLine_core(globalDL1, globalSeq, globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
+    else
+        dataLine_lineOnly(globalDL1, globalSeq, globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
+
 
     // We confirm that we have finished
     globalDL1.drawn = true;
@@ -234,7 +254,8 @@ function getLevel(dataName, level)
     for(var i in globalSeqs)
         if(globalSeqs[i].dataName==dataName) {
             if (level == "DL1")
-                return dl1[i]
+                //return dl1[i]
+                return dl1[0]
             if (level == "DL2")
                 return dl2[i]
             if (level == "Seq")
@@ -251,7 +272,8 @@ function drawSearch(allPoints0)
 
     //remove all previous points
     for(var i in dl1)
-        dl1[i].cv.svg.selectAll(".point").remove();
+        if(dl1[i].cv.svg!=undefined)
+             dl1[i].cv.svg.selectAll(".point").remove();
 
     // Remove all occurrences label
     dl1[0].cv.svg.selectAll(".search-label").remove();
@@ -410,6 +432,9 @@ function drawSearch(allPoints0)
 
 function drawPoints(dataPoints, globalDL1)
     {
+    //--- testing
+    globalDL1=dl1[0];//No different places now
+    //---
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".point").remove();
 
     // Create all new points
@@ -442,7 +467,8 @@ function drawPoints(dataPoints, globalDL1)
 function drawEnrichment(enrichment)
 {
     // Remove all goterm (previous)
-    var globalDL1=dl1[dl1.length-1];//not in the latest of the DL1 lines
+    //var globalDL1=dl1[dl1.length-1];//not in the latest of the DL1 lines
+    var globalDL1=dl1[0];//not in the latest of the DL1 lines
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm").remove();
     globalDL1.cv.svg.selectAll("."+globalDL1.cv.classSVG+".goterm-tip").remove();
     d3.selectAll("."+globalDL1.cv.classSVG+".goterm-tip").remove();//some goterm-tips are not removed, not sure why
@@ -463,7 +489,9 @@ function drawEnrichment(enrichment)
 
     // We create an array with goterms
     var goterms = [];
+    //var keys=enrichment.keys().sort();
     for(var k in enrichment)
+    //for(var k in keys)
     {
         if(enrichment.hasOwnProperty(k))
         {
@@ -548,9 +576,10 @@ function drawEnrichment(enrichment)
 
             //Underline the selected term
             //0) first remove previous selection
-            for(var i in dl1)
+            //for(var i in dl1)
                 {
-                var gdl = dl1[i];
+              //  var gdl = dl1[i];
+                var gdl=dl1[0];
                 if (d3.select(this).classed("selected") == false)
                     gdl.cv.svg.selectAll("." + globalDL1.cv.classSVG + ".goterm").classed("selected", false);
                 }
@@ -560,29 +589,34 @@ function drawEnrichment(enrichment)
             var gis=[];
             for(var i in d["gis"])
                 {
-                var annot=globalDL1.annotations[d["gis"][i]];
+                //var annot=globalDL1.annotations[d["gis"][i]];
+                var annot=dl1[0].annotations[d["gis"][i]];//annotations are only in the first DL1 track
                 var globalSeq=globalSeqs[0];
                 if (annot["chromosome"] == globalSeq.track)
                     gis.push(annot["pos"]);
                 }
 
             //2) Hightlight it
-            for(var k in dl1)
+            //for(var k in dl1)
                 {
-                var gdl=dl1[k];
-                var dataPoints = gdl.cv.svg.selectAll("." + gdl.cv.classSVG + ".point").data();
-                if (d3.select(this).classed("selected") == true) {
-                    for (var i in dataPoints) {
-                        dataPoints[i].selected = false;
-                        for (var j in gis) {
-                            if (gis[j] > dataPoints[i]["real_pos"] - 50 && gis[j] < dataPoints[i]["real_pos"] + 50)
-                                dataPoints[i].selected = true;
+                //var gdl=dl1[k];
+                var gdl=dl1[0];
+                if(gdl.cv.svg!=undefined) {
+                    var dataPoints = gdl.cv.svg.selectAll("." + gdl.cv.classSVG + ".point").data();
+                    if (d3.select(this).classed("selected") == true) {
+                        for (var i in dataPoints) {
+                            dataPoints[i].selected = false;
+                            for (var j in gis) {
+                                if (gis[j] > dataPoints[i]["real_pos"] - 50 && gis[j] < dataPoints[i]["real_pos"] + 50)
+                                    dataPoints[i].selected = true;
+                            }
                         }
                     }
-                }
-                else {
-                    for (var i in dataPoints)
-                        dataPoints[i].selected = false;
+
+                    else {
+                        for (var i in dataPoints)
+                            dataPoints[i].selected = false;
+                    }
                     }
                 drawPoints(dataPoints, gdl);
                 }
@@ -591,6 +625,7 @@ function drawEnrichment(enrichment)
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide);
 }
+
 
 
 //-------------------------------------------------------------
@@ -604,6 +639,8 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
 {
     var globalDL2=getLevel(dataName, "DL2")
     var globalSeq=getLevel(dataName, "Seq");
+    if(globalDL2.cv.nameSVG!="lineSeq2_0")//modify a little the margins if it's not the first one
+        globalDL2.cv.margin.bottom=8;
 
     // DRAWING DATALINE 2
     //-------------------------------------------------
@@ -628,28 +665,44 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
     //-------------------------------------------------
     globalDL2.cv.svg.selectAll("."+globalDL2.cv.classSVG+".line").on("mouseover", function (d)
     {
-        // DRAWING BRACKETS
-        var line_x0 = d3.event.x-globalDL2.cv.margin.left;
-        //var line_y0 = d3.event.y-dl1[0].cv.dim.graphHeight*(dl1.length)-dl2[0].cv.dim.height;//dimDL.height
+        // DRAWING BRACKETS AND LOCATION
+        // Removes previous info about location
+        d3.selectAll(".dl2.hover.point").remove();
+        d3.selectAll(".dl2.hover.vline").remove();
+        d3.selectAll(".dl2.hover.label").remove();
 
-        var yScale = d3.scale.linear()
-            .domain([globalSeqs[0].min, globalSeqs[0].max])
-            .range([dl2[0].cv.dim.height, 0]);
+        for(i in dl2) {
+            var dl2i=dl2[i];
+            var dd=dl2i.cv.svg.selectAll("."+dl2i.cv.classSVG+".line")[0][0]["__data__"];
 
-        var line_y0=-1;
-        var pointXY=null;
-        for(var i in d)
-            if(d[i].pos==line_x0) {
-                line_y0 = yScale(d[i].value);
-                pointXY=d[i];
-                break;
-                }
+            var line_x0 = d3.event.x - dl2i.cv.margin.left;
+            var yScale = d3.scale.linear()
+                .domain([globalSeqs[i].min, globalSeqs[i].max])
+                .range([dl2i.cv.dim.height, 0]);
 
-        // Determine the width of the brackets (note: approximate)
-        var widthText = getTextWidth("A", "12px Courier New");
-        var len = dimDL.width/(widthText*2);
-        drawLocation(globalDL2, line_x0, line_y0, pointXY);
-        drawBrackets(globalDL2, line_x0-len, line_x0+len, line_y0);
+            var line_y0 = -1;
+            var pointXY = null;
+            /*for (var i in d)        //TODO: d is still a single point from DL2[0]... not the actual one on other lines
+                if (d[i].pos == line_x0) {
+                    line_y0 = yScale(d[i].value);
+                    pointXY = d[i];
+                    break;
+                }*/
+            for (var i in dd)        //This loops over the proper data line
+             if (dd[i].pos == line_x0) {
+                 line_y0 = yScale(dd[i].value);
+                 pointXY = dd[i];
+                 break;
+             }
+            // Determine the width of the brackets (note: approximate)
+            var widthText = getTextWidth("A", "12px Courier New");
+            var len = dimDL.width / (widthText * 2);
+            drawLocation(dl2i, line_x0, line_y0, pointXY);
+            if(dl2i.cv.nameSVG==globalDL2.cv.nameSVG)
+                drawBrackets(globalDL2, line_x0-len, line_x0+len, line_y0);
+        }
+        //drawLocation(globalDL2, line_x0, line_y0, pointXY);
+        //drawBrackets(globalDL2, line_x0-len, line_x0+len, line_y0);
 
         // DRAWING NUCLEOTIDES
         var start = startSeq + line_x0-len; // taking the left bracket as start
@@ -1095,6 +1148,56 @@ function drawNucleotides(start, point, nuc)
 }
 
 
+function dataLine_lineOnly(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, endSeq, initialPoint, point, sizePattern)
+    {
+    var classSVG    = globalDL.cv.classSVG;
+    var nameSVG     = globalDL.cv.nameSVG;
+    var height      = globalDL.cv.dim.height;
+    var width       = globalDL.cv.dim.width;
+
+    var svg=dl1[0].cv.svg;//Draw all in the same one
+    //var svg=globalDL1.cv.svg;//Draw all in the same one
+
+
+
+    if(seqServ.minimum!=undefined) //In order to draw variation shade
+        {
+        var dataMin=scalePoints(seqServ.minimum, startSeq,endSeq, scaleSeqServ, globalDL, globalSeq);
+        var dataMax=scalePoints(seqServ.maximum, startSeq,endSeq, scaleSeqServ, globalDL, globalSeq);
+        var data=scalePoints(seqServ.partSeq, startSeq,endSeq, scaleSeqServ, globalDL, globalSeq);
+        }
+    else
+        var data=scalePoints(seqServ, startSeq,endSeq, scaleSeqServ, globalDL, globalSeq);
+
+    var ymin = globalSeq.min;
+    var ymax=globalSeq.max;
+
+        // Scaling of the axes
+    var xScale = d3.scale.linear()
+        .domain(d3.extent(data, function (d) { return d.pos; }))  // xmin, xmax
+        .range([0, width]);
+    var yScale = d3.scale.linear()
+        .domain([ymin, ymax])
+        .range([height, 0]);
+
+    // Function to draw the line
+    var line = d3.svg.line()
+        .x(function(d) { return xScale(d.pos); })
+        .y(function(d) { return yScale(d.value); });
+
+
+    // The image SVG: line
+    svg.append("g")
+        .attr("class", classSVG+" line")
+        .datum(data)
+        .append("path")
+        .attr("stroke",globalDL.cv.color)
+        //.attr("stroke",DLcolors[3])
+        .attr("d", line);
+
+    drawColor(globalDL, globalSeq, svg);
+
+    }
 
 //-------------------------------------------------------------
 //          DATALINE CORE AND OTHER FUNCTIONS
@@ -1230,12 +1333,19 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
         .style("text-anchor", "end");
 
     // Image SVG: data name
-    svg.append("g")
-        .attr("class", classSVG+" title")
-        .append("text")
-        .attr("fill",globalDL.cv.color)//x and y should be in a translate clause if rotation is to be applied
-        .attr("transform", "translate(-30,"+(globalDL.cv.dim.height*.5+getTextWidth(globalSeq.dataName, "13px sans-serif") *.5)+") rotate(-90)")
-        .text(globalSeq.dataName);
+    if(globalDL.cv.nameSVG.indexOf("2_")==-1)
+        {//DL1 will show just a summary
+        drawColor(globalDL, globalSeq, globalDL.cv.svg);
+        }
+    else
+        {
+        svg.append("g")
+            .attr("class", classSVG + " title")
+            .append("text")
+            .attr("fill", globalDL.cv.color)//x and y should be in a translate clause if rotation is to be applied
+            .attr("transform", "translate(-30," + (globalDL.cv.dim.height * .5 + getTextWidth(globalSeq.dataName, "13px sans-serif") * .5) + ") rotate(-90)")
+            .text(globalSeq.dataName);
+        }
 
     //Shadow line in case seqServ provides that info
     if(seqServ.minimum!=undefined) //In order to draw variation shade
@@ -1297,7 +1407,6 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
 
 
     // Save information of dataLine
-    globalDL.cv.svg = svg;
     globalDL.cv.scaleSeqScreen = scaleSeqScreen;
     globalDL.cv.scaleServScreen = scaleServScreen;
     globalDL.cv.data = data;
@@ -1305,6 +1414,20 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
     globalDL.cv.yScale = yScale;
 }
 
+
+function drawColor(globalDL, globalSeq, svg)
+    {
+    var number=parseInt(globalDL.cv.nameSVG.replace(/^.*_/,""))
+    svg.append("g")
+        .append("rect")
+        .attr("class", globalDL.cv.classSVG +" rect")
+        .attr("x",-45)
+        .attr("y",10+number*12)
+        .attr("fill", globalDL.cv.color)
+        .append("svg:title")
+        .text(globalSeq.dataName);
+    console.log("done!");
+    }
 /**
  * Draws shift (< >) and zoom (+-) elements on a dataline2, plus their logic
  * @param globalDL2
@@ -1499,12 +1622,6 @@ function drawLocation(globalDL, x0, y0, point)
     var height = globalDL.cv.bracketHeight;
     var desp;
 
-    // Removes previous info
-    d3.selectAll("."+classSVG+".hover.point").remove();
-    d3.selectAll("."+classSVG+".hover.vline").remove();
-    d3.selectAll("."+classSVG+".hover.label").remove();
-
-
     // POINT
     d3.select("#"+nameSVG)
         .select("svg")
@@ -1639,7 +1756,7 @@ function drawGrid() {
         for(var i in dl1)
             {
             var globalDL1 = dl1[i];
-            if (globalDL1.drawn)
+            if (globalDL1.drawn & globalDL1.cv.svg!=undefined)
                 {
                 globalDL1.cv.svg.selectAll(".dl1.band").remove();
                 globalDL1.cv.svg.selectAll(".dl1.band.letter").remove();
@@ -1648,7 +1765,7 @@ function drawGrid() {
         for(var i in dl2)
             {
             var globalDL2=dl2[i]
-            if (globalDL2.drawn)
+            if (globalDL2.drawn & globalDL2.cv.svg!=undefined)
                 {
                 globalDL2.cv.svg.selectAll(".dl1.band").remove();
                 globalDL2.cv.svg.selectAll(".dl1.band.letter").remove();
@@ -1682,7 +1799,7 @@ function drawGrid() {
         }
 
         //1) BANDS IN LINE 1
-        if (globalDL1.drawn && globalDL1.cv.svg.selectAll(".dl1.band")[0].length <= 1)    //If not already drawn
+        if (globalDL1.cv.svg!= undefined && globalDL1.drawn && globalDL1.cv.svg.selectAll(".dl1.band")[0].length <= 1)    //If not already drawn
         {
             globalDL1.cv.svg.selectAll("bands")
                 .data(bw)
@@ -1730,7 +1847,7 @@ function drawGrid() {
         }
 
         //2) BANDS IN LINE 2
-        if (globalDL2.drawn && globalDL2.cv.svg.selectAll(".dl1.band")[0].length <= 1)    //If not already drawn
+        if (globalDL2.cv.svg!= undefined && globalDL2.drawn && globalDL2.cv.svg.selectAll(".dl1.band")[0].length <= 1)    //If not already drawn
         //if (globalDL2.drawn)
         {
             y0 = 0;

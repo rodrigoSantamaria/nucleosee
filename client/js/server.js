@@ -424,6 +424,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(_DEBUG) console.log("Time spent get track: " + (new Date() - startTime) + "ms");
 
                     callback(response, track, index, total);
+
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
