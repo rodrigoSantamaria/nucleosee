@@ -301,6 +301,31 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         };
 
 
+        /**
+         * Removes user from server
+         */
+        Server.removeUser = function ()
+        {
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/removeUser?user="+_user+"&password="+_password,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                   console.log("User succesfully removed from the server")
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    console.log("removeUser() failed...");
+                });
+        };
+
+
         Server.getDSeq = function (start,end,track,dataName)
         {
             var startTime = new Date();

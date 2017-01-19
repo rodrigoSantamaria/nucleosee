@@ -240,6 +240,7 @@ def listData():
     except:
         return jsonify(response="error", msg="no tracks.txt at {} in {}".format(app.config['UPLOAD_FOLDER'],os.getcwd()))
     tracks=[l.split("\t")[0] for l in f.readlines()]
+    f.close()
     return jsonify(response=tracks)
 
 #%%
@@ -1057,6 +1058,23 @@ def assignUser():
     session[user]={}
     return jsonify(response=user)
     
+@app.route("/removeUser")
+def removeUser():
+    global user
+    global session
+    del session[user]
+    return jsonify(response="User successfully removed")
+    
+@app.route("/listUsers")
+def listUsers():
+    global session
+    return jsonify(response=session.keys())
+    
+@app.route("/removeAllUsers")
+def removeAllUsers():
+    global session
+    session={}
+    
 #%%from http://mortoray.com/2014/04/09/allowing-unlimited-access-with-cors/
 @app.after_request
 def add_cors(resp):
@@ -1097,7 +1115,7 @@ def testArray():
 
 @app.route("/test")
 def test():
-    return "Seqview server correclty configured"
+    return "Seqview server correctly configured"
 
 #%%
 @app.route("/availableOrganisms")

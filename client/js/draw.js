@@ -349,6 +349,8 @@ function drawSearch(allPoints0)
                 var startSeq = point - (numNucleotidesDraw / 2) + (focusLine / 2);
                 var endSeq = point + (numNucleotidesDraw / 2) + (focusLine / 2);
 
+                //Remove nucleotide track
+                removeNucleotides();
 
                 // Draw dataLine2
                 for (var i in globalSeqs) {
@@ -934,6 +936,13 @@ function drawAnnotations(annotations)
 //          NUCLEOTIDES (DATALINE 3)
 //-------------------------------------------------------------
 
+function removeNucleotides()
+    {
+        var nameSVG     = globalDL3.cv.nameSVG;
+        var svg=d3.select("#"+nameSVG)
+        if(svg!=undefined)
+            svg.remove();
+    }
 /**
  *
  * @param start starting position from the mouse hovering

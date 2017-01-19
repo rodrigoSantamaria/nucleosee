@@ -419,10 +419,13 @@
 
     <script>
 
+       window.addEventListener("beforeunload", function(e){
+           Server.removeUser();
+        })
+
         // This part of the code is executed automatically when the page is ready
         $(window).ready(function()
         {
-
             $('#btConfigSearchSave').click(function()
             {
                 GVB_GLOBAL.geo       = paramGeo.checked;

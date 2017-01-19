@@ -35,8 +35,11 @@
     Quizás habría que separar DL1 del Enrichment track
     También quizás habría que separa los svgs de las DL1
 
-  TODO: búsqueda simple: eliminar el and/or/not para evitar problemas y usar el dataset que haya puesto arriba (claro)
+  TODO: mostrar DL3 sólo después de todas las demas DL2! OJO
+    HECHO: eliminarla a seleccionar un nuevo DL2
+  TODO: sobre todo en remoto, descoloca un montón las tracks y no las muestra en el orden puesto originalmente!
   TODO: ordenar alfabéticamente los términos GO?
+
   Backend
 =============
   - Intentar optimizar el cálculo de estadísticas y discretización (2.5/5s en 2M y  5/7s en 4M)
