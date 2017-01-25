@@ -107,10 +107,15 @@ def processBigWig(path, track="None",  windowSize=100, numBins=5, percentile=Tru
         print('\ttime in annotations (GFF and FASTA):',(time.clock()-t0),'s')
 
 
+    if(len(dataFASTA.keys())==0):#the case of a single genomic FASTA
+        print("Loading FASTA data (genomic single file)...")
+        try:
+            dataFASTA=ann.fasta(org=organism)
+        except:
+            print("FASTA data couldn't be retrieved")
     try:
-        print("Loading GFF data")
+        print("Loading GFF data...")
         dataGFF={}
-        #dataGFF=ann.gffData(org=organism, tracks=bw.chroms.keys())
         dataGFF=ann.gffData(org=organism, tracks=m.keys())
         if(len(dataGFF.keys())!=len(bw.chroms.keys())):
             print("One or more chromosome tracks do not match with GFF names:")
@@ -297,7 +302,14 @@ def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism
 
         print("time in processing ", k, ": ", (time.clock()-tk))
     #end (for each chromosome)
-        
+     
+    if(len(dataFASTA.keys())==0):#the case of a single genomic FASTA
+        print("Loading FASTA data (genomic single file)...")
+        try:
+            dataFASTA=ann.fasta(org=organism)
+        except:
+            print("FASTA data couldn't be retrieved")
+    
     try:
         dataGFF=ann.gffData(org=organism, tracks=genome.keys())
     except:

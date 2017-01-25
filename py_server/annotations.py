@@ -23,7 +23,7 @@ def gff(filename="annotations/Schizosaccharomyces pombe/gff/schizosaccharomyces_
     
     print("reading GFF csv...")
     f=open(filename)
-    regions=["gene","exon","ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene", "three_prime_UTR", "five_prime_UTR", "CDS"]
+    regions=["gene","exon","ncRNA_gene", "tRNA_gene", "snRNA_gene", "snoRNA_gene", "rRNA_gene", "three_prime_UTR", "five_prime_UTR", "CDS", "ORF"]
     fieldnames=["seqid", "source", "type", "start", "end", "score", "sense", "phase", "attributes"]
     reader=csv.DictReader(f, fieldnames=fieldnames, delimiter="\t")
     
@@ -44,13 +44,17 @@ def gff(filename="annotations/Schizosaccharomyces pombe/gff/schizosaccharomyces_
     print("populating annotations...")
     sc=("cerevisiae" in filename)
     
-    data=np.empty(len(entries),dtype=[("chromosome", "a20"),("type", "a30"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a40"), ("name", "a40")])
+    data=np.empty(len(entries),dtype=[("chromosome", "a40"),("type", "a30"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a40"), ("name", "a40")])
                 
     for i in xrange(len(entries)):
         row=entries.pop()
-
+        
         data[i]["start"]=(int)(row["start"])
         data[i]["end"]=(int)(row["end"])
+        if(data[i]["start"]>data[i]["end"]):#some GFF erroneusly switch start and end in antisens
+            temp=data[i]["start"]
+            data[i]["start"]=data[i]["end"]
+            data[i]["end"]=temp
         
         seqid=row["seqid"]
         try:
@@ -73,7 +77,7 @@ def gff(filename="annotations/Schizosaccharomyces pombe/gff/schizosaccharomyces_
             name=re.sub("^.*ID=", "", re.sub(";.*$","",re.sub("^.*gene=", "", row["attributes"])))
         else:
             gid=re.sub("gene:", "", re.sub(";Name.*$","",re.sub("^.*ID=", "", row["attributes"])))
-            name=re.sub(";.*$","",re.sub("^.*ID=.*;Name=", "", row["attributes"]))
+            name=re.sub("^.*ID=", "",re.sub(";.*$","",re.sub("^.*ID=.*;Name=", "", row["attributes"])))
             
         
         data[i]["id"]=gid
@@ -143,17 +147,24 @@ def gffData(org="Schizosaccharomyces pombe", tracks=[]):
                 k2+="0"
             k2+=(str)(k)
             d[k2]=data[k0]
-    if(org=="Drosophila melanogaster"):
-        contents=os.listdir("annotations/"+org)
+    else:
+        print("OTHER ORGANISMS")
+        contents=os.listdir("annotations/"+org+"/gff")
+        filenames=[]
         for c in contents:
             if(re.search(".gff$", c)):
-                filename=c
-        data=gff("annotations/"+org+"/"+filename, "multiple")
+                filenames.append(c)
+        if(len(filenames)==0):
+            data=gff("annotations/"+org+"/gff/"+filenames[0], "single")
+        else:#TO BE DEFINED
+            data=gff("annotations/"+org+"/gff/"+filenames[0], "multiple")
         d=data
-        print("gff read")
+        
+        
         
     return d
     
+#tal=gffData("Candida albicans WO")
 #import time
 #t0=time.clock()
 #dataGFF2=gffData("Drosophila melanogaster", ["X","Y","2R"])
@@ -211,17 +222,49 @@ def goa(org="Schizosaccharomyces pombe"):
 
 #%% Loads the fasta sequence of a given file (by now only working forS pombe files)
 #it takes only 0.125s for the pombe genomw (the three chromosomes)
-def fasta(ch, org="Schizosaccharomyces pombe"):
-    #path=org[0]+org[org.find(" ")+1:]
-    #path=path.lower()
-    try:
-        f=open("annotations/"+org+"/fasta/"+(str)(ch)+".fasta")
-    except:  
-        f=open("annotations/"+org+"/fasta/"+(str)(ch)+".fsa")
-    reader=f.readlines()
-    reader=reader[1:]
-    return "".join(reader).replace("\n","")
-  
+def fasta(ch="None", org="Schizosaccharomyces pombe"):
+    import re
+    import os
+    if(ch=="None"):#full genome fasta
+        contents=os.listdir("annotations/"+org+"/fasta")
+        filenames=[]
+        for c in contents:
+            if(re.search(".f.*a$", c)):
+                filenames.append(c)
+        print filenames
+        if(len(filenames)==1):#should be a single file
+            f=open("annotations/"+org+"/fasta/"+filenames[0])
+            reader=f.readlines()
+            f=open("annotations/"+org+"/fasta/"+filenames[0])
+            ff={}
+            k=re.sub("\(.*\)", "", re.sub(">", "", reader[0])).strip()
+            i=0
+            while i<len(reader):
+                seq=""
+                while(i<len(reader)):
+                    line=f.next()
+                    i+=1
+                    if(line.startswith(">")):
+                        ff[k]=seq.replace("\n","")
+                        k=re.sub("\(.*\)", "", re.sub(">", "", line)).strip()
+                        break
+                    else:
+                        seq+=line
+            ff[k]=seq.replace("\n","")
+            return ff
+        return "No FASTA data or several ambiguous files"
+                
+    else:#single track fasta (specified by ch, same name)
+        try:
+            f=open("annotations/"+org+"/fasta/"+(str)(ch)+".fasta")
+        except:  
+            f=open("annotations/"+org+"/fasta/"+(str)(ch)+".fsa")
+
+        reader=f.readlines()
+        reader=reader[1:]
+        return "".join(reader).replace("\n","")
+ 
+#dataFASTA=fasta(org="Candida albicans WO")   
 #dataFASTA=fasta("chr01", "Saccharomyces cerevisiae")  
 #import time
 #t0=time.clock()
@@ -246,6 +289,10 @@ def annotate(mm, dataGFF, types=["any"], winSize=1000, align="center", intersect
         def selected(elmt): return elmt in wanted_set  # Or: selected = numpy.vectorize(wanted_set.__contains__)
         data2=dataGFF[selected(dataGFF["type"])]
     em={} #enriched (i.e. detailed) matches, including for each the thigs found at GFF
+    
+    print("positions are",mm)
+    print("winSize is",winSize)
+    
     
     if(type(winSize)==int):
         ws=winSize
@@ -324,7 +371,7 @@ def searchGO(text, dataGOA, dataGO, dataGFF):
             res2.append(x["gene_name"])
     res2=set(res2)
     
-    wanted_set = set(["gene"])  # Much faster look up than with lists, for larger lists
+    wanted_set = set(["gene", "ORF"])  # Much faster look up than with lists, for larger lists
     @np.vectorize
     def selected(elmt): return elmt in wanted_set  # Or: selected = numpy.vectorize(wanted_set.__contains__)
     data=dataGFF[selected(dataGFF["type"])]
@@ -335,6 +382,8 @@ def searchGO(text, dataGOA, dataGO, dataGFF):
          res3.append({"start":x["start"], "end":x["end"]})
     return res3
 
+
+#searchGO("zinc", dataGOA, dataGO, dataGFF['Supercontig_1.5_C_albicans_WO-1'])
 #result=searchGO("ribosomal", dataGOA, dataGO, dataGFF)    
 #result
 #
@@ -372,6 +421,7 @@ def annotateGOnames(em, dataGOA, dataGO):
         except KeyError:
             print('Key',k,' not found')
     return egon
+#annotateGOnames(["CAWG_06156"],dataGOA,dataGO)    
 #%%
 #goids=[x["go_id"] for x in dataGOA]
 #goterms={}
@@ -390,6 +440,7 @@ def annotateGOnames(em, dataGOA, dataGO):
 def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=5, maxGO=500, discard=["IEA"]):
     #0) Prepare sets    
     # Retrieve a dict where k=go id and value=set of genes
+
     print("enrichment fisher")
     goids=[x["go_id"] for x in dataGOA]
     goterms={}
@@ -398,11 +449,15 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=5, maxGO=50
     for x in dataGOA:
         if((x["evidence"] in discard) == False):
             goterms[x["go_id"]].add(x["gene_id"])
-            
+    
+    print("Number of annotations", len(dataGOA))
+    print("Number of terms with annotations", len(goterms.keys()))       
     # Compute universe genes
     unigenes=set()
     for k in goterms.keys():
             unigenes |= set(goterms[k])
+    print("Universe genes", len(unigenes))
+    
     unigenes=unigenes-gis
     uni=len(unigenes)
     sel=len(gis)

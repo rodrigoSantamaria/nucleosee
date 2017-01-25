@@ -341,10 +341,10 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
             data[filename]=pickle.load(f)
             print("pickle loaded!", data[filename].keys())
             print(data.keys())
-            
-            talg3=data[filename]["gff"]["chromosome3"]
+            print(data[filename].keys())
             
             if track=="None":
+                #print(data[filename][filename].keys())
                 track=sorted(data[filename]["maximum"].keys())[0]
                     
         #1B) Preprocessing must be done     
@@ -737,18 +737,22 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
     
     print(patternSymbols, "\t",set(pattern))
     if(False in [x in patternSymbols for x in set(pattern)]):
-        print("GENE OR TERM")      
         points={}
         sizes={}
         for k in data["batch"]["processed"]["seq"].keys():
-            if(string.find(pattern,"go:")==-1):
-                print("GENE")
-                oc=ann.searchGene(pattern, data["batch"]["processed"]["gff"][k], ["gene", "tRNA_gene"])
-            else:
-                print("TERM")
-                oc=ann.searchGO(pattern.replace("go:", "").strip(), data["goa"], data["go"], data["batch"]["processed"]["gff"][k])
-            points[k]=(str)([(int)(y["start"]) for y in oc])
-            sizes[k]=(str)([(int)((y["end"]-y["start"])/ws) for y in oc])
+            if(k in data["batch"]["processed"]["gff"].keys()):
+                if(string.find(pattern,"go:")==-1):
+                    print("GENE in ",k)
+                    oc=ann.searchGene(pattern, data["batch"]["processed"]["gff"][k], ["gene", "tRNA_gene", "ORF"])
+                else:
+                    print("TERM in ", k)
+                    oc=ann.searchGO(pattern.replace("go:", "").strip(), data["goa"], data["go"], data["batch"]["processed"]["gff"][k])
+                    print("Occurences: ",oc)
+                points[k]=(str)([(int)(y["start"]) for y in oc])
+                sizes[k]=(str)([(int)((y["end"]-y["start"])/ws) for y in oc])
+            else:    #some tracks might not have annotations!
+                points[k]="[]"
+                sizes[k]="[]"
         data["search"]={'points':points, 'sizePattern':sizes}
         #return jsonify(points=points, sizePattern=sizes);
         return {"points":points, "sizePattern":sizes};
@@ -875,7 +879,10 @@ def getDSeq(start=0, end=0, track="None", dataName="None"):
 @app.route("/annotations")
 def annotations(positions={}, window=1000, types=["any"], onlyIDs="False", align="left", intersect="soft", dataName="None"):
     global data
-    window=eval(request.args.get("window"))
+    try:
+        window=eval(request.args.get("window"))
+    except:
+        window=int(request.args.get("window"))
     types=eval(request.args.get("types"))
     positions=eval(request.args.get("positions"))
     onlyIDs=str(request.args.get("onlyIDs"))
@@ -896,19 +903,24 @@ def annotations(positions={}, window=1000, types=["any"], onlyIDs="False", align
         pos=positions[track]
         if(type(pos)==str):
             pos=eval(pos)
-            
+        if(type(window)==dict):
+            wk=eval(window[track])
+        else:   #constant for all (pattern searches)
+            wk=window
+    
+        print("Window is: ", wk)   
         if(track in dbp["gff"].keys()):
-            res[track]=annotationsLocal(positions=pos, gff=dbp["gff"][track], window=window, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
+            res[track]=annotationsLocal(positions=pos, gff=dbp["gff"][track], window=wk, types=types, onlyIDs=onlyIDs, align=align, intersect=intersect)
         else:
             res[track]=[]
             
-                        
-    if("search" in data.keys()):
+    if(("search" in data.keys()) and (type(res)==dict)):#if there's a previous search and some annotations for it
         for ch in res.keys():
-            for x in res[ch].keys():
-                for y in res[ch][x]:
-                    if(y["t"]=="gene"):
-                        gis.append(y["id"])
+            if(type(res[ch])==dict):
+                for x in res[ch].keys():
+                    for y in res[ch][x]:
+                        if(y["t"]=="gene" or y["t"]=="ORF"):#C albicans WO has ORFs only
+                            gis.append(y["id"])
         data["annotations"]=res    
         data["gis"]=gis                       
     return jsonify(response=res)
@@ -1026,20 +1038,21 @@ def annotationsGOA(genes=[], types=["any"]):
 #annotations is the result of calling annotations
 #correction is for multiple hipothesis and can be 'none', 'bonferroni', 'fdr' or 'fwer'
 #alpha is the threshold, applied as is with 'none' correction or with the specified one
-def enrichmentGO(annotations={}, correction="none", alpha=0.01):
+def enrichmentGO(annotations={}, correction="none", alpha=0.01, discard=["IEA"]):
     global data
     print("Enrichment GO")
     gis=set(eval(request.args.get("annotations")))
     alpha=float(request.args.get("alpha"))
     correction=request.args.get("correction")
+    discard=eval(request.args.get("discard"))
 
     if(len(gis)==0):
         gis=set(data["gis"])
     
     dg=helpers.getDataAnnot(data)
-    
+    print("GIS are", gis)
     ego={}
-    ego=ann.enrichmentFisher(gis, dg["goa"], alpha, correction)
+    ego=ann.enrichmentFisher(gis=gis, dataGOA=dg["goa"], th=alpha, correction=correction, discard=discard)
     for k in ego.keys():
         if(dg["go"].has_key(k) and dg["go"][k]!="undefined"):
             ego[k]["go_name"]=dg["go"][k]

@@ -345,18 +345,28 @@ function searchResults(result)
     getAllAnnotations(result);
 }
 
-
+/**
+ * Export positions in BED format: chromosome start end
+ * @param points
+ */
 function exportPositions(points)
     {
-    var text="pos\tchromosome\tdataset\n";
+    //var text="pos\tchromosome\tdataset\n"; //no header for bed format
+    var text="";
     for(var dataName in points)
         {
-        for(var ch in points[dataName]["points"]) {
+        var size=points[dataName]["sizePattern"]
+        size=size*globalSeqs[0].ws;
+        for(var ch in points[dataName]["points"])
+            {
             var pch = JSON.parse(points[dataName]["points"][ch]);
-            for (var p in pch) {
-                text = text + pch[p] + "\t" + ch + "\t" + dataName +"\n";
+            for (var p in pch)
+                {
+                //text = text +  ch + "\t" + pch[p] + "\t" + dataName +"\n";
+                text = text +  ch + "\t" + pch[p] + "\t"+ (pch[p]+size) +"\n";
                 }
             }
+        break;//we only pick for one (maybe buggy, fix this)
         }
     var data = new Blob([text], {type: 'text/plain'});
     var URL = this.URL || this.webkitURL;
@@ -433,9 +443,6 @@ function getAllAnnotations(matches)
             if (allPoints[j] == undefined)
                 allPoints[j] = matches[i].points[j];
             else allPoints[j].push(matches[i].points[j]);
-            //allPoints[j]=allPoints[j].filter(function(itm,i,a){
-            //    return i==a.indexOf(itm);
-            //});
             }
 
 
@@ -450,11 +457,11 @@ function getAllAnnotations(matches)
                 winS[i][j]*=ws;
             winS[i]="["+winS[i].join(",")+"]";
             }
-        winS=winS[globalSeqs[0].track];
+        //winS=winS[globalSeqs[0].track];
         }
     else
         winS=sizePattern*ws;
-    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"any\"]", winS, "left", "False", chromosomes, ws, "soft", globalSeqs[0].dataName);
+    Server.allAnnotationsGenes(getEnrichment, allPoints, "[\"any\"]", winS, "left", "False", chromosomes, ws, "soft", globalSeqs[0].dataName, globalSeqs[0].track);
 }
 
 
@@ -469,7 +476,15 @@ function getEnrichment(gis, annotations)
     exportGenes(annotations);
 
     //Server.enrichmentGO(drawEnrichment, gis, "fdr", 0.01)
-    Server.enrichmentGO(drawEnrichment, "", "fdr", 0.01)
+
+    var pval = $('#paramPval').val();
+
+    var discard="[]"
+    if(document.getElementById('paramDiscard').checked)
+        discard="[\"IEA\"]";
+
+
+    Server.enrichmentGO(drawEnrichment, "", "fdr", pval, discard)
 }
 
 

@@ -296,6 +296,7 @@ function drawSearch(allPoints0)
         if (DEBUG_GBV) console.log("\ndataLine_1_drawPoints(): " + points.length + " points");
 
         for (i in tracks) {
+            //if(allPoints.hasOwnProperty(tracks[i]))//some tracks might not have any anotation
             var pp = JSON.parse(allPoints[tracks[i]]);
             if(matches[i]==undefined)   matches[i]=pp.length;
             else                        matches[i]+=pp.length;
@@ -753,6 +754,10 @@ function drawAllDataLine_2(seqs, start, end)
     }
 
 
+/**
+ * Draw an annotation gene line below the first DL2 lane.
+ * @param annotations
+ */
 function drawAnnotations(annotations)
 {
     var globalDL2=dl2[0];
@@ -788,7 +793,7 @@ function drawAnnotations(annotations)
             var h=0;
             if (d.t=="gene")// || d.t.indexOf("UTR")>=0)
                 h=lineHeight*.25;
-            else if(d.t=="CDS" || d.t.indexOf("_gene")>=0)
+            else if(d.t=="ORF" || d.t=="CDS" || d.t.indexOf("_gene")>=0)
                 h = lineHeight;
             return h});
 
@@ -853,7 +858,7 @@ function drawAnnotations(annotations)
     var genes=[];
     for (var key in annotations)
         {
-        if (annotations[key]["t"] == "gene")
+        if (annotations[key]["t"] == "gene" || annotations[key]["t"] == "ORF")
             {
             var g=annotations[key]["id"];
             genes.push(g);
@@ -908,9 +913,9 @@ function drawAnnotations(annotations)
         })
         .attr("y", function(d){   return d.ss=="+"?10:25})
         .text(function(d){
-            res="";
+            var res="";
             if(d.e>startSeq)
-                if(d.t.indexOf("gene")>-1)
+                if(d.t.indexOf("gene")>-1 || d.t=="ORF")
                     res=d.n;
             return res;
         })

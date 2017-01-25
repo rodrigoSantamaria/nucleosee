@@ -542,11 +542,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param numMatches        it's not necessary!!
          */
         Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs, chromosomes, ws, intersect,
-                                               dataName, gis, annotations)
+                                               dataName, track)
         {
             // Initialize variables first
-            if(typeof(gis) === 'undefined')             gis = "";
-            if(typeof(annotations) === 'undefined')     annotations = {};
+            var gis = "";
+            var annotations = {};
             var startTime = new Date();
 
             // Calculate points of this track and number of matches
@@ -554,7 +554,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var points = JSON.stringify(allPoints);
             var ws=window;
             if(typeof(window)=="object")
-                ws=window[track];
+                ws=JSON.stringify(window);
 
             var requestAJAX = $.ajax(
                 {
@@ -628,11 +628,11 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         /**
          * Get enrichment in all the genome (with 'gis').
          * @param callback
-         * @param gis
+         * @param gis: leave empty ("") as it is now stored in the backend
          * @param correction  ('none', 'bonferroni', 'fdr', 'fwer')
          * @param alpha
          */
-        Server.enrichmentGO = function (callback, gis, correction, alpha)
+        Server.enrichmentGO = function (callback, gis, correction, alpha, discard)
         {
             var startTime = new Date();
 
@@ -660,7 +660,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             var requestAJAX = $.ajax(
                 {
-                    url: _serverPath+"/enrichmentGO?user="+_user+"&password="+_password+"&annotations="+gis+"&correction="+correction+"&alpha="+alpha,
+                    url: _serverPath+"/enrichmentGO?user="+_user+"&password="+_password+"&annotations="+gis+"&correction="+correction+"&alpha="+alpha+"&discard="+discard,
                     type: "GET",
                     datatype: "json"
                 });
