@@ -265,6 +265,12 @@
                         <div class="col-sm-2">
                             <input class="form-control" type="text" value="0.01" id="paramPval">
                         </div>
+                        <div class="col-sm-7 col-sm-offset-1">
+                            <label class="control-label" for="paramExtend" title="Number of nucleotides from the searched pattern (both sides) to which the gene searches for annotations and enrichment will be extended">Extend gene searches up to distance (bps):</label>
+                       </div>
+                        <div class="col-sm-2">
+                            <input class="form-control" type="text" value="0" id="paramExtend">
+                        </div>
 
                     </div>
                 </div>
@@ -288,14 +294,14 @@
 
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h3 class="modal-title">Selection options</h3>
+                    <h3 class="modal-title">Available data</h3>
                 </div>
 
                 <div class="modal-body">
 
                 <div class="row">
                     <div class="col-sm-9 col-sm-offset-1">
-                        <b>Available data: </b> select one or more.
+                        Select one or more:
                     </div>
                     <div class="col-sm-9 col-sm-offset-1">
                         <select id="selectionList" size="0" multiple onchange="if (this.selectedIndex==undefined || this.selectedIndex.length>2)  btSelectOptions.disabled=true; else  btSelectOptions.disabled=false;">

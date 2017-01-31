@@ -264,6 +264,7 @@ def fasta(ch="None", org="Schizosaccharomyces pombe"):
         reader=reader[1:]
         return "".join(reader).replace("\n","")
  
+ 
 #dataFASTA=fasta(org="Candida albicans WO")   
 #dataFASTA=fasta("chr01", "Saccharomyces cerevisiae")  
 #import time
@@ -381,8 +382,34 @@ def searchGO(text, dataGOA, dataGO, dataGFF):
       if x["name"] in res2:
          res3.append({"start":x["start"], "end":x["end"]})
     return res3
-
-
+#%%
+#Given positions and lengths return the corresponding sequences in fasta format
+#positions and sizes are dicts with references to the proper tracks
+#(alternatively, sizes can be a int that is taken as constant size)
+def exportFASTA(search, fasta,windowSize):
+    text=""
+    print(search.keys())
+    for track in search["points"].keys():
+        positions=eval(search["points"][track])
+        s=True if type(search["sizePattern"])==int else False
+        if not s:
+            sizes=eval(search["sizePattern"][track])
+        else:
+            sizes=int(search["sizePattern"])
+        print("Getting seqs for ",positions," in track",track)
+        for i in xrange(len(positions)):
+            start=int(positions[i])
+            if(s):
+                end=start+sizes*windowSize
+            else:
+                end=start + int(sizes[i])*windowSize
+            text+=">"+track+": "+str(start)+"-"+str(end)+"\n"
+            text+=fasta[track][start:end]+"\n"
+    return text
+            
+#exportFASTA({'Supercontig_1.7_C_albicans_WO-1':[124]},300,dataFASTA)
+        
+#%%
 #searchGO("zinc", dataGOA, dataGO, dataGFF['Supercontig_1.5_C_albicans_WO-1'])
 #result=searchGO("ribosomal", dataGOA, dataGO, dataGFF)    
 #result

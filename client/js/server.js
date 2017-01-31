@@ -231,6 +231,14 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             $.when(requestAJAX)
                 .done(function(result)
                 {
+                    if(result.error!=undefined)
+                        {
+                        console.log("preprocess failed: ", result.error);
+                        javascript_abort("preprocess failed:\n"+result.error, false)
+                        callback("Preprocessing error.")
+                        return;
+                        }
+
                     var response = [];
                     response.seq=result.seq; // this is only a sample, as it is too large to show as a whole and to send via REST
                     response.max=result.maximum;
@@ -253,12 +261,16 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
 
-                    callback(response, track,0,1);
+                    //callback(response, track,0,1);
+                    callback("data preprocessed!")
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("preprocress(): discretization failed...");
-                    javascript_abort("preprocessing() failed: possible causes: \n· Make sure the wig file follows the standard format\n· Make sure you selected the right species");
+                    if(result==undefined)
+                        var result="no result";
+                    javascript_abort("preprocessing() failed: possible causes: \n· Make sure the wig file follows the standard format\n· Make sure you selected the right species\n");
+
                 });
         };
 
@@ -556,6 +568,10 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             if(typeof(window)=="object")
                 ws=JSON.stringify(window);
 
+            console.log(_serverPath+"/annotations?user="+_user+"&password="+_password+
+                "&positions="+points+"&types="+types+"&window="+ws+"&align="+align+
+                "&onlyIDs="+onlyIDs+"&intersect="+intersect+"&dataName="+dataName);
+
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/annotations?user="+_user+"&password="+_password+
@@ -591,7 +607,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                                         var rrki = result.response[key][i];
                                         for(var k in rrki) {    //for each annotation at a given position
                                             var rrkik=rrki[k]
-                                            if(rrkik["t"]=="gene") {
+                                            if(rrkik["t"]=="gene" || rrkik["t"]=="ORF") {
                                                 var id=rrkik["id"]
                                                 gis += id + ",";
                                                 annotations[id] = {};
@@ -940,6 +956,39 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
 
         /**
+         * Calls the REST service for a FASTA formatted text with current search sequences
+         * @param dataName name of the searched track (any in case of several)
+         * @returns sequence for that interval
+         */
+        Server.exportFASTA = function (callback, dataName)
+        {
+            // var startTime = new Date();
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/exportFASTA?user="+_user+"&password="+_password+"&dataName="+dataName,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            //noinspection JSUnresolvedFunction
+            /**
+             * @typedef {Object} result
+             * @property response
+             */
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    callback(result.response); // this is only a sample, as it is too large to show as a whole and to send via REST
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    if(_DEBUG) console.log("exportFASTA(): get nucleotides failed...");
+                    javascript_abort("exportFASTA() failed");
+                });
+        };
+
+        /**
          * Calls the REST service available to retrieve a sequence of nucleotides
          * @param callback
          * @param positions: array with numerical starting positions
@@ -1006,7 +1055,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             return url;
         }
 
-        function javascript_abort(msg)
+        function javascript_abort(msg, exit)
         {
             msg   || ( msg = 'An error has occurred' );
             alert(msg);
@@ -1015,7 +1064,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             showImageLoading("imgLoadingFile", false);
             showImageLoading("imgLoadingSearch", false);
 
-            throw "ERROR GBV: "+msg;
+            if(exit!=undefined & exit==true)
+                throw "ERROR GBV: "+msg;
         }
 
         return Server;

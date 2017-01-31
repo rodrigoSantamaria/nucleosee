@@ -77,7 +77,17 @@ from flask import send_from_directory
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-      
+#%%
+@app.route('/testTry')
+def testTry(a=0):
+    a=request.args.get("a")
+    try:
+        print a
+        b=a
+        #xb=str(a)+4
+    except:
+        return jsonify(response="error")
+    return jsonify(response=b)
 #%%
 @app.route('/testUpload', methods=['GET'])
 def testUpload():
@@ -239,7 +249,12 @@ def listData():
         f=open(os.path.join(app.config['UPLOAD_FOLDER'],"tracks.txt"))
     except:
         return jsonify(response="error", msg="no tracks.txt at {} in {}".format(app.config['UPLOAD_FOLDER'],os.getcwd()))
-    tracks=[l.split("\t")[0] for l in f.readlines()]
+    tracks={}
+    for l in f.readlines():
+        l=l.split("\t")
+        wig=re.sub("c[0-9]\..*$","", l[1])
+        tracks[l[0]]={"window":l[2], "intervals":l[3], "organism":l[4].strip(), "file":wig} 
+        #tracks=[l.split("\t")[0] for l in f.readlines()]
     f.close()
     return jsonify(response=tracks)
 
@@ -288,39 +303,43 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
 #    #0) getting parameter
     print('----------------------- PREPROCESS...')
     t0=time.clock()
-    basePath=app.config['UPLOAD_FOLDER']
-    filenames=eval(request.args.get("filenames"))
-    track=request.args.get("track")
-    organism=request.args.get("organism")
-    windowSize=int(request.args.get("windowSize"))
-    numBins=int(request.args.get("numBins"))
-    maxSize=int(request.args.get("maxSize"))
-    interpolation=request.args.get("interpolation")
-    stdev=float(request.args.get("stdev"))
-    dataName=request.args.get("dataName")
-    clear=request.args.get("clear")
-
+    
+    try:
+        basePath=app.config['UPLOAD_FOLDER']
+        filenames=eval(request.args.get("filenames"))
+        track=request.args.get("track")
+        organism=request.args.get("organism")
+        windowSize=int(request.args.get("windowSize"))
+        numBins=int(request.args.get("numBins"))
+        maxSize=int(request.args.get("maxSize"))
+        interpolation=request.args.get("interpolation")
+        stdev=float(request.args.get("stdev"))
+        dataName=request.args.get("dataName")
+    except:
+        return jsonify(error="Error in getting parameters")
+        
+    
+    
     data={}
     print("Files are: ",filenames)
     
-    #TODO: check that all batch files have same tracks and sizes
     #3) annotations (same for all batch files? - hard to do with pickles)
     t0=time.clock()
-    dataGO=ann.go()
-    dataGOA=[]
-
     try:
+        dataGO=ann.go()
+        dataGOA=[]
         dataGOA=ann.goa(organism)
         print("GO loaded")
     except:
         print("organism",organism,"'s annotations missing or failing")
+        return jsonify(error="Error in getting GO annotations")
+ 
     print("done! ... GO annotations takes",(time.clock()-t0))
     
     data["go"]=dataGO
     data["goa"]=dataGOA
     data["windowSize"]=windowSize
 
-    #basePath="/Users/rodri/WebstormProjects/seqview/py_server/genomes/jpiriz/"
     print("organism:",organism)
         
     pickleFiles=[]
@@ -337,27 +356,35 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
         genome={}
         #1A) Preprocessed data (.pic data) exist
         if os.path.isfile(picklePath):
-            f=open(picklePath)
-            data[filename]=pickle.load(f)
-            print("pickle loaded!", data[filename].keys())
-            print(data.keys())
-            print(data[filename].keys())
-            
-            if track=="None":
-                #print(data[filename][filename].keys())
-                track=sorted(data[filename]["maximum"].keys())[0]
+#            try:
+#                f=open(picklePath)
+#                data[filename]=pickle.load(f)
+#                print("pickle loaded!", data[filename].keys())
+#                print(data.keys())
+#                print(data[filename].keys())
+#                
+#                if track=="None":
+#                    track=sorted(data[filename]["seq"].keys())[0]
+#            except:
+            return jsonify(error="File already processed with this configuration, choose it at 'Select data' or contact with your administrator if you can't find it")
                     
         #1B) Preprocessing must be done     
         else: #no previous preprocessing -> do it now
-            if(path.endswith("bw")):
+            if(path.endswith("bw")):#BIG WIG
                 tbw=time.clock()
-                data[filename]=helpers.processBigWig(path=path, track=track, windowSize=windowSize, numBins=numBins, percentile=True, maxSize=maxSize, stdev=stdev, organism=organism, picklePath=picklePath)
-                print("process bw done in ",(time.clock()-tbw))
-                genome=data[filename]["seq"]
+                try:
+                    data[filename]=helpers.processBigWig(path=path, track=track, windowSize=windowSize, numBins=numBins, percentile=True, maxSize=maxSize, stdev=stdev, organism=organism, picklePath=picklePath)
+                    genome=data[filename]["seq"]
+                    print("process bw done in ",(time.clock()-tbw))
+                except:
+                    return jsonify(error="Error preprocessing BigWig")
     
-            else:
-                genome=helpers.readWig(path, method=interpolation)
-                data[filename]=helpers.processWig(genome, stdev=stdev, windowSize=windowSize, numBins=numBins, maxSize=maxSize, percentile=True, organism=organism, track=track)
+            else:#NORMAL WIG
+                try:
+                    genome=helpers.readWig(path, method=interpolation)
+                    data[filename]=helpers.processWig(genome, stdev=stdev, windowSize=windowSize, numBins=numBins, maxSize=maxSize, percentile=True, organism=organism, track=track)
+                except:
+                    return jsonify(error="Error preprocessing Wig")
     
             if track=="None":
                 track=sorted(genome.keys())[0]
@@ -865,6 +892,21 @@ def getDSeq(start=0, end=0, track="None", dataName="None"):
     #print("DSEQ ES", part)    
     return jsonify(response=list(part))
 
+#%%
+@app.route("/exportFASTA")
+def exportFASTA(dataName="None"):
+    global data
+    
+    dataName=str(request.args.get("dataName"))
+    
+    if(dataName=="None"):
+        dbp=data["batch"]["processed"]
+    else:
+        dbp=data[dataName]["batch"]["processed"]
+    if("search" in data.keys()==False):
+        return jsonify(response="Error: no search performed")
+
+    return jsonify(response=ann.exportFASTA(data["search"][dataName],dbp["fasta"],dbp["windowSize"]))
 
 #%%
 # positions is a dictionary of tracks -> [positions]

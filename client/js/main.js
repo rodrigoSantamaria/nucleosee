@@ -28,6 +28,12 @@ var GVB_GLOBAL =
     interpolation : "none",  //Either 'none', 'step' or 'rolling' for no interpolation, step-like or a rolling average 30-length window
     sendFile : false,    //if true, wig file should be uploaded to server for preprocessing
     exportFileURL: "",
+
+    //Thesea are some variables that we should keep on track changes
+    goURL: "",
+    fastaURL: "",
+    genesURL: "",
+    posURL: "",
     gis: undefined,
     annotations: undefined
 };
@@ -70,10 +76,20 @@ function checkFile(files)
 function populateDataList(data)
     {
     var elSel = document.getElementById('selectionList');
-    elSel.size=data.length;
 
-    for(var i in data)
-        elSel.options[elSel.options.length]=new Option(data[i],data[i]);
+    var cont=0
+    var keys=Object.keys(data).sort(function (a, b) {
+        return a.toLowerCase().localeCompare(b.toLowerCase());
+        });
+    for(var i in keys)
+        {
+        var d=data[keys[i]]
+        var option = new Option(keys[i], keys[i]);
+        option.title = "orig. file: "+d.file+"\norganism: "+d.organism+"\nwindow: "+ d.window+"\n#intervals:"+ d.intervals;
+        elSel.options[elSel.options.length] = option;
+        cont+=1;
+        }
+    elSel.size=Math.min(cont, 20);
     }
 
 function populateOrganismList(data)
@@ -162,7 +178,8 @@ function preprocessing(chromosome)
         elOptNew.value = $('#paramDescription').val();
         elSel.add(elOptNew, null);
 
-        Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filenames, GVB_GLOBAL.track, $("#paramWS").val(), $("#paramNB").val(),
+        // Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filenames, GVB_GLOBAL.track, $("#paramWS").val(), $("#paramNB").val(),
+        Server.preprocess(filePreprocessed, GVB_GLOBAL.filenames, GVB_GLOBAL.track, $("#paramWS").val(), $("#paramNB").val(),
             GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value,
             $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value, $("#paramSD").val(),
             $("#paramDescription").val());
@@ -184,6 +201,12 @@ function preprocessing(chromosome)
         }
     }
 }
+
+function filePreprocessed(message)
+    {
+    GVB_GLOBAL.sendFile=true;//for next files
+    $('#loadText')[0].innerHTML=message;
+    }
 
 
 // DRAWING: DATALINE 1
@@ -214,39 +237,34 @@ function drawingFirstDataLine(processedData, chromosome, index, total) {
 
     // We create icons chromosomes and bind the click event
     GVB_GLOBAL.chromosomes = processedData.chromosomes;
-    if (chromosome == "None") {
+    if (chromosome == "None")
+        {
         createIconsChromosomes(GVB_GLOBAL.chromosomes);
         GVB_GLOBAL.track = processedData.chromosomes[0];
-        //}
         }
-        else {
-            GVB_GLOBAL.track = chromosome;
-        }
-
-        var seqServer = processedData.seq;    // just a sampling of about 400K of the original full length sequence
-        var fullLength = processedData.fullLength;
-        var mean = processedData.mean;
-        var stdev = processedData.stdev;
+    else
+        GVB_GLOBAL.track = chromosome;
 
 
-        // DATALINE 1 (preprocessed data)
-        //----------------------------------
-        if (DEBUG_GBV) console.log("\n----- DRAWING: DATALINE 1 (" + GVB_GLOBAL.track + ")-----");
-        if (DEBUG_GBV) console.log("Length of seqServer:" + seqServer.length + " (full length seq=" + fullLength + ")");
+    var seqServer = processedData.seq;    // just a sampling of about 400K of the original full length sequence
+    var fullLength = processedData.fullLength;
+
+    // DATALINE 1 (preprocessed data)
+    //----------------------------------
+    if (DEBUG_GBV) console.log("\n----- DRAWING: DATALINE 1 (" + GVB_GLOBAL.track + ")-----");
+    if (DEBUG_GBV) console.log("Length of seqServer:" + seqServer.length + " (full length seq=" + fullLength + ")");
 
 
-        if (typeof(fullLength) == "object")
-            dataLine_1(processedData, 0, fullLength[GVB_GLOBAL.track], total, GVB_GLOBAL.annotations, GVB_GLOBAL.gis);
-        else
-            dataLine_1(processedData, 0, fullLength, total, GVB_GLOBAL.annotations, GVB_GLOBAL.gis);
+    if (typeof(fullLength) == "object")
+        dataLine_1(processedData, 0, fullLength[GVB_GLOBAL.track], total, GVB_GLOBAL.annotations, GVB_GLOBAL.gis);
+    else
+        dataLine_1(processedData, 0, fullLength, total, GVB_GLOBAL.annotations, GVB_GLOBAL.gis);
 
-        //In case of switching tracks
-        if (processedData.hasOwnProperty("search") && processedData.search[globalSeqs[index].dataName].points.hasOwnProperty(chromosome)) {
-            drawSearch(processedData.search);
-        }
-        if (processedData.hasOwnProperty("ego")) {
-            drawEnrichment(processedData.ego);
-        }
+    //In case of switching tracks
+    if (processedData.hasOwnProperty("search") && processedData.search[globalSeqs[index].dataName].points.hasOwnProperty(chromosome))
+        drawSearch(processedData.search);
+    if (processedData.hasOwnProperty("ego"))
+        drawEnrichment(processedData.ego);
 }
 
 
@@ -339,11 +357,24 @@ function searchResults(result)
     drawSearch(result);
 
     exportPositions(result)
+    //Server.exportFASTA(exportFasta, globalSeqs[0].dataName);
+
     // ENRICHMENT
     //----------------------------------
     if (DEBUG_GBV) console.log("\n----- ENRICHMENT -----");
     getAllAnnotations(result);
 }
+
+function exportFasta(text)
+    {
+    var blob = new Blob([text], {type: 'text/plain'});
+    var URL = this.URL || this.webkitURL;
+    var textURL;
+    if (textURL !== null)   URL.revokeObjectURL(textURL);
+    var textURL = URL.createObjectURL(blob);
+    dl1[0].fastaURL=textURL;
+    window.open(dl1[0].fastaURL)
+    }
 
 /**
  * Export positions in BED format: chromosome start end
@@ -375,6 +406,11 @@ function exportPositions(points)
 
     var textURL = URL.createObjectURL(data);
     var globalDL1=dl1[0];
+
+    //Clean up previous urls
+    globalDL1.genesURL="http://vis.usal.es/seqview/client/html/error/404.html";
+    globalDL1.goURL="http://vis.usal.es/seqview/client/html/error/404.html";
+    globalDL1.fastaURL="http://vis.usal.es/seqview/client/html/error/404.html";
     globalDL1.posURL=textURL;
     }
 
@@ -424,12 +460,36 @@ function exportGO(annotations)
     globalDL1.goURL=textURL;
 }
 
+function exportFASTA()
+    {
+        var text="";
+        for(var a in annotations)
+        {
+            var aa=annotations[a]
+            text=text+a+"\t"+aa.go_name+"\t"+aa.ngis+"\t"+aa.ngo+"\t"+aa.pval+"\t"+aa.gis+"\n";
+        }
+        var data = new Blob([text], {type: 'text/plain'});
+        var URL = this.URL || this.webkitURL;
+        var textURL;
+        // If we are replacing a previously generated file we need to
+        // manually revoke the object URL to avoid memory leaks.
+        if (textURL !== null) {
+            URL.revokeObjectURL(textURL);
+        }
+
+        var textURL = URL.createObjectURL(data);
+        var globalDL1=dl1[0];
+        globalDL1.goURL=textURL;
+    }
+
 // GET ALL ANNOTATIONS
 ////////////////////////////////
 function getAllAnnotations(matches)
 {
     var chromosomes = GVB_GLOBAL.chromosomes;
     var ws          = GVB_GLOBAL.ws;
+
+    var extend=parseInt($("#paramExtend").val()); //this parameter is to allow extend the area to search for GIS x nucleotides on left and right from the pattern size searched
 
     globalTime=new Date();
 
@@ -440,9 +500,19 @@ function getAllAnnotations(matches)
         if(sizePattern==undefined)
             sizePattern=matches[i].sizePattern
         for(var j in matches[i].points) {
+            var pos=matches[i].points[j].replace("[","").replace("]", "").split(",")
+            if(pos[0]=="")
+                pos=[]
+
+            for(var k in pos)
+                pos[k]=parseInt(pos[k])-extend
+            //var pos=matches[i].points[j]-extend;//extend on the left
             if (allPoints[j] == undefined)
-                allPoints[j] = matches[i].points[j];
-            else allPoints[j].push(matches[i].points[j]);
+                //allPoints[j] = matches[i].points[j];
+                allPoints[j] = pos;
+            else
+                //allPoints[j].push(matches[i].points[j]);
+                allPoints[j].push(pos);
             }
 
 
@@ -454,10 +524,12 @@ function getAllAnnotations(matches)
             {
             winS[i]=JSON.parse(sizePattern[i]);
             for(var j in winS[i])
-                winS[i][j]*=ws;
+                {
+                winS[i][j] *= ws;
+                winS[i][j] +=extend; //extend on the left
+                }
             winS[i]="["+winS[i].join(",")+"]";
             }
-        //winS=winS[globalSeqs[0].track];
         }
     else
         winS=sizePattern*ws;
@@ -593,6 +665,10 @@ function destroyAll(clear, tracksOnly)
         {
         GVB_GLOBAL.annotations=dl1[0].annotations
         GVB_GLOBAL.gis=dl1[0].gis
+        GVB_GLOBAL.goURL=dl1[0].goURL
+        GVB_GLOBAL.posURL=dl1[0].posURL
+        GVB_GLOBAL.genesURL=dl1[0].genesURL
+        GVB_GLOBAL.fastaURL=dl1[0].fastaURL
         }
 
     globalSeqs=[]

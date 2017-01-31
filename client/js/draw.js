@@ -132,9 +132,10 @@ function globalDL1Object(id)
 
     this.gis = null;         //In the case of a search, the genes that include matching positions
     this.annotations = {};   //In the case of a search, the enriched annotation for the genes that include matching positions
-    this.genesURL= "http://www.usal.es"; //URLs for raw text to matching positions, genes and GO terms.
-    this.posURL= "http://www.usal.es";//TODO: default to usal.es is ugly
-    this.goURL= "http://www.usal.es";
+    this.genesURL= "http://vis.usal.es/seqview/client/html/error/404.html"; //URLs for raw text to matching positions, genes and GO terms.
+    this.posURL= "http://vis.usal.es/seqview/client/html/error/404.html";
+    this.goURL= "http://vis.usal.es/seqview/client/html/error/404.html";
+    this.fastaURL= "http://vis.usal.es/seqview/client/html/error/404.html";
 }
 
 
@@ -203,28 +204,19 @@ function dataLine_1(processedData, startSeq, endSeq, numLines, annot, gis)
 
     var globalDL1=new globalDL1Object("lineSeq_"+dl1.length);
     dl1.push(globalDL1);
-    //----
-    /*var globalDL1;
-    if(dl1.length==0)
-        {
-        globalDL1 = new globalDL1Object("lineSeq_" + dl1.length);
-        dl1.push(globalDL1);
-        }
-    globalDL1=dl1[0]*/
-    //---
 
     var globalDL2=new globalDL2Object("lineSeq2_"+dl2.length);
     dl2.push(globalDL2);
     if(dl1.length==1 && annot!=undefined)
         setAnnotations(gis, annot);
-
-    //TODO: replace this with a single DL1 with several lines!! It's just a context view, there's no sense in making 6 when comparing 6 groups
-    //      The only sensitive usage apart from locating searches is to see if there are some large scale variations. You can still see that with a single track-multiple lines
-    /*if(dl1.length==1 & numLines>1)//modify a little the margins if it's the first one
+    if(dl1.length==1 && GVB_GLOBAL.posURL!="")
         {
-        dl1[0].cv.margin.bottom=8;
-        globalDL1=dl1[0];
-        }*/
+        dl1[0].posURL=GVB_GLOBAL.posURL;
+        dl1[0].genesURL=GVB_GLOBAL.genesURL;
+        dl1[0].goURL=GVB_GLOBAL.goURL;
+        dl1[0].fastaURL=GVB_GLOBAL.fastaURL;
+        }
+
     if(dl1.length>1)
         {
         dl1[dl1.length-1].cv.color=DLcolors[dl1.length-1];
@@ -234,7 +226,6 @@ function dataLine_1(processedData, startSeq, endSeq, numLines, annot, gis)
         }
 
     // We use the core function
-    //if(globalDL1.drawn==false)
     if(dl1.length==1)
         dataLine_core(globalDL1, globalSeq, globalSeq.seqServ, globalSeq.scaleSeqServ, startSeq, endSeq, startSeq);
     else
@@ -422,6 +413,25 @@ function drawSearch(allPoints0)
         })
         .text("go>");
 
+    dl1[0].cv.svg.append("g")
+        .append("text")
+        .attr("class", dl1[0].cv.classSVG + " export-label")
+        .attr('x', startX + 55 + 29 * (matches.length) + 40 + 20)
+        .attr('y', -2)
+        .on("click", function () {
+           /* var text=Server.exportFASTA(globalSeqs[0].dataName);
+            var blob = new Blob([text], {type: 'text/plain'});
+            var URL = this.URL || this.webkitURL;
+            var textURL;
+            if (textURL !== null)   URL.revokeObjectURL(textURL);
+            var textURL = URL.createObjectURL(blob);
+            window.open(textURL);*/
+            if(dl1[0].fastaURL=="http://vis.usal.es/seqview/client/html/error/404.html")
+                Server.exportFASTA(exportFasta, globalSeqs[0].dataName);
+            else
+                window.open(dl1[0].fastaURL)
+        })
+        .text("fasta>");
 
     //GET SEQUENCES, MOTIFS, (ALIGNMENT), CONSENSUS
     //NOTE: alignment takes more than 1s if there's >50 sequences! (using the fastest method: kalign)
@@ -699,16 +709,15 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
              }
             // Determine the width of the brackets (note: approximate)
             var widthText = getTextWidth("A", "12px Courier New");
-            var len = dimDL.width / (widthText * 2);
+            var len = (dimDL.width / (widthText * 2))/dl2i.cv.scaleServScreen ;
             drawLocation(dl2i, line_x0, line_y0, pointXY);
             if(dl2i.cv.nameSVG==globalDL2.cv.nameSVG)
                 drawBrackets(globalDL2, line_x0-len, line_x0+len, line_y0);
         }
-        //drawLocation(globalDL2, line_x0, line_y0, pointXY);
-        //drawBrackets(globalDL2, line_x0-len, line_x0+len, line_y0);
 
         // DRAWING NUCLEOTIDES
-        var start = startSeq + line_x0-len; // taking the left bracket as start
+        //var start = startSeq + line_x0-len; // taking the left bracket as start
+        var start = (startSeq + (line_x0 -len)*dl2i.cv.scaleServScreen ) ; // taking the left bracket as start
         Server.nucleotides(drawNucleotides, globalSeq.track, startSeq, endSeq, start, point, globalSeq.dataName);
     });
 
@@ -810,7 +819,7 @@ function drawAnnotations(annotations)
         })
 
         .attr("points", function(d){
-            if(d.t.indexOf("gene")<0)
+            if(d.t.indexOf("gene")<0 || d.t=="ORF")
                 return "";
 
             var y0=d.ss=="+"?0:15;
@@ -1667,8 +1676,7 @@ function drawLocation(globalDL, x0, y0, point)
 }
 
 function drawBrackets(globalDL, left_x0, right_x0, y0)
-{
-
+    {
     // Get information of dataLine and coordinates
     var nameSVG = globalDL.cv.nameSVG;
     var classSVG = globalDL.cv.classSVG;
@@ -1712,7 +1720,7 @@ function drawBrackets(globalDL, left_x0, right_x0, y0)
         .append("path")
         .attr("d", bracket)
         .attr("class", classSVG+" bracket");
-}
+    }
 
 function saveSequences(response)
 {

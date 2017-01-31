@@ -21,29 +21,35 @@
   - MONITOR: a veces un goterm-tip no se elimina correctamente. He hecho un cambio pero no sé si funcionará
 
   - TODO: parece que en Firefox pasar por encima de una línea de DL2 no responde.
-  - TODO: brackets en DL2 no concuerdan con el zoom, ojo.
 
   - TODO: cuando hay varias ocurrencias cerca en el chromosome level son difíciles de seleccionar
         TODO: si son a 150 nucleótidos o menos no se distinguen directamente... -> considerarlas como una ocurrencia?
   - SOLVED: seleccionar go terms parece que falla si tenemos dos conjuntos de datos cargados?
         Era porque las anotaciones sólo se guardan en el primer track, y cogíamos el último
 
-  - TODO: comportamiento con 3 o más datasets...
+  - HECHO: comportamiento con 3 o más datasets...
         Diseño: quizás mejor dejar sólo un track del chromosome level?
 
   -TODO: ingeniería del software
     Quizás habría que separar DL1 del Enrichment track
     También quizás habría que separa los svgs de las DL1
 
-  TODO: mostrar DL3 sólo después de todas las demas DL2! OJO
+  HECHO: mostrar DL3 sólo después de todas las demas DL2! OJO
     HECHO: eliminarla a seleccionar un nuevo DL2
   TODO: sobre todo en remoto, descoloca un montón las tracks y no las muestra en el orden puesto originalmente!
+    Sólo a veces, difícil de depurar
   TODO: ordenar alfabéticamente los términos GO?
 
+
+  HECHO: ordenar alfabéticamente los conjuntos de datos disponbiles y mostrar sus detalles cuando se pasa por encima
+
   HECHO: exportar posiciones en formato bed (ch start end)
+  HECHO: fasta export+
+    TODO: estaría bien que si la búsqueda es de genes ponga los nombres de los genes en vez de la posición...
+
+  HECHO: enriquecimiento 'en distancia': que se pueda especificar cercanía a genes
+    A través de una opción en More... (no veo mucha diferencia en los enriquecimientos de todos modos)
   TODO: seleccionar trozos: click+rectangulo?
-  TODO: fasta export
-  TODO: enriquecimiento 'en distancia': que se pueda especificar cercanía a genes
   TODO: pistas wig (no procesadas) sólo para mostrar.
 
   Backend
