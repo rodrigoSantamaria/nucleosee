@@ -735,7 +735,7 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
 #%%    
 def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutations="false"):
     import time
-    
+    print("LOCAL SEARCH")
     t00=time.clock()
     ws=data["windowSize"]
                 
@@ -766,6 +766,9 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
     if(False in [x in patternSymbols for x in set(pattern)]):
         points={}
         sizes={}
+        print("GENE or TERM search", data["batch"]["processed"]["seq"].keys())
+        print(data["batch"]["processed"].keys())
+        print(data["batch"]["processed"]["gff"])
         for k in data["batch"]["processed"]["seq"].keys():
             if(k in data["batch"]["processed"]["gff"].keys()):
                 if(string.find(pattern,"go:")==-1):

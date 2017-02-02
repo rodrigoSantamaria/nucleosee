@@ -132,8 +132,9 @@ def gffData(org="Schizosaccharomyces pombe", tracks=[]):
             elif(k.find("2")>=0 or k.find("II")>=0):
                 roman+="I"
             ret="annotations/"+org+"/gff/"+"schizosaccharomyces_pombe."+roman+".gff3"
+            print(ret)
             d[k]=gff(ret, "single")
-    if(org=="Saccharomyces cerevisiae"):
+    elif(org=="Saccharomyces cerevisiae"):
         data=gff("annotations/"+org+"/gff/saccharomyces_cerevisiae.gff", "multiple")
         print("gff read")
         for k in data.keys():
@@ -164,6 +165,7 @@ def gffData(org="Schizosaccharomyces pombe", tracks=[]):
         
     return d
     
+#tal=gffData(tracks=["chromosome1", "chromosome2", "chromosome3"])
 #tal=gffData("Candida albicans WO")
 #import time
 #t0=time.clock()
