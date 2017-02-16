@@ -81,6 +81,7 @@ function populateDataList(data)
     var keys=Object.keys(data).sort(function (a, b) {
         return a.toLowerCase().localeCompare(b.toLowerCase());
         });
+
     for(var i in keys)
         {
         var d=data[keys[i]]
@@ -89,7 +90,19 @@ function populateDataList(data)
         elSel.options[elSel.options.length] = option;
         cont+=1;
         }
+/*
+    for(var i in keys)
+        {
+        var d = data[keys[i]]
+        elSel.options[elSel.options.length] = new Option(keys[i], keys[i]);
+        }
+*/
     elSel.size=Math.min(cont, 20);
+
+/*
+        for(var i in data)
+            elSel.options[elSel.options.length]=new Option(data[i],data[i]);
+            */
     }
 
 function populateOrganismList(data)
@@ -108,8 +121,10 @@ function selectData()
     if($("#selectionList option:selected").length>=2)
         {
         $("#paramSearchDataset2")[0].disabled=false;
+        $("#paramSearchDataset2a")[0].disabled=false;
         $("#paramSearchJoin")[0].disabled=false;
         $("#patternSearch2")[0].disabled=false;
+        $("#paramAgnostic")[0].disabled=false;
         }
 
         //1) Get and print data
@@ -126,6 +141,19 @@ function selectData()
         elSel.add(elOptNew, null);
 
         var elSel = document.getElementById('paramSearchDataset2');
+        var elOptNew = document.createElement('option');
+        elOptNew.text = $("#selectionList option:selected")[i].value;
+        elOptNew.value = $("#selectionList option:selected")[i].value;
+        elSel.add(elOptNew, null);
+
+        //populate search option lists
+        var elSel = document.getElementById('paramSearchDataset1a');
+        var elOptNew = document.createElement('option');
+        elOptNew.text = $("#selectionList option:selected")[i].value;
+        elOptNew.value = $("#selectionList option:selected")[i].value;
+        elSel.add(elOptNew, null);
+
+        var elSel = document.getElementById('paramSearchDataset2a');
         var elOptNew = document.createElement('option');
         elOptNew.text = $("#selectionList option:selected")[i].value;
         elOptNew.value = $("#selectionList option:selected")[i].value;
@@ -173,6 +201,20 @@ function preprocessing(chromosome)
         elSel.add(elOptNew, null);
 
         var elSel = document.getElementById('paramSearchDataset2');
+        var elOptNew = document.createElement('option');
+        elOptNew.text = $('#paramDescription').val();
+        elOptNew.value = $('#paramDescription').val();
+        elSel.add(elOptNew, null);
+
+        //populate search option lists
+        var elSel = document.getElementById('paramSearchDataset1a');
+        var elOptNew = document.createElement('option');
+
+        elOptNew.text = $('#paramDescription').val();
+        elOptNew.value = $('#paramDescription').val();
+        elSel.add(elOptNew, null);
+
+        var elSel = document.getElementById('paramSearchDataset2a');
         var elOptNew = document.createElement('option');
         elOptNew.text = $('#paramDescription').val();
         elOptNew.value = $('#paramDescription').val();
@@ -334,9 +376,22 @@ function searchPattern(id)
         if (document.getElementById('paramIntersect').checked)
             intersect = "hard"//TODO: hard with intergenic regions is not working.
 
+        var agnostic="false";
+        var section=300;
+        var portion=150;
+        if(document.getElementById('paramAgnostic').checked)
+            {
+            agnostic = "true";
+            section=$('#agnosticSearchL').val();
+            portion=$('#agnosticSearchV').val();
+            selection1=$("#paramSearchDataset1a option:selected")[0].value;
+            selection2=$("#paramSearchDataset2a option:selected")[0].value;
+            }
+
         if (DEBUG_GBV) console.log("\n----- SEARCH -----");
         Server.search(searchResults, pattern, d, geo, intersect, GVB_GLOBAL.softMutations,
-            selection1, selection2, selectionJoin, pattern2);
+            selection1, selection2, selectionJoin, pattern2,
+            agnostic, section, portion);
     }
 }
 
@@ -657,6 +712,8 @@ function destroyAll(clear, tracksOnly)
         //Clear data pattern search selection lists
         document.getElementById('paramSearchDataset').options.length=0;
         document.getElementById('paramSearchDataset2').options.length=0;
+        document.getElementById('paramSearchDataset1a').options.length=0;
+        document.getElementById('paramSearchDataset2a').options.length=0;
 
         GVB_GLOBAL.annotations=undefined
         GVB_GLOBAL.gis=undefined

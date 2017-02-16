@@ -1,7 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Different methods to read annotations
-@author: rodri
+Functional, gene and sequence annotation ancillary methods.
+
+@author: Rodrigo Santamaría (rodri@usal.es). Universidad de Salamanca
+            http://vis.usal.es/rodrigo
+
+License: -GPL3.0 with authorship attribution (extension 7.b) -
+
+    
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  
+    
+    If not, see <https://www.gnu.org/licenses/gpl.txt>; applying 7.b extension:
+    Requiring preservation of specified reasonable legal notices or
+    author attributions in that material or in the Appropriate Legal
+    Notices displayed by works containing it;   
 """
 
 #%% -------------------------- ADDITIONAL ANNOTATIONS ----------------------
@@ -43,6 +66,7 @@ def gff(filename="annotations/Schizosaccharomyces pombe/gff/schizosaccharomyces_
     import re
     print("populating annotations...")
     sc=("cerevisiae" in filename)
+    ce=("elegans" in filename)
     
     data=np.empty(len(entries),dtype=[("chromosome", "a40"),("type", "a30"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a40"), ("name", "a40")])
                 
@@ -57,24 +81,28 @@ def gff(filename="annotations/Schizosaccharomyces pombe/gff/schizosaccharomyces_
             data[i]["end"]=temp
         
         seqid=row["seqid"]
-        try:
-            rs=re.search("[XIV]+$",seqid).start() #roman numbers, happen in yeasts :s
-            if(rs>=0):
-                an=roman2arabic(seqid[rs:])
-                if(an<10):
-                    an="0"+(str)(an)
-                else:
-                    an=(str)(an)
-                seqid=seqid[:rs]+an
-        except:
-            pass
+#        try: #TODO: we should remove this
+#            if(sc):
+#                rs=re.search("[XIV]+$",seqid).start() #roman numbers, happen in yeasts :s
+#                if(rs>=0):
+#                    an=roman2arabic(seqid[rs:])
+#                    if(an<10):
+#                        an="0"+(str)(an)
+#                    else:
+#                        an=(str)(an)
+#                    seqid=seqid[:rs]+an
+#        except:
+#            pass
         data[i]["chromosome"]=seqid
         
         data[i]["type"]=row["type"]
         data[i]["sense"]=row["sense"]
-        if(sc==True):#SGD are 'flexible' about standars... grrr
+        if(sc==True):#SGD are 'flexible' about standards... grrr
             gid=re.sub("^.*ID=", "",re.sub(";.*$","",re.sub("^.*SGD:", "", row["attributes"])))
             name=re.sub("^.*ID=", "", re.sub(";.*$","",re.sub("^.*gene=", "", row["attributes"])))
+        elif(ce==True):#WB are 'flexible' about standards... grrr
+            gid=re.sub("\"","",re.sub("gene_id", "", re.sub(";.*$", "", row["attributes"]))).strip()
+            name=re.sub("\"","",re.sub("gene_id", "", re.sub(";.*$", "", row["attributes"]))).strip()
         else:
             gid=re.sub("gene:", "", re.sub(";Name.*$","",re.sub("^.*ID=", "", row["attributes"])))
             name=re.sub("^.*ID=", "",re.sub(";.*$","",re.sub("^.*ID=.*;Name=", "", row["attributes"])))
@@ -153,18 +181,22 @@ def gffData(org="Schizosaccharomyces pombe", tracks=[]):
         contents=os.listdir("annotations/"+org+"/gff")
         filenames=[]
         for c in contents:
-            if(re.search(".gff$", c)):
+            if(re.search(".gff", c)):#sometimes it looks like .gff3 or .gff2
                 filenames.append(c)
+            elif(re.search(".gtf", c)):#gff2
+                filenames.append(c)
+                
+        
         if(len(filenames)==0):
             data=gff("annotations/"+org+"/gff/"+filenames[0], "single")
         else:#TO BE DEFINED
             data=gff("annotations/"+org+"/gff/"+filenames[0], "multiple")
         d=data
-        
-        
-        
+            
     return d
     
+#tal=gffData("Caenorhabditis elegans")      
+#tal=gffData("Oryza sativa jap")  
 #tal=gffData(tracks=["chromosome1", "chromosome2", "chromosome3"])
 #tal=gffData("Candida albicans WO")
 #import time
@@ -546,3 +578,32 @@ def enrichmentFisher(gis, dataGOA, th=0.01, correction="none", minGO=5, maxGO=50
 #%%
 #tal=enrichmentFisher(set(gis),dataGOA, 0.01, "fdr")
 #tal=enrichmentFisher(set(gis),dataGOA,0.01,"fdr")
+    
+#%% AgnosticSearch 
+# seq1 and seq2 are charcter arrays of the same length
+# l is the length (in bps) of the window we want to use for searching diffs
+# v is the length (in bps) of the section of the window with differences
+#ws is the number of bps referred by each character
+def agnosticSearch(l=300, v=200, ws=30, seq1=[], seq2=[]):
+    ll=l/ws
+    vv=v/ws
+    
+    import time
+    t0=time.clock()
+    difs=[]
+    contv=0
+    contl=0
+    for i in range(min(len(seq1), len(seq2))):#TODO: workaround to avoid errors
+        contl+=1
+        if(seq1[i]!=seq2[i]):
+            contv+=1
+            if(contv>vv):
+                #print(contv,contl)
+                #difs.append([(i-ll)*ws, "".join(wt[i-ll:i]), "".join(hta[i-ll:i])])
+                difs.append((i-ll)*ws)
+        if(contl>ll):
+            contv=0
+            contl=0
+    print(time.clock()-t0)
+    len(difs)
+    return difs

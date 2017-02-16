@@ -1,10 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jun  4 10:41:47 2014
-1) app.after_request necesario para implementar política similar a CORS
-2) Todos los métodos deben encontrarse entre Flask(__name__) y app.run()
+Web service wrapper for BWT sequence searches
 
-@author: rodri
+@author: Rodrigo Santamaría (rodri@usal.es). Universidad de Salamanca
+            http://vis.usal.es/rodrigo
+
+License: -GPL3.0 with authorship attribution (extension 7.b) -
+
+    
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  
+    
+    If not, see <https://www.gnu.org/licenses/gpl.txt>; applying 7.b extension:
+    Requiring preservation of specified reasonable legal notices or
+    author attributions in that material or in the Appropriate Legal
+    Notices displayed by works containing it;   
 """
 # --------------------- LIBRARIES -----------------
 from flask import Flask, jsonify, request
@@ -194,8 +214,29 @@ def loadData(dataName="Test", track="None", clear="false"):
     print("load data takes",(time.clock()-t0))
     
     #--------------- COMPILE BATCH
+    data=batchCompile(pdata, filenames, filename,organism)
+    session[user][dataName]=data#trying to load several datasets at once
+    print('file preprocess takes ',(time.clock()-t00),"s")
+    print("USER KEYS:", session[user].keys())
+    
+    dbp=data["batch"]["processed"]
+    
+    
+    return jsonify(seq=dbp["res"][track], 
+                fullLength=dbp["fullLength"],
+                maximum=(float)(dbp["maximum"][track]),
+                minimum=(float)(dbp["minimum"][track]), 
+                mean=(float)(dbp["mean"][track]), 
+                stdev=(float)(dbp["stdev"][track]), 
+                dseq=dbp["dseq"][track], 
+                chromosomes=sorted(dbp["maximum"].keys()),
+                bins=dbp["bins"][track],
+                windowSize=data["windowSize"])
+#%%
+def batchCompile(pdata, filenames=[], filename="", organism=""):             
     data["batch"]={}
     data["batch"]["processed"]=pdata[filename]
+    print("BATCH COMPILE:", pdata["processed"].keys(), filenames)
     if(len(filenames)==1): #  (single file)
         data["batch"]["min"]=pdata[filename]["seq"]
         data["batch"]["max"]=pdata[filename]["seq"]
@@ -221,27 +262,7 @@ def loadData(dataName="Test", track="None", clear="false"):
         data["go"]=dataGO
         data["goa"]=dataGOA       
         data["windowSize"]=pdata["processed"]["windowSize"]
-    
-  
-    session[user][dataName]=data#trying to load several datasets at once
-    print('file preprocess takes ',(time.clock()-t00),"s")
-    print("USER KEYS:", session[user].keys())
-    
-    dbp=data["batch"]["processed"]
-    
-    
-    return jsonify(seq=dbp["res"][track], 
-                fullLength=dbp["fullLength"],
-                maximum=(float)(dbp["maximum"][track]),
-                minimum=(float)(dbp["minimum"][track]), 
-                mean=(float)(dbp["mean"][track]), 
-                stdev=(float)(dbp["stdev"][track]), 
-                dseq=dbp["dseq"][track], 
-                chromosomes=sorted(dbp["maximum"].keys()),
-                bins=dbp["bins"][track],
-                windowSize=data["windowSize"])
-
-#ret=loadData("Test")
+    return data
 #%%
 @app.route("/listData")
 def listData():
@@ -290,8 +311,7 @@ returns    a JSON object with the following fields:
 def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", organism="Saccharomyces cerevisiae", interpolation="mean"):
     global data
     global session
-#
-#    
+
     import time
     import re
     import os, pickle        
@@ -299,10 +319,9 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
     import helpers
 
     t00=time.clock()
-#    
+   
 #    #0) getting parameter
     print('----------------------- PREPROCESS...')
-    t0=time.clock()
     
     try:
         basePath=app.config['UPLOAD_FOLDER']
@@ -319,10 +338,41 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
         return jsonify(error="Error in getting parameters")
         
     
+    ret=batchPreprocessLocal(filenames=filenames,track=track, basePath=basePath,
+            organism=organism, windowSize=windowSize, numBins=numBins,
+            maxSize=maxSize, interpolation=interpolation, stdev=stdev, dataName=dataName)
+    if("error" in ret.keys()):
+        return jsonify(error=ret["error"])
+    data=ret["data"]
+    track=ret["track"]
+        
     
+    session[user]=data
+    print('FILE PREPROCESS TAKES ',(time.clock()-t00),"s")
+    print("Data KEYS: ",data.keys())
+    
+    return jsonify(seq=data["batch"]["processed"]["res"][track], 
+                   fullLength=data["batch"]["processed"]["fullLength"],#len(genome[track]), 
+                   maximum=(float)(data["batch"]["processed"]["maximum"][track]),
+                   minimum=(float)(data["batch"]["processed"]["minimum"][track]), 
+                    mean=(float)(data["batch"]["processed"]["mean"][track]), 
+                stdev=(float)(data["batch"]["processed"]["stdev"][track]), 
+                dseq=data["batch"]["processed"]["dseq"][track], 
+                chromosomes=sorted(data["batch"]["processed"]["maximum"].keys()),
+                bins=data["batch"]["processed"]["bins"][track])
+
+#%%
+def batchPreprocessLocal(filenames=[], outfiles=[], dataName="None", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", organism="Saccharomyces cerevisiae", interpolation="mean", basePath="."):
+    import time
+    import re
+    import os, pickle        
+    import numpy as np
+    import helpers
+
+    t0=time.clock()
     data={}
     print("Files are: ",filenames)
-    
+
     #3) annotations (same for all batch files? - hard to do with pickles)
     t0=time.clock()
     try:
@@ -331,8 +381,8 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
         dataGOA=ann.goa(organism)
         print("GO loaded")
     except:
-        print("organism",organism,"'s annotations missing or failing")
-        return jsonify(error="Error in getting GO annotations")
+        print("WARNING: organism",organism,"'s annotations missing or failing")
+        #return jsonify(error="Error in getting GO annotations")
  
     print("done! ... GO annotations takes",(time.clock()-t0))
     
@@ -344,51 +394,50 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
         
     pickleFiles=[]
     #------------ Preprocess each file
-    for filename in filenames: #for each file
-        pickleFile=re.sub(r"\..*$", "", filename)+"c"+str(stdev)+"ws"+str(windowSize)+"nb"+str(numBins)+"i"+interpolation+"org"+organism.replace(" ", "_")+".pic"
-        picklePath=os.path.join(basePath,pickleFile)
-        path=os.path.join(basePath,filename)
+    for i in range(len(filenames)): #for each file
+        filename=filenames[i]
+        print("---------------- FILE: "+filename+" ------------------")
+        
+        if(len(outfiles)==len(filenames)):
+            pickleFile=outfiles[i]
+            picklePath=os.path.join(basePath,pickleFile)
+            path=os.path.join(basePath,filename)
+        else:
+            pickleFile=re.sub(r"\..*$", "", filename)+"c"+str(stdev)+"ws"+str(windowSize)+"nb"+str(numBins)+"i"+interpolation+"org"+organism.replace(" ", "_")+".pic"
+            picklePath=os.path.join(basePath,pickleFile)
+            path=os.path.join(basePath,filename)
+            #path=basePath
+            #1A) Preprocessed data (.pic data) exist
+            if os.path.isfile(picklePath):
+                return jsonify(error="File already processed with this configuration, choose it at 'Select data' or contact with your administrator if you can't find it")
         pickleFiles.append(pickleFile)
 
         savePickle=False
         
-        print("---------------- FILE: "+filename+" ------------------")
         genome={}
-        #1A) Preprocessed data (.pic data) exist
-        if os.path.isfile(picklePath):
-#            try:
-#                f=open(picklePath)
-#                data[filename]=pickle.load(f)
-#                print("pickle loaded!", data[filename].keys())
-#                print(data.keys())
-#                print(data[filename].keys())
-#                
-#                if track=="None":
-#                    track=sorted(data[filename]["seq"].keys())[0]
-#            except:
-            return jsonify(error="File already processed with this configuration, choose it at 'Select data' or contact with your administrator if you can't find it")
                     
         #1B) Preprocessing must be done     
-        else: #no previous preprocessing -> do it now
-            if(path.endswith("bw")):#BIG WIG
-                tbw=time.clock()
-                try:
-                    data[filename]=helpers.processBigWig(path=path, track=track, windowSize=windowSize, numBins=numBins, percentile=True, maxSize=maxSize, stdev=stdev, organism=organism, picklePath=picklePath)
-                    genome=data[filename]["seq"]
-                    print("process bw done in ",(time.clock()-tbw))
-                except:
-                    return jsonify(error="Error preprocessing BigWig")
-    
-            else:#NORMAL WIG
-                try:
-                    genome=helpers.readWig(path, method=interpolation)
-                    data[filename]=helpers.processWig(genome, stdev=stdev, windowSize=windowSize, numBins=numBins, maxSize=maxSize, percentile=True, organism=organism, track=track)
-                except:
-                    return jsonify(error="Error preprocessing Wig")
-    
-            if track=="None":
-                track=sorted(genome.keys())[0]
-            savePickle=True
+        if(path.endswith("bw")):#BIG WIG
+            tbw=time.clock()
+            try:
+                data[filename]=helpers.processBigWig(path=path, track=track, windowSize=windowSize, numBins=numBins, percentile=True, maxSize=maxSize, stdev=stdev, organism=organism, picklePath=picklePath)
+                genome=data[filename]["seq"]
+                print("process bw done in ",(time.clock()-tbw))
+            except:
+                return {"error":"Error preprocessing BigWig"}
+
+        else:#NORMAL WIG
+            try:
+                print(path, interpolation)
+                genome=helpers.readWig(path, method=interpolation)
+                print("wig read")
+                data[filename]=helpers.processWig(genome, stdev=stdev, windowSize=windowSize, numBins=numBins, maxSize=maxSize, percentile=True, organism=organism, track=track)
+            except:
+                return {"error":"Error preprocessing Wig"}
+
+        if track=="None":
+            track=sorted(genome.keys())[0]
+        savePickle=True
     
         
         print("load data takes",(time.clock()-t0))
@@ -446,40 +495,17 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
         f=open(os.path.join(basePath,"tracks.txt"), 'a')
         f.write(dataName+"\t"+",".join(pickleFiles)+"\t"+str(windowSize)+"\t"+str(numBins)+"\t"+organism+"\n")
         f.close()
+        
+    return {"data":data, "track":track}
+##%%        
+#filenames1=["MN-Damien-WT-1_S1_wlt_mean.wig"]
+#s1=batchPreprocessLocal(filenames1, [], "None", 30, 3, organism="Schizosaccharomyces pombe")
+##%%
+#filenames2=[""]
+#s2=batchPreprocessLocal(filenames=filenames2, outfiles=[], "None", 30, 3)
+#   
     
-    session[user]=data
-    print('FILE PREPROCESS TAKES ',(time.clock()-t00),"s")
-    print("Data KEYS: ",data.keys())
-    
-    return jsonify(seq=data["batch"]["processed"]["res"][track], 
-                   fullLength=data["batch"]["processed"]["fullLength"],#len(genome[track]), 
-                   maximum=(float)(data["batch"]["processed"]["maximum"][track]),
-                   minimum=(float)(data["batch"]["processed"]["minimum"][track]), 
-                    mean=(float)(data["batch"]["processed"]["mean"][track]), 
-                stdev=(float)(data["batch"]["processed"]["stdev"][track]), 
-                dseq=data["batch"]["processed"]["dseq"][track], 
-                chromosomes=sorted(data["batch"]["processed"]["maximum"].keys()),
-                bins=data["batch"]["processed"]["bins"][track])
-#    return data
-   
-#batch=["MN-Damien-WT-1_S1_wlt_mean.wig", "MN-Damien-WT-2_S2_wlt_mean.wig"]                
-#data=batchPreprocess(filenames=batch, windowSize=100, numBins=3, maxSize=100000, stdev=3, track="None", organism="Schizosaccharomyces pombe", interpolation="mean")
-     
-#%%
-#data["batch"]={"min":{}, "max":{}, "mean":{}}
-#for k in data[batch[0]]["seq"].keys():
-#    data["batch"]["min"][k]=np.minimum(data[batch[0]]["seq"][k], data[batch[1]]["seq"][k])
-#    data["batch"]["max"][k]=np.maximum(data[batch[0]]["seq"][k], data[batch[1]]["seq"][k])
-#    temp=np.ndarray(shape=(len(batch), len(data[batch[0]]["seq"][k])))
-#    temp[0]=data[batch[0]]["seq"][k]
-#    temp[1]=data[batch[1]]["seq"][k]
-#    for i in range(2,len(batch)):
-#        data["batch"]["min"][k]=np.minimum(data["batch"]["min"][k], data[batch[i]]["seq"][k])
-#        data["batch"]["max"][k]=np.maximum(data["batch"]["max"][k], data[batch[i]]["seq"][k])
-#        temp[i]=data[batch[i]]["seq"][k]
-#    data["batch"]["mean"][k]=np.mean(temp,axis=0)  
-#data["batch"]["processed"]=helpers.processWig(data["batch"]["mean"], stdev=3, windowSize=100, numBins=3, maxSize=100000, percentile=True, organism="Schizosaccharomyces pombe", track=k)
-    
+
 #%%
 """
 Preprocesa un fichero wig para su visualización
@@ -614,7 +640,35 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
                 bins=data["bins"][track])
 
 #%%preprocess(filename="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/dwtMini2.wig")
-
+#%% Returns statistics about the replicates on our data
+@app.route("/stats")
+def stats(dataName="None"):
+    import numpy as np
+    global data
+    dataName=request.args.get("dataName")
+    print("STATS")
+    f=open(os.path.join(app.config['UPLOAD_FOLDER'],"tracks.txt"))
+    nr=0
+    for l in f.readlines():
+        if(l.startswith(dataName)):
+            l=l.split("\t")
+            nr=len(l[1].split(","))
+            break
+    from scipy.stats.stats import pearsonr    
+    cor={}
+    for k in data[dataName]["batch"]["min"].keys():
+        mini=data[dataName]["batch"]["min"][k]
+        maxi=data[dataName]["batch"]["max"][k]
+        #zeroes can produce nans on divisions
+        min0=np.where(mini>1)
+        max0=np.where(maxi>1)
+        els=np.intersect1d(min0,max0)
+        a=mini[els]
+        b=maxi[els]
+        cor[k]=str(pearsonr(np.array(a,np.float32),np.array(b,np.float32))[0])
+    return jsonify(numReplicates=nr, correlation=cor);
+    
+    
 #%%
 @app.route("/getTrack")
 def getTrack(track="None", dataName="None"):
@@ -655,7 +709,8 @@ retorna    las posiciones dentro de dseq donde aparece el patrón
 """
 @app.route("/search")
 def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false", 
-           dataName1="None", dataName2="None", pattern2="None", join="not"):
+           dataName1="None", dataName2="None", pattern2="None", join="not", 
+           agnostic="false", section=300, portion=150):
     global data
     data["search"]={}
     data["gis"]=set()
@@ -674,50 +729,63 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
     join=str(request.args.get("join"))
     pattern2=str(request.args.get("pattern2"))
 
-    print("SEARCHING IN DATANAME1", dataName1)   
-    if dataName1=="None":
-        ret=searchLocal(data, pattern, d, geo, intersect, softMutations)
-    else:
-        ret=searchLocal(data[dataName1], pattern, d, geo, intersect, softMutations)
-    search1=ret["points"]
-    #sizePattern=ret["sizePattern"]
-    
-    if(dataName2=="None" or join=="None"):
-        search=search1
-    else:
-        if(pattern2=="None"):
-            ret=searchLocal(data[dataName2], pattern, d, geo, intersect, softMutations)
+    agnostic=str(request.args.get("agnostic"))
+    section=int(request.args.get("section"))
+    portion=int(request.args.get("portion"))
+
+    if agnostic=="true":
+        print("SEARCHING AGNOSTIC")
+        if(dataName1==dataName2 or dataName2=="None"):
+            return jsonify(response="error in agnostic search")
+        ret=agnosticSearchLocal(data[dataName1], data[dataName2], data["windowSize"],section,portion)
+        data["search"]={}
+        data["search"][dataName1]={"sizePattern":section/data["windowSize"], "points":ret}
+        #data["search"][dataName2]={"sizePattern":section, "points":ret}
+    else:    
+        print("SEARCHING PATTERN")   
+        if dataName1=="None":
+            ret=searchLocal(data, pattern, d, geo, intersect, softMutations)
         else:
-            ret=searchLocal(data[dataName2], pattern2, d, geo, intersect, softMutations)
-            
-        search2=ret["points"]
-        search={}
-        for k in search2.keys():
-            s1=set(search1[k])
-            s2=set(search2[k])
-            if(join=="not"):
-                s12=s1 - s2
-            if(join=="and"):
-                s12=s1 & s2
-            if(join=="or"):
-                s12=s1 | s2
-                if(len(data["search"].keys())==0):
-                    data["search"][dataName1]={"points":{}, "sizePattern":0}
-                    data["search"][dataName2]={"points":{}, "sizePattern":0}
-                data["search"][dataName1]["points"][k]=list(s1)
-                data["search"][dataName2]["points"][k]=list(s2)
-            search[k]=list(s12)
-            print("SEARCH SIZES: ", len(s1), " ", len(s2), " ", len(s12))    
-    print("DATA NAMES:" ,dataName1, dataName2)
+            ret=searchLocal(data[dataName1], pattern, d, geo, intersect, softMutations)
+        search1=ret["points"]
+        #sizePattern=ret["sizePattern"]
+        
+        if(dataName2=="None" or join=="None"):
+            search=search1
+        else:
+            if(pattern2=="None"):
+                ret=searchLocal(data[dataName2], pattern, d, geo, intersect, softMutations)
+            else:
+                ret=searchLocal(data[dataName2], pattern2, d, geo, intersect, softMutations)
+                
+            search2=ret["points"]
+            search={}
+            for k in search2.keys():
+                s1=set(search1[k])
+                s2=set(search2[k])
+                if(join=="not"):
+                    s12=s1 - s2
+                if(join=="and"):
+                    s12=s1 & s2
+                if(join=="or"):
+                    s12=s1 | s2
+                    if(len(data["search"].keys())==0):
+                        data["search"][dataName1]={"points":{}, "sizePattern":0}
+                        data["search"][dataName2]={"points":{}, "sizePattern":0}
+                    data["search"][dataName1]["points"][k]=list(s1)
+                    data["search"][dataName2]["points"][k]=list(s2)
+                search[k]=list(s12)
+                print("SEARCH SIZES: ", len(s1), " ", len(s2), " ", len(s12))    
+        print("DATA NAMES:" ,dataName1, dataName2)
     
-    if(join=="None" or dataName2=="None" or join=="and" or join=="not"):
-        data["search"][dataName1]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
-    if(join=="and" and dataName2!="None"):
-        data["search"][dataName2]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
-    if(join=="or" and dataName2!="None"):
-        data["search"][dataName1]["sizePattern"]=ret["sizePattern"]
-        data["search"][dataName2]["sizePattern"]=ret["sizePattern"]
-    #data["search"]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
+        if(join=="None" or dataName2=="None" or join=="and" or join=="not"):
+            data["search"][dataName1]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
+        if(join=="and" and dataName2!="None"):
+            data["search"][dataName2]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
+        if(join=="or" and dataName2!="None"):
+            data["search"][dataName1]["sizePattern"]=ret["sizePattern"]
+            data["search"][dataName2]["sizePattern"]=ret["sizePattern"]
+        #data["search"]={"points":search,"sizePattern":ret["sizePattern"]}#Asume same len pattern on multi-searches
     
     search=data["search"]
     #for json
@@ -732,13 +800,22 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
         #return jsonify(points=search, sizePattern=sizePattern)
         return jsonify(search)
         
-#%%    
+#%%
+def agnosticSearchLocal(data1,data2,ws,l,v):
+    search={}
+    dbp1=data1["batch"]["processed"]
+    dbp2=data2["batch"]["processed"]
+    for k in dbp1["seq"].keys():
+        search[k]=ann.agnosticSearch(l,v,ws,dbp1["dseq"][k],dbp2["dseq"][k])
+    return search
+#%%
 def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutations="false"):
     import time
     print("LOCAL SEARCH")
     t00=time.clock()
     ws=data["windowSize"]
-                
+     
+
     #CASE 1) Numerical range pattern
     if(string.find(pattern, "go:")==-1):#go terms might contain '-'
         interval=helpers.convertRange(pattern)
@@ -751,7 +828,7 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
             return {"points":points, "sizePattern":((int)(interval["length"]/ws))}
     
     #CASE 2) gene/go name pattern
-    t=data["batch"]["processed"]["bwt"][data["batch"]["processed"]["seq"].keys()[0]]
+    #t=data["batch"]["processed"]["bwt"][data["batch"]["processed"]["seq"].keys()[0]]
     
     pattern=pattern.lower().strip()
     patternLetters=[chr(x) for x in range(ord('a'), ord('a')+len(data["batch"]["processed"]["bins"][data["batch"]["processed"]["bins"].keys()[0]])-1)]
@@ -813,8 +890,9 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
     
     for k in data["batch"]["processed"]["seq"].keys():
         search[k]=[x*ws for x in search[k]]        
-        
-    #geo filtering
+    #End of pattern searches    
+    
+    #post-search: geo filtering
     if(geo!="none"):
         if(geo!="intergenic"):
             for k in data["batch"]["processed"]["seq"].keys():

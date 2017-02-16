@@ -52,6 +52,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.connect = function (DEBUG, callback, user, password, serverPath)
         {
+            console.log("connecting...")
             serverPath     || ( serverPath = "http://127.0.0.1:2750/" );
 
 
@@ -313,6 +314,40 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         };
 
 
+        Server.stats = function (callback, dataName)
+        {
+            var startTime = new Date();
+
+            var requestAJAX = $.ajax(
+                {
+                    url: _serverPath+"/stats?user="+_user+"&dataName="+dataName,
+                    type: "GET",
+                    datatype: "json"
+                });
+
+            $.when(requestAJAX)
+                .done(function(result)
+                {
+                    //var response = result.response;
+                    if(result.response=="error")
+                        {
+                        javascript_abort(result.msg);
+                        return;
+                        }
+
+                    if(_DEBUG) console.log("stats(): stats done...");
+                    if (_DEBUG) console.log("Time spent computing stats: " + (new Date() - startTime) + "ms");
+
+                    callback(result, dataName);
+                })
+                .fail(function(jqXHR, textStatus, errorThrown)
+                {
+                    if(_DEBUG) console.log("stats(): listing failed...");
+                    javascript_abort("stats() failed");
+                });
+        };
+
+
         /**
          * Removes user from server
          */
@@ -478,7 +513,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param pattern
          * @param d
          */
-        Server.search = function (callback, pattern, d, geo, intersect, softMutations, dataName1,dataName2,join,pattern2)
+        Server.search = function (callback, pattern, d, geo, intersect, softMutations, dataName1,dataName2,join,pattern2,
+            agnostic, section, portion)
         {
             var startTime = new Date();
 
@@ -493,7 +529,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 {
                     url: _serverPath+"/search?user="+_user+"&password="+_password+"&pattern="+pattern+"&d="+d+
                         "&geo="+geo+"&intersect="+intersect+"&softMutations="+softMutations+
-                        "&dataName1="+dataName1+"&dataName2="+dataName2+"&join="+join+"&pattern2="+pattern2,
+                        "&dataName1="+dataName1+"&dataName2="+dataName2+"&join="+join+"&pattern2="+pattern2+
+                        "&agnostic="+agnostic+"&section="+section+"&portion="+portion,
                     type: "GET",
                     datatype: "json"
                 });
@@ -547,11 +584,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          * @param onlyIDs
          * @param chromosomes
          * @param ws
-         * @param gis               it's not necessary!! sure?
-         * @param annotations       it's not necessary!! sure?
-         * @param numChromosome     it's not necessary!!
-         * @param startTime         it's not necessary!!
-         * @param numMatches        it's not necessary!!
+         * @param intersect
          */
         Server.allAnnotationsGenes = function (callback, allPoints, types, window, align, onlyIDs, chromosomes, ws, intersect,
                                                dataName, track)

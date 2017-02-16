@@ -1,3 +1,32 @@
+# -*- coding: utf-8 -*-
+"""
+Search methods based on the Burrows-Wheeler Transform.
+
+@author: Rodrigo Santamaría (rodri@usal.es). Universidad de Salamanca
+            http://vis.usal.es/rodrigo
+
+License: -GPL3.0 with authorship attribution (extension 7.b) -
+
+    
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  
+    
+    If not, see <https://www.gnu.org/licenses/gpl.txt>; applying 7.b extension:
+    Requiring preservation of specified reasonable legal notices or
+    author attributions in that material or in the Appropriate Legal
+    Notices displayed by works containing it;   
+"""
+
 #----------------- BURROWS-WHEELER TRANSFORM
 #Returns a dict with the transform (key 'bwt') and also the first occurrences
 #and the suffix array

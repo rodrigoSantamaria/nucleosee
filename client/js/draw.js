@@ -34,29 +34,33 @@ var dimDLAnnotation =
 };
 
 var DLcolors=["steelblue", "#968096", "#327A2A", "#70AA00", "#FAB526"];
+var currentZoom=1;
 
 //________________________ SEQUENCE OBJECTS DEFINITION _____________________________
 
 //This object compiles the summay information for a given wig sequence
 //globalDL1,2 and 3 contain the information of different detail levels
-function globalSeqObject()
-    {
+function globalSeqObject() {
     this.scaleSeqServ = null;//Scale between sequence and server
     this.seqServ = null;//Sequence for current track as provided by the server (sampled to screen width)
     this.mean = null;//Mean value for current track
     this.stdev = null;//Standard deviation for current track
-    this.max=null;//Maximum value for current track
-    this.min=null;//Minimum value for current track
+    this.max = null;//Maximum value for current track
+    this.min = null;//Minimum value for current track
 
     //The following parameters should be the same for all the sequence to be loaded
     this.fullLength = null;//number of nucleotides for current track
-    this.bins=null;//number of bins for BWT discretization
+    this.bins = null;//number of bins for BWT discretization
     this.ws = null;//window size for BWT discretization
     this.tracks = null;//all track names
     this.track = null;//current track
 
     this.dataName = null; //Dataset name to which this sequence belongs
-    };
+
+    this.numReplicates = null;
+    this.correlations = null;
+    this.id=null;
+    }
 var globalSeqs=[]
 //In drawSearch, drawEnrichment, and dataLine2, any sequence will do (ref to globalSeqs[0]) as they only use ws, bins, track(s)
 
@@ -196,6 +200,7 @@ function dataLine_1(processedData, startSeq, endSeq, numLines, annot, gis)
     globalSeq.dataName      = processedData.dataName;
     globalSeq.ws            = GVB_GLOBAL.ws;
     globalSeq.scaleSeqServ  = 1;
+    globalSeq.id            = globalSeqs.length;
     if(Math.floor(fullLength/GVB_GLOBAL.maxSize) >= 1)
         globalSeq.scaleSeqServ = Math.floor(fullLength/GVB_GLOBAL.maxSize);
 
@@ -240,13 +245,15 @@ function dataLine_1(processedData, startSeq, endSeq, numLines, annot, gis)
 
 
 
-function getLevel(dataName, level)
+function getLevel(dataName, level, realDL1)
     {
     for(var i in globalSeqs)
         if(globalSeqs[i].dataName==dataName) {
             if (level == "DL1")
-                //return dl1[i]
-                return dl1[0]
+                if(realDL1==undefined)
+                    return dl1[0]
+                else
+                    return dl1[i]
             if (level == "DL2")
                 return dl2[i]
             if (level == "Seq")
@@ -344,13 +351,23 @@ function drawSearch(allPoints0)
                 //Remove nucleotide track
                 removeNucleotides();
 
+                console.log("Discretized seqs:")
+                for(var i in globalSeqs) {
+                    var dseq=Server.getDSeq(startSeq, endSeq, globalSeqs[0].track, globalSeqs[i].dataName);
+                    console.log(dseq);
+                }
+
+                zoom(currentZoom, startSeq, endSeq);
+                //Server.getAllPartSeq(drawAllDataLine_2, startSeq, endSeq, dataPoint, dl1,dl2,globalSeqs, 0, {});
+                //Server.getAllPartSeq(drawAllDataLine_2, startSeq, endSeq, point, dl1,dl2,globalSeqs, 0, {});
+
                 // Draw dataLine2
-                for (var i in globalSeqs) {
+                /*for (var i in globalSeqs) {
                     var globalDL2 = getLevel(globalSeqs[i].dataName, "DL2")
                     globalDL2.startSeq = startSeq;
                     globalDL2.endSeq = endSeq;
                     Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, d.size, globalSeqs[i].dataName);
-                }
+                }*/
 
                 return "<strong>" + d3.format(",")(point) + ":</strong> " + d3.format(".2f")(d.value); // e.g. "307,770 : 0.79"
             });
@@ -671,9 +688,6 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
     dataLine_core(globalDL2,globalSeq, seq, 1/globalDL2.scale, 0, numNucleotides, startSeq,  point, sizePattern);
 
 
-
-
-
     // DRAWING NUCLEOTIDES (DATALINE 3)
     //-------------------------------------------------
     globalDL2.cv.svg.selectAll("."+globalDL2.cv.classSVG+".line").on("mouseover", function (d)
@@ -938,6 +952,7 @@ function drawAnnotations(annotations)
             var numNucleotidesDraw=endSeq-startSeq;
 
             var dataPoint= getSelectedDataPoint();
+
             Server.getAllPartSeq(drawAllDataLine_2, startSeq, endSeq, dataPoint, dl1,dl2,globalSeqs, 0, {});
 
         });
@@ -1215,10 +1230,12 @@ function dataLine_lineOnly(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq,
         .datum(data)
         .append("path")
         .attr("stroke",globalDL.cv.color)
-        //.attr("stroke",DLcolors[3])
         .attr("d", line);
 
-    drawColor(globalDL, globalSeq, svg);
+    if(globalSeq.correlations==null)
+        Server.stats(setStats,globalSeq.dataName);
+    else
+      drawColor(globalDL, globalSeq, svg);
 
     }
 
@@ -1358,7 +1375,10 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
     // Image SVG: data name
     if(globalDL.cv.nameSVG.indexOf("2_")==-1)
         {//DL1 will show just a summary
-        drawColor(globalDL, globalSeq, globalDL.cv.svg);
+        if(globalSeq.correlations==null)
+            Server.stats(setStats,globalSeq.dataName);
+        else
+            drawColor(globalDL, globalSeq, globalDL.cv.svg);
         }
     else
         {
@@ -1419,6 +1439,7 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
             }
     }
 
+
     // The image SVG: scale text
     svg.append("g")
         .attr("class", classSVG+" scale")
@@ -1440,7 +1461,19 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
 
 function drawColor(globalDL, globalSeq, svg)
     {
-    var number=parseInt(globalDL.cv.nameSVG.replace(/^.*_/,""))
+    //var number=parseInt(globalDL.cv.nameSVG.replace(/^.*_/,""))
+    var number=globalSeq.id;
+    var cor=0;
+    var cont=0;
+    for(var i in globalSeq.correlations)
+        {
+        cor+=parseFloat(globalSeq.correlations[i]);
+        cont+=1
+        }
+    cor/=cont;
+    cor=cor.toFixed(2);
+
+    //Server.stats(setStats, globalSeq.dataName);
     svg.append("g")
         .append("rect")
         .attr("class", globalDL.cv.classSVG +" rect")
@@ -1448,7 +1481,7 @@ function drawColor(globalDL, globalSeq, svg)
         .attr("y",10+number*12)
         .attr("fill", globalDL.cv.color)
         .append("svg:title")
-        .text(globalSeq.dataName);
+        .text(globalSeq.dataName+"\n  "+globalSeq.numReplicates+" replicates\n  "+cor+" mean correlation");
     console.log("done!");
     }
 /**
@@ -1487,7 +1520,7 @@ function drawShiftZoom(globalDL2)
         .attr("x", globalDL2.cv.dim.width-65)
         .attr("y", 8)
         .text("-")
-        .on("click",function(){zoom(2)});
+        .on("click",function(){currentZoom=currentZoom*2; zoomLocal(2)});
 
 
         //zoom - (0.5x)
@@ -1497,37 +1530,42 @@ function drawShiftZoom(globalDL2)
         .attr("x", globalDL2.cv.dim.width-20)
         .attr("y", 8)
         .text("+")
-        .on("click",function(){zoom(.5)});
+        .on("click",function(){currentZoom=currentZoom*.5; zoomLocal(.5)});
 
     }
 
-//Zooms current view in DL2 by the factor in amount.
-function zoom(amount)
+function zoom(amount, start0, end0)
     {
     var start;
     var end;
-    var globalDL2=getLevel(globalSeqs[0].dataName, "DL2")
-    var interval=(globalDL2.endSeq-globalDL2.startSeq);
+    var interval=(end0-start0);
     var newInterval=interval*amount;
+    var globalDL2=getLevel(globalSeqs[0].dataName, "DL2")
     var scale=Math.max(Math.round(globalDL2.cv.scaleSeqScreen), Math.round(globalDL2.cv.scaleServScreen));
 
 
     if(amount>=1)//zoom out
-        {
-            start = globalDL2.startSeq - (newInterval - interval) * .5;
-            end = globalDL2.endSeq + (newInterval - interval) * .5;
-        }
+    {
+        start = start0 - (newInterval - interval) * .5;
+        end = end0 + (newInterval - interval) * .5;
+    }
     else{
         if(scale>1) //zoom in up to scale 1:1
-            {
-                start = globalDL2.startSeq + (interval - newInterval) * .5;
-                end = globalDL2.endSeq - (interval - newInterval) * .5;
-            }
+        {
+            start = start0 + (interval - newInterval) * .5;
+            end = end0 - (interval - newInterval) * .5;
+        }
         else//zooming in after max zoom in performed, just return
             return;
-        }
+    }
     var dataPoint= getSelectedDataPoint();
     Server.getAllPartSeq(drawAllDataLine_2, Math.round(start), Math.round(end), dataPoint, dl1,dl2,globalSeqs, 0, {});
+    }
+//Zooms current view in DL2 by the factor in amount.
+function zoomLocal(amount)
+    {
+    var globalDL2=getLevel(globalSeqs[0].dataName, "DL2")
+    zoom(amount, globalDL2.startSeq, globalDL2.endSeq);
     }
 
 //Shifts current view in DL2 by the number of nucleotides in amount.
@@ -1744,6 +1782,16 @@ function saveSequences(response)
     globalDL3.sequences = sequences;
 }
 
+function setStats(stats, dataName)
+    {
+    var dl=getLevel(dataName,"Seq")
+    dl.numReplicates=stats["numReplicates"]
+    dl.correlations=stats["correlation"]
+
+    var dl1=getLevel(dataName,"DL1", true);
+    var svg=getLevel(dataName,"DL1").cv.svg;
+    drawColor(dl1,dl,svg);
+    }
 
 function setAnnotations(gis, annotations)
 {

@@ -1,10 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 17 16:31:59 2015
+Parsing and analysis workflow for preprocessing wig/bw files.
 
-Ancillary methods for python server
+@author: Rodrigo Santamaría (rodri@usal.es). Universidad de Salamanca
+            http://vis.usal.es/rodrigo
 
-@author: rodri
+License: -GPL3.0 with authorship attribution (extension 7.b) -
+
+    
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  
+    
+    If not, see <https://www.gnu.org/licenses/gpl.txt>; applying 7.b extension:
+    Requiring preservation of specified reasonable legal notices or
+    author attributions in that material or in the Appropriate Legal
+    Notices displayed by works containing it;   
 """
 
 #%%
@@ -168,6 +188,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
     import re
     
     t0=time.clock()
+    print(path)
     f=open(path)
     seq=f.readlines()
     print ((time.clock()-t0),' s in reading') 
@@ -198,6 +219,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
             cont=cont+2
             sr=seq[cont:(cont+i-1)]
             ch[name]=numpy.array(sr, dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+            #ch[name]=numpy.array(sr, dtype=numpy.float32) 
             cont=cont+i
             if(cont<lenseq):
                 s=seq[cont]
@@ -245,7 +267,7 @@ def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism
     dataFASTA={}
     
     
-    #for each chromosomes
+    #for each chromosome
     for k in genome.keys():
         tk=time.clock()
         seq=genome[k]
@@ -261,6 +283,7 @@ def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism
         print("Values in [",minimum[k],maximum[k],"]")
         upperlim=min(maximum[k],m[k]+stdev*sd[k])#avoid outliers? testing
         lowerlim=max(minimum[k],m[k]-stdev*sd[k])
+        seq=np.nan_to_num(seq)
         seq=np.clip(seq,lowerlim,upperlim)
         #seq=np.clip(seq,0,upperlim)
         
@@ -340,17 +363,17 @@ def interpolate(seq, chsize, method="step", window=30):
             name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
             cont+=1
             print(i, name)
-            chi=numpy.empty(i, dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+            chi=numpy.empty(i, dtype=numpy.float32) #gives issues with jsonify but is much more memory efficient
             index=0
             while((cont+2< len(seq)) and (("variable" in seq[cont+2]) == False)):
                 s=seq[cont].split("\t")
                 level=(float)(s[1])
                 if("variable" in seq[cont-1]):
                     nuc=0
-                    nuc2=(int)(s[0])
+                    nuc2=(float)(s[0])
                 else:
                     nuc=(int)(s[0])
-                    nuc2=(int)(seq[cont+1].split("\t")[0])
+                    nuc2=(int)(seq[cont+1].strip().split("\t")[0])
                 step=nuc2-nuc
                 chi[nuc:nuc2]=[level]*step
                 index+=step
@@ -364,7 +387,7 @@ def interpolate(seq, chsize, method="step", window=30):
             name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
             cont+=1
             print(i, name)
-            chi=numpy.empty(i, dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+            chi=numpy.empty(i, dtype=numpy.float32) #gives issues with jsonify but is much more memory efficient
 
             y0=0
             x0=0
@@ -389,7 +412,7 @@ def interpolate(seq, chsize, method="step", window=30):
             name=re.sub("\n", "", re.sub(" .*$", "", re.sub("^.*chrom=", "", seq[cont])))
             cont+=1
             print(i, name)
-            chi=numpy.empty(i, dtype=numpy.float16) #gives issues with jsonify but is much more memory efficient
+            chi=numpy.empty(i, dtype=numpy.float32) #gives issues with jsonify but is much more memory efficient
 
             y0=0
             x0=0
@@ -401,7 +424,6 @@ def interpolate(seq, chsize, method="step", window=30):
                 f=(y1-y0)/(x1-x0)
                 for x in range(x0,x1):
                     chi[x]=f*(x-x0)+y0
-                    
                 cont+=1
                 x0=x1
                 y0=y1
@@ -411,6 +433,52 @@ def interpolate(seq, chsize, method="step", window=30):
             ch[name]=numpy.mean(rolling_window0(chi, window),-1)
         
     return ch;
+#%%
+#t0=time.clock()
+#tal=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/7_DHta1_200U_O1_wlt_mean.wig", method="mean")
+#tal2=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/MN-Dhta1-200U-O2_S4_wlt_mean.wig", method="mean")
+#import time
+#t0=time.clock()
+#wt=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/MN-Damien-WT-1_S1_wlt_mean.wig", method="mean")
+#hta=readWig("/Users/rodri/WebstormProjects/seqview/py_server/genomes/MN-Dhta1-200U-O2_S4_wlt_mean.wig", method="mean")
+#print(time.clock()-t0)
+
+#
+#
+#%%
+#t0=time.clock()
+#a=wt["chromosome1"]
+#b=hta["chromosome1"]
+#a0=np.where(a!=0)
+#b0=np.where(b!=0)
+#els=np.intersect1d(a0,b0)
+#print(pearsonr(np.array(a[els], np.float32),np.array(b[els],np.float32)))
+#print(time.clock()-t0)
+
+#%%
+#t0=time.clock()
+#a=signal["wt"]["chromosome1"]
+#b=signal["hta"]["chromosome1"]
+#a0=np.where(np.array(a)!=0)
+#b0=np.where(np.array(b)!=0)
+#els=np.intersect1d(a0,b0)
+#print(pearsonr(np.array(a)[els],np.array(b)[els]))
+#print(time.clock()-t0)
+#
+##%%
+#y1=[]
+#y2=[]
+#t0=time.clock()
+#chrid="chromosome1"
+#for k in range(len(signal[names[i]][chrid])):
+#    if signal["wt"][chrid][k] > 0 and signal["hta"][chrid][k] > 0 :
+#      y1.append(signal["wt"][chrid][k])
+#      y2.append(signal["hta"][chrid][k])
+#y1a = np.array(y1)
+#y2a = np.array(y2)
+#pcc1=stats.pearsonr(y1a,y2a)
+#print pcc1
+#print(time.clock()-t0)
 #%% ------------------ DISCRETIZATION -------------------
 """Given a numerical sequence seq, this method binarizes based on the average 
 and standard deviations on windows of size windowSize. Binarzation is done
@@ -459,8 +527,13 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True, bins
         bins=[]
         for i in range(numBins):
             bins.append(factor*i)
+        print bins
     return {'dseq':dseq, 'bins':bins} 
     
+#talc1=tal["chromosome1"]
+#dtp=discretize(talc1, 30, min(talc1), max(talc1), 3)   
+#dta=discretize(talc1, 30, min(talc1), max(talc1), 3, False)   
+
 #0.20s faster for 5M    
 #def discretize(seq, windowSize, minimo, maximo, numBins=5):
 #    import numpy as np

@@ -50,7 +50,11 @@
   HECHO: enriquecimiento 'en distancia': que se pueda especificar cercanía a genes
     A través de una opción en More... (no veo mucha diferencia en los enriquecimientos de todos modos)
   TODO: seleccionar trozos: click+rectangulo?
-  TODO: pistas wig (no procesadas) sólo para mostrar.
+  TODO: pistas wig (no procesadas) sólo para mostrar
+
+  TODO: anotaciones
+    HECHO: C elegans: funcionan, aunque el gff es grande y tarda en leerlo
+
 
   Backend
 =============
@@ -76,6 +80,10 @@
         Parece que requieren unas ventanas un poco más grandes, lo he puesto al doble del a anchura (~2400)
 
   - TODO: versión para consola de búsquedas sobre wig/bigwig, con creación de índices... que sea similar a como hace bowtie
+        FASE1: usage y carga+búsqueda sencilla hecha
+        TODO: añadir enriquecimiento, anotaciones, exportar resultados en distintos formatos (bed, genes, go, fasta)
+        TODO: añadir búsqueda diferencial
+        TODO: tratar de evitar la carga de pic con cada nueva búsqueda?
 
   - TODO: añadir anotaciones para Candida albicans
     Candida albicans WO exactamente. No tiene genes, solo ORFs (añadido para funcionar así)
@@ -87,4 +95,17 @@
             Tenemos que añadir ORF para búsqeudas por searchGO (no sólo "gene"
             TODO: problemas al seleccionar elementos enriquecidos (no se resaltan los puntos)
         SOLVED FASTA: tenemos sólo un archivo para el genoma en vez de uno por track. Implementado para que autodetecte si hay +1 fasta o no, y aplique uno u otro parseo
+
+  - TODO: añadir discretización por desviación estándar o por valores de usuario, no sólo por cuantiles
+        Puede ser importante en experimentos de RNA-seq, donde el percentil con muchos valores repetidos puede ser equívoco.
+            P.ej. si un 50% de nuestros valores es 0, el percentil 33 y el 50 son el mismo!
+  - HECHO: búsquedas generales de diferencias
+        TODO: hay que testearlo todavía bastante pero parece que funciona bastante bien
+            Errores en casos de comparación de secuencias con distinta longitud (parece)
+            ura4 en DHTA1 respecto a h972 poniendo 900/2000 me saca una zona un poco extraña y obvia la zona gorda de cambio --> mirar cómo se puede afinar.
+
+  - TODO: Mostrar localización en el genérico y permitir clicks para zoom
+  - HECHO: Mantener el zoom una vez se cambia entre searches
+  - HECHO: Algún estadístico de correlación entre réplicas biológicas, etc.
+        Saco correlación media de Pearson para todos los cromosomas. No se consideran todas las réplicas sino que se comparan máximo y mínimo.
 
