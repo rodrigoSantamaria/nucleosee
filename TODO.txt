@@ -55,6 +55,9 @@
   TODO: anotaciones
     HECHO: C elegans: funcionan, aunque el gff es grande y tarda en leerlo
 
+  TODO: fixedStep > 1 parece que lo hace bien pero luego hay problemas de visualización
+  --->TODO: el número de búsquedas sale duplicado en comparaciones.
+  TODO: Por alguna razón ahora tarda mucho en sacar dataline2!!
 
   Backend
 =============
@@ -101,7 +104,8 @@
             P.ej. si un 50% de nuestros valores es 0, el percentil 33 y el 50 son el mismo!
   - HECHO: búsquedas generales de diferencias
         TODO: hay que testearlo todavía bastante pero parece que funciona bastante bien
-            Errores en casos de comparación de secuencias con distinta longitud (parece)
+            EVITADO: Errores en casos de comparación de secuencias con distinta longitud (parece)
+                Le he puesto que compare hasta la longitud de la menor de ellas
             ura4 en DHTA1 respecto a h972 poniendo 900/2000 me saca una zona un poco extraña y obvia la zona gorda de cambio --> mirar cómo se puede afinar.
 
   - TODO: Mostrar localización en el genérico y permitir clicks para zoom

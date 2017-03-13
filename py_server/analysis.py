@@ -236,7 +236,7 @@ def loadData(dataName="Test", track="None", clear="false"):
 def batchCompile(pdata, filenames=[], filename="", organism=""):             
     data["batch"]={}
     data["batch"]["processed"]=pdata[filename]
-    print("BATCH COMPILE:", pdata["processed"].keys(), filenames)
+    #print("BATCH COMPILE:", pdata["processed"].keys(), filenames)
     if(len(filenames)==1): #  (single file)
         data["batch"]["min"]=pdata[filename]["seq"]
         data["batch"]["max"]=pdata[filename]["seq"]
@@ -877,7 +877,7 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
             search[k]=(ss.bwMatchingV8("".join(data["batch"]["processed"]["dseq"][k]), pattern, t["bwt"], t["firstOccurrence"],t["suffixArray"],t["checkpoints"],1000, d))
             print(len("".join(data["batch"]["processed"]["dseq"][k])))
             print("Search ",k,"takes",(time.clock()-t0), "and finds",len(search[k]), "occurences")
-            if(len(search[k])>10000):
+            if(len(search[k])>100000):
                 return {"response":"error", "msg":"Too many occurrences, please narrow your search", "points":{}, "sizePattern":len(pattern)}
     print("Search finished in ",(time.clock()-t00))
     

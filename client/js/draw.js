@@ -277,7 +277,8 @@ function drawSearch(allPoints0)
     dl1[0].cv.svg.selectAll(".search-label").remove();
     dl1[0].cv.svg.selectAll(".export-label").remove();
 
-    for(var dataName in allPoints0)
+    var dataName=Object.keys(allPoints0)[0];
+    //for(var dataName in allPoints0)
         {//FOR START
         var allPoints=allPoints0[dataName].points;
         var sizePattern=allPoints0[dataName].sizePattern;
@@ -294,7 +295,6 @@ function drawSearch(allPoints0)
         if (DEBUG_GBV) console.log("\ndataLine_1_drawPoints(): " + points.length + " points");
 
         for (i in tracks) {
-            //if(allPoints.hasOwnProperty(tracks[i]))//some tracks might not have any anotation
             var pp = JSON.parse(allPoints[tracks[i]]);
             if(matches[i]==undefined)   matches[i]=pp.length;
             else                        matches[i]+=pp.length;
@@ -351,23 +351,7 @@ function drawSearch(allPoints0)
                 //Remove nucleotide track
                 removeNucleotides();
 
-                console.log("Discretized seqs:")
-                for(var i in globalSeqs) {
-                    var dseq=Server.getDSeq(startSeq, endSeq, globalSeqs[0].track, globalSeqs[i].dataName);
-                    console.log(dseq);
-                }
-
                 zoom(currentZoom, startSeq, endSeq);
-                //Server.getAllPartSeq(drawAllDataLine_2, startSeq, endSeq, dataPoint, dl1,dl2,globalSeqs, 0, {});
-                //Server.getAllPartSeq(drawAllDataLine_2, startSeq, endSeq, point, dl1,dl2,globalSeqs, 0, {});
-
-                // Draw dataLine2
-                /*for (var i in globalSeqs) {
-                    var globalDL2 = getLevel(globalSeqs[i].dataName, "DL2")
-                    globalDL2.startSeq = startSeq;
-                    globalDL2.endSeq = endSeq;
-                    Server.getPartSeq(dataLine_2, globalSeq.track, startSeq, endSeq, numNucleotidesDraw, point, d.size, globalSeqs[i].dataName);
-                }*/
 
                 return "<strong>" + d3.format(",")(point) + ":</strong> " + d3.format(".2f")(d.value); // e.g. "307,770 : 0.79"
             });
@@ -755,10 +739,14 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
 function getSelectedDataPoint()
     {
     var dataPoint=null;
-    for(var i in dl1)
-        if(dl1[i].cv.svg.selectAll("."+dl1[i].cv.classSVG+".point.pressed").data().length>0) {//Take the first (and only) selected point
+    var i=0
+    //for(var i in dl1)
+        {
+        if (dl1[i].cv.svg.selectAll("." + dl1[i].cv.classSVG + ".point.pressed").data().length > 0)
+            {//Take the first (and only) selected point
             dataPoint = dl1[i].cv.svg.selectAll("." + dl1[i].cv.classSVG + ".point.pressed").data()[0];
             return dataPoint;
+            }
         }
     return dataPoint;
     }
@@ -1232,9 +1220,9 @@ function dataLine_lineOnly(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq,
         .attr("stroke",globalDL.cv.color)
         .attr("d", line);
 
-    if(globalSeq.correlations==null)
+    /*if(globalSeq.correlations==null)
         Server.stats(setStats,globalSeq.dataName);
-    else
+    else*/
       drawColor(globalDL, globalSeq, svg);
 
     }
@@ -1375,9 +1363,9 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
     // Image SVG: data name
     if(globalDL.cv.nameSVG.indexOf("2_")==-1)
         {//DL1 will show just a summary
-        if(globalSeq.correlations==null)
+        /*if(globalSeq.correlations==null)
             Server.stats(setStats,globalSeq.dataName);
-        else
+        else*/
             drawColor(globalDL, globalSeq, globalDL.cv.svg);
         }
     else
@@ -1463,7 +1451,7 @@ function drawColor(globalDL, globalSeq, svg)
     {
     //var number=parseInt(globalDL.cv.nameSVG.replace(/^.*_/,""))
     var number=globalSeq.id;
-    var cor=0;
+    /*var cor=0;
     var cont=0;
     for(var i in globalSeq.correlations)
         {
@@ -1471,9 +1459,8 @@ function drawColor(globalDL, globalSeq, svg)
         cont+=1
         }
     cor/=cont;
-    cor=cor.toFixed(2);
+    cor=cor.toFixed(2);*/
 
-    //Server.stats(setStats, globalSeq.dataName);
     svg.append("g")
         .append("rect")
         .attr("class", globalDL.cv.classSVG +" rect")
@@ -1481,8 +1468,8 @@ function drawColor(globalDL, globalSeq, svg)
         .attr("y",10+number*12)
         .attr("fill", globalDL.cv.color)
         .append("svg:title")
-        .text(globalSeq.dataName+"\n  "+globalSeq.numReplicates+" replicates\n  "+cor+" mean correlation");
-    console.log("done!");
+        //.text(globalSeq.dataName+"\n  "+globalSeq.numReplicates+" replicates\n  "+cor+" mean correlation");
+        .text(globalSeq.dataName);
     }
 /**
  * Draws shift (< >) and zoom (+-) elements on a dataline2, plus their logic

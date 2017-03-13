@@ -237,7 +237,7 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
             s=seq[i]
             if "variableStep" in seq[i]:
              chsize.append((int)(seq[i-2].split("\t")[0]))
-        chsize.append((int)(seq[i-2].split("\t")[0]))
+        chsize.append((int)(seq[i-2].split("\t")[0].strip()))
         print((time.clock()-t0),' s in computing sizes')
         
         
