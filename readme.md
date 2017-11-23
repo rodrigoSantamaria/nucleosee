@@ -4,7 +4,7 @@ Nucleosome is web-based nucleosome map visual browser backed up for BWT-based pa
 
 ## Working example
 If you want to give it a quick look there is a server set up for tests at http://cpg3.der.usal.es/nucleosee
-Try loading samples 972h and SP_16 and do some searches as explained in this video: http://cg3.der.usal.es/nucleosee/nucleosee.mp4
+Try loading samples 972h and SP_16 and do some searches as explained in this video: http://cpg3.der.usal.es/nucleosee/nucleosee.mp4
 
 ## Help 
 For further help please check http://cpg3.der.usal.es/nucleosee/help.pdf
