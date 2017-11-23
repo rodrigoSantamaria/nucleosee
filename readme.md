@@ -1,10 +1,9 @@
 # Nucleosee
 
-SeqView is a prototype for a nucleosome map visualization and BWT-based pattern searches.
-You can find more information on this introductory Video
+Nucleosome is web-based nucleosome map visual browser backed up for BWT-based pattern searches. It can be used for other kinds of high-throughput genomic data as well.
 
 ## Working example
-There is a server set up for tests at http://cpg3.der.usal.es/nucleosee
+If you want to give it a quick look there is a server set up for tests at http://cpg3.der.usal.es/nucleosee
 Try loading samples 972h and SP_16 and do some searches as explained in this video: http://cg3.der.usal.es/nucleosee/nucleosee.mp4
 
 ## Help 
