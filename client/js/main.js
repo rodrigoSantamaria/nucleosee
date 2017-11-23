@@ -127,7 +127,7 @@ function selectData()
         $("#paramAgnostic")[0].disabled=false;
         }
 
-        //1) Get and print data
+    //1) Get and print data
     for(var i=0; i<$("#selectionList option:selected").length; i++)
         {
         showImageLoading("imgLoadingFile", true);
@@ -158,7 +158,7 @@ function selectData()
         elOptNew.text = $("#selectionList option:selected")[i].value;
         elOptNew.value = $("#selectionList option:selected")[i].value;
         elSel.add(elOptNew, null);
-
+        //elSel.selected(1)
         var clear="true";
         if(i>0)
             clear="false"
@@ -220,7 +220,6 @@ function preprocessing(chromosome)
         elOptNew.value = $('#paramDescription').val();
         elSel.add(elOptNew, null);
 
-        // Server.preprocess(drawingFirstDataLine, GVB_GLOBAL.filenames, GVB_GLOBAL.track, $("#paramWS").val(), $("#paramNB").val(),
         Server.preprocess(filePreprocessed, GVB_GLOBAL.filenames, GVB_GLOBAL.track, $("#paramWS").val(), $("#paramNB").val(),
             GVB_GLOBAL.maxSize, $("#speciesList")[0][$("#speciesList")[0].selectedIndex].value,
             $("#interpolationList")[0][$("#interpolationList")[0].selectedIndex].value, $("#paramSD").val(),

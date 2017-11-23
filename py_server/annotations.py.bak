@@ -216,7 +216,6 @@ def go(filename="annotations/go/go-basic.obo"):
     print("Opening GO at ", filename)
     f=open(filename)
     lines=f.readlines()
-    f.close()
     data={}
     i=0
     while i<len(lines):
@@ -234,8 +233,8 @@ def goa(org="Schizosaccharomyces pombe"):
     #path=path.lower()
     import glob
     f=open(glob.glob("annotations/"+org+"/goa/*")[0])#expects one and only one file in goa folder
+    
     lines=f.readlines()
-    f.close()
     data=[]
     for l in lines:
         if(l.startswith("!")==False):

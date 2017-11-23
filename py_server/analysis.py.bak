@@ -40,14 +40,11 @@ import motifSearch as ms
 import annotations as ann
 import helpers
 import re
-import threading
-import copy
 
 import pickle #i tried cPickle but is way slower!
     
 global session
-#global data
-session_lock=threading.Lock()
+global data
 session={}
 data={}
 
@@ -199,10 +196,8 @@ def loadData(dataName="Test", track="None", clear="false"):
     
     t0=time.clock()
     print("---------------- FILE: "+picklePath+" ------------------")
-    pdata=pickle.load(open(os.path.join(basePath,picklePath)))
-    #f=open(os.path.join(basePath,picklePath))
-    #pdata=pickle.load(f)
-    #f.close()
+    f=open(os.path.join(basePath,picklePath))
+    pdata=pickle.load(f)
     print("KEYS", pdata.keys())
     
     filenames=filter(lambda x:x.endswith(".wig") or x.endswith(".bw"),pdata.keys())
@@ -221,13 +216,11 @@ def loadData(dataName="Test", track="None", clear="false"):
     
     #--------------- COMPILE BATCH
     data=batchCompile(pdata, filenames, filename,organism)
-    session[user][dataName]=copy.deepcopy(data)#trying to load several datasets at once
+    session[user][dataName]=data#trying to load several datasets at once
     print('file preprocess takes ',(time.clock()-t00),"s")
     print("USER KEYS:", session[user].keys())
     
     dbp=data["batch"]["processed"]
-    
-    print(dbp["res"][track][1000:1010])
     
     
     return jsonify(seq=dbp["res"][track], 
@@ -767,7 +760,7 @@ def search(pattern="", d=0, geo="none", intersect="soft", softMutations="false",
             ret=searchLocal(data, pattern, d, geo, intersect, softMutations)
         else:
             ret=searchLocal(data[dataName1], pattern, d, geo, intersect, softMutations)
-        search1=copy.deepcopy(ret["points"])
+        search1=ret["points"]
         sizePattern1=ret["sizePattern"]
         #sizePattern=ret["sizePattern"]
         print("search done")
@@ -1249,8 +1242,6 @@ def add_cors(resp):
     # set low for debugging
     if app.debug:
         resp.headers['Access-Control-Max-Age'] = '1'
-    print("---RELEASE")
-    session_lock.release()
     return resp
     
         
@@ -1265,17 +1256,7 @@ def load_passport():
     #DISCARDED: check password and so on.
     if user in session.keys():
         data=session[user]
-    print("---ACQUIRE")
-    session_lock.acquire()
 
-#@app.before_request
-#def sessionLock():
-#    session_lock.acquire()
-#    
-#@app.after_request
-#def sessionRelease(response):
-#    session_lock.release()
-    
 #@app.after_request
 #def serialize_passport(response):
 #    if hasattr(g, "passport"):

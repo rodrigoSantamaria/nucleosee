@@ -1,0 +1,50 @@
+Each [] refers to a dictionary for all the tracks/chromosomes
+*Private fields that are not returned to frontend
+ 
+USER
+   DATA
+	GOA
+	GO
+	WINDOWSIZE
+	DATANAME_1	
+		BATCH
+			*MIN []			minimum values among all the wig files
+			*MAX []			maximum values among all the wig files
+			PROCESSED
+				RES []		reduced sequence only for printing
+				FULLLENGTH	length of SEQ
+				MAXIMUM []	statistics for each chromosome
+				MINIMUM []
+				MEAN []
+				STDEV []	
+				DSEQ []		discretized sequence
+				BINS []		number of bins of DSEQ
+				*SEQ []		full abundance sequence
+				*BWT []		burrows-wheeler transform structure
+				*GFF []		annotations
+				*FASTA []	nucleotide sequence
+
+		*WIG_FILE1  --> In case of a single file, this is returned instead of BATCH
+			RES []
+			FULLLENGTH
+			MAXIMUM []
+			MINIMUM []
+			MEAN []
+			STDEV []
+			DSEQ []
+			BINS []
+			SEQ []
+
+			BWT []
+			GFF []
+			FASTA []
+
+			WINDOWSIZE	window size for DSEQ
+		*WIG_FILE2
+			[...]
+
+	DATANAME_2
+		[...]
+
+	SEARCH
+	EGO

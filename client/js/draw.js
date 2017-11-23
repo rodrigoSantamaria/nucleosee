@@ -33,7 +33,9 @@ var dimDLAnnotation =
     lineHeight : 12
 };
 
+var DLcolors=["steelblue", "#FF4400", "#968096", "#327A2A", "#70AA00", "#FAB526"];
 var DLcolors=["steelblue", "#968096", "#327A2A", "#70AA00", "#FAB526"];
+//var DLcolors=["steelblue", "#327A2A", "#968096", "#70AA00", "#FAB526"];
 var currentZoom=1;
 
 //________________________ SEQUENCE OBJECTS DEFINITION _____________________________
@@ -197,8 +199,9 @@ function dataLine_1(processedData, startSeq, endSeq, numLines, annot, gis)
     globalSeq.max           = processedData.max;
     globalSeq.min           = processedData.min;
     globalSeq.bins          = processedData.bins;
-    globalSeq.dataName      = processedData.dataName;
-    globalSeq.ws            = GVB_GLOBAL.ws;
+    globalSeq.dataName      = decodeURIComponent(processedData.dataName);
+   // globalSeq.ws            = GVB_GLOBAL.ws;
+    globalSeq.ws            = processedData.ws;
     globalSeq.scaleSeqServ  = 1;
     globalSeq.id            = globalSeqs.length;
     if(Math.floor(fullLength/GVB_GLOBAL.maxSize) >= 1)
@@ -276,6 +279,15 @@ function drawSearch(allPoints0)
     // Remove all occurrences label
     dl1[0].cv.svg.selectAll(".search-label").remove();
     dl1[0].cv.svg.selectAll(".export-label").remove();
+
+    //For different possible sizes in different datasets
+    for(var i in Object.keys(dl2))
+        dl2[i].sizePattern=0;
+    for(var dataName in allPoints0)
+        {
+        var globalDL2=getLevel(dataName, "DL2")
+        globalDL2.sizePattern=allPoints0[dataName].sizePattern
+        }
 
     var dataName=Object.keys(allPoints0)[0];
     //for(var dataName in allPoints0)
@@ -365,7 +377,7 @@ function drawSearch(allPoints0)
 
 
     // Draw occurrences label (only on first lane) --------------------
-    var startX = 200;
+    var startX = 210;
     dl1[0].cv.svg.append("g")
         .attr("class", dl1[0].cv.classSVG + " export-label")
         .append("text")
@@ -420,14 +432,7 @@ function drawSearch(allPoints0)
         .attr('x', startX + 55 + 29 * (matches.length) + 40 + 20)
         .attr('y', -2)
         .on("click", function () {
-           /* var text=Server.exportFASTA(globalSeqs[0].dataName);
-            var blob = new Blob([text], {type: 'text/plain'});
-            var URL = this.URL || this.webkitURL;
-            var textURL;
-            if (textURL !== null)   URL.revokeObjectURL(textURL);
-            var textURL = URL.createObjectURL(blob);
-            window.open(textURL);*/
-            if(dl1[0].fastaURL=="http://vis.usal.es/seqview/client/html/error/404.html")
+           if(dl1[0].fastaURL=="http://vis.usal.es/seqview/client/html/error/404.html")
                 Server.exportFASTA(exportFasta, globalSeqs[0].dataName);
             else
                 window.open(dl1[0].fastaURL)
@@ -499,7 +504,9 @@ function drawEnrichment(enrichment)
     var goSize = d3.scale.log().base(10)
         .domain([1,10e-6])  // p-values
         .clamp(true)
-        .rangeRound([6, 14]); // min and max letter size
+        .rangeRound([8, 16]); // min and max letter size
+    //.rangeRounls
+    // d([6, 14]); // min and max letter size
 
     // We create an array with goterms
     var goterms = [];
@@ -760,7 +767,8 @@ function drawAllDataLine_2(seqs, start, end)
         var globalSeq=getLevel(i,"Seq");
         globalDL2.startSeq = start;
         globalDL2.endSeq = end;
-        dataLine_2(seqs[i],seqs[i].partSeq.length,dataPoint.real_pos,dataPoint.size,globalSeq.dataName)
+        //dataLine_2(seqs[i],seqs[i].partSeq.length,dataPoint.real_pos,dataPoint.size,globalSeq.dataName)
+            dataLine_2(seqs[i],seqs[i].partSeq.length,dataPoint.real_pos,     globalDL2.sizePattern    ,globalSeq.dataName)
         }
     }
 
@@ -1396,7 +1404,9 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
                 .attr("class", classSVG+" lineshadow")
                 .datum(dataShadow)
                 .append("path")
-                .attr("d", line);
+                .attr("d", line)
+                .attr("fill", globalDL.cv.color) //NUEVO
+                .attr("stroke", "none");
         }
 
     // The image SVG: line
@@ -1406,6 +1416,8 @@ function dataLine_core(globalDL, globalSeq, seqServ, scaleSeqServ, startSeq, end
         .append("path")
         .attr("stroke",globalDL.cv.color)
         .attr("d", line);
+
+
 
 
 
@@ -1546,7 +1558,7 @@ function zoom(amount, start0, end0)
             return;
     }
     var dataPoint= getSelectedDataPoint();
-    Server.getAllPartSeq(drawAllDataLine_2, Math.round(start), Math.round(end), dataPoint, dl1,dl2,globalSeqs, 0, {});
+        Server.getAllPartSeq(drawAllDataLine_2, Math.round(start), Math.round(end), dataPoint, dl1,dl2,globalSeqs, 0, {});
     }
 //Zooms current view in DL2 by the factor in amount.
 function zoomLocal(amount)
@@ -1679,7 +1691,17 @@ function drawLocation(globalDL, x0, y0, point)
         .attr("cy",y0)
         .attr("class", classSVG+" hover point");
 
-    // LABEL
+    // LABEL (ABUNDANCE) (SHADOW)
+    d3.select("#"+nameSVG)
+        .select("svg")
+        .select("g")
+        .append("text")
+        .attr("x",x0-getTextWidth(""+point.value.toFixed(2), "10px sans-serif")*.5)
+        .attr("y",y0-5)
+        .text(point.value.toFixed(2))
+        .attr("class", classSVG+" hover label shadow");
+
+    // LABEL (ABUNDANCE)
     d3.select("#"+nameSVG)
         .select("svg")
         .select("g")
@@ -1689,15 +1711,27 @@ function drawLocation(globalDL, x0, y0, point)
         .text(point.value.toFixed(2))
         .attr("class", classSVG+" hover label");
 
-    // LABEL
-    d3.select("#"+nameSVG)
+    //LABEL (POSITION) (SHADOW)
+    var label=d3.select("#"+nameSVG)
         .select("svg")
         .select("g")
         .append("text")
         .attr("x",x0-getTextWidth(""+(globalDL.startSeq+point.pos), "10px sans-serif")*.5)
-        .attr("y",globalDL.cv.dim.height-3)
+        .attr("y",globalDL.cv.dim.height+15)
         .text(globalDL.startSeq+point.pos)
-        .attr("class", classSVG+" hover label");
+        .attr("class", classSVG+" hover label shadow")
+
+    // LABEL (POSITION)
+    var label=d3.select("#"+nameSVG)
+        .select("svg")
+        .select("g")
+        .append("text")
+        .attr("x",x0-getTextWidth(""+(globalDL.startSeq+point.pos), "10px sans-serif")*.5)
+        .attr("y",globalDL.cv.dim.height+15)
+        .text(globalDL.startSeq+point.pos)
+        .attr("class", classSVG+" hover label")
+
+    return;
 }
 
 function drawBrackets(globalDL, left_x0, right_x0, y0)
@@ -1924,7 +1958,8 @@ function drawGrid() {
                 })
                 .attr("fill", function (d, i) {
                     if (i % 2 == 0)
-                        return "#ffc477";
+                        //return "#ffc477";
+                        return "grey";
                     else
                         return "white";
                 })

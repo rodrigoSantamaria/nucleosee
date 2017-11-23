@@ -207,6 +207,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             // Show the image of "loading..."
             showImageLoading("imgLoadingFile", true);
 
+            description = encodeURIComponent(description);
+
             for(var i in filenames)
                 filenames[i] = "\""+encodeURIComponent(filenames[i])+"\"";  // it encodes the following characters: , / ? : @ & = + $ #
 
@@ -317,6 +319,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         Server.stats = function (callback, dataName)
         {
             var startTime = new Date();
+            dataName = encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
 
             var requestAJAX = $.ajax(
                 {
@@ -376,6 +379,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         Server.getDSeq = function (start,end,track,dataName)
         {
             var startTime = new Date();
+            dataName = encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
 
             var requestAJAX = $.ajax(
                 {
@@ -404,6 +408,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         Server.selectData = function (callback, dataName, index, total, clear)
         {
             var startTime = new Date();
+            dataName = encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
 
             var requestAJAX = $.ajax(
                 {
@@ -426,7 +431,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.chromosomes=result.chromosomes;
                     response.bins=result.bins;
                     response.dataName=dataName;
-                    GVB_GLOBAL.ws=result.windowSize;
+                    response.ws=result.windowSize;
+                    //GVB_GLOBAL.ws=result.windowSize;
 
                     if(_DEBUG) console.log("preprocress(): discretization done...");
                     if (_DEBUG) console.log("Time spent preprocessing: " + (new Date() - startTime) + "ms");
@@ -449,6 +455,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         Server.getTrack = function (callback, track, dataName, index, total)
         {
             var startTime = new Date();
+            dataName= encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
 
             // Show the image of "loading..."
             showImageLoading("imgLoadingFile", true);
@@ -487,6 +494,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     response.chromosomes=result.chromosomes;
                     response.search=result.search;
                     response.ego=result.ego;
+                    response.ws=result.windowSize;
                     response.dataName=dataName;
 
                     // Hide the image of "loading..."
@@ -520,7 +528,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
             // Show the image of "loading..."
             showImageLoading("imgLoadingSearch", true);
-
+            dataName1 = encodeURIComponent(dataName1);  // it encodes the following characters: , / ? : @ & = + $ #
+            dataName2 = encodeURIComponent(dataName2);  // it encodes the following characters: , / ? : @ & = + $ #
 
             if(_DEBUG) console.log("pattern is "+pattern);
             pattern = encodeURIComponent(pattern);  // it encodes the following characters: , / ? : @ & = + $ #
@@ -593,6 +602,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var gis = "";
             var annotations = {};
             var startTime = new Date();
+
+            dataName = encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
+
 
             // Calculate points of this track and number of matches
             //var points = JSON.parse(allPoints);
@@ -667,8 +679,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
                     if(_DEBUG) console.log("allAnnotationsGenes(): get all annotations failed...");
-                    javascript_abort("allAnnotationsGenes failed");
-
+                   // javascript_abort("allAnnotationsGenes failed");
                 });
         };
 
@@ -759,6 +770,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                     p = point[ch][i]
                     break;
                     }
+            dataName = encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
+
 
             var requestAJAX = $.ajax(
                 {
@@ -850,6 +863,9 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
          */
         Server.getPartSeq = function (callback, track, startSeq, endSeq, numNucleotides, point, sizePattern, dataName)
         {
+
+            dataName = encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
+
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/getPartSeq?user="+_user+"&password="+_password+"&track="+track+
@@ -880,10 +896,13 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
 
         Server.getAllPartSeq = function (callback, start, end, point, dl1, dl2, globalSeqs, i, seqs)
         {
+
+           var dataName = encodeURIComponent(globalSeqs[i].dataName);  // it encodes the following characters: , / ? : @ & = + $ #
+
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/getPartSeq?user="+_user+"&password="+_password+"&track="+globalSeqs[i].track+
-                    "&start="+start+"&end="+end+"&dataName="+globalSeqs[i].dataName,
+                    "&start="+start+"&end="+end+"&dataName="+dataName,
                     type: "GET",
                     datatype: "json"
                 });
@@ -954,6 +973,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         Server.nucleotides = function (callback, track, startSeq, endSeq, start, point, dataName)
         {
             // var startTime = new Date();
+            dataName = encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
 
             var requestAJAX = $.ajax(
                 {
@@ -996,6 +1016,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         Server.exportFASTA = function (callback, dataName)
         {
             // var startTime = new Date();
+            dataName = encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
 
             var requestAJAX = $.ajax(
                 {
@@ -1031,6 +1052,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
         Server.nucProfile = function (callback, track, positions, size, k, dataName)
         {
             // var startTime = new Date();
+            dataName = encodeURIComponent(dataName);  // it encodes the following characters: , / ? : @ & = + $ #
 
             var requestAJAX = $.ajax(
                 {
@@ -1073,7 +1095,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 {
                     if(_DEBUG) console.log("nucProfile(): discretization failed...");
                     console.log(requestAJAX.url);
-                    javascript_abort("nucProfile failed");
+                    //javascript_abort("nucProfile failed");
                 });
         };
 

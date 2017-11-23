@@ -298,6 +298,17 @@ body {
     text-align: center;
 }
 
+.dl2.hover.label.shadow{
+    fill: white;
+    fill-opacity: .5;
+    stroke-width: 5px;
+    stroke: white;
+    font-family: sans-serif;
+    font-size: 10px;
+    font-weight: 4px;
+    text-align: center;
+}
+
 /*--------------------------------------------*/
 /*      NUCLEOTIDES (DATALINE 3)              */
 /*--------------------------------------------*/

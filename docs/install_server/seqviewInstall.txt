@@ -1,0 +1,72 @@
+1) CONFIGURAR APACHE WEB
+sudo a2enmod userdir	-> permite módulo para carpetas public_html
+sudo systemctl restart apache2
+
+2) INSTALAR FLASK
+pip install flask --> Cuidado si tienes un entorno de python 3, necesitamos python 2.7
+pip install numpy
+pip install fisher --> DA ERROR: uknown Python.h, luego no sé como ahora me da otro error porque se mezcla con py3!
+				-> ha quedado algo cascado con pip y me instala los paquetes de la 3.5 en la 2.7, o 					algo así, lo soluciono instalando con easy_install
+
+3) USUARIO SEQVIEW_USER
+Para evitar problemas queremos ejecutar sobre este usuario
+sudo useradd seqview_user
+sudo mkhomedir_helper seqview_user
+
+4) CONFIGURAR WSGI
+4.1) CONF
+Meter esto en /etc/apache2/sites-available/seqview.conf
+Listen 2750
+<VirtualHost *:2750>
+  ErrorLog /home/seqview_user/logs/error.log
+
+    WSGIDaemonProcess seqview user=seqview_user group=seqview_user threads=5
+    WSGIScriptAlias / /var/www/seqview/seqview.wsgi
+
+	Options FollowSymLinks
+    <Directory /var/www/seqview>
+        WSGIProcessGroup seqview
+        WSGIApplicationGroup %{GLOBAL}
+	WSGIScriptReloading On
+        Order deny,allow
+        Allow from all
+    </Directory>
+</VirtualHost>
+
+sudo a2ensite seqview
+
+4.2) WSGI
+Meter esto en /var/wwww/seqview
+import sys
+sys.path.insert(0, "/home/rodri/public_html/seqview/py_server")
+from analysis import app as application
+
+5) INSTALAR PROYECTO
+Meter el proyecto en /home/rodri/public_html
+5.1) CLIENT
+Editar index.html y en la línea 560 (aprox.) poner como Server.connect la url de nuestro servidor
+
+5.2)
+La información de genomas, anotaciones y tracks estará en seqview_user
+
+6) REINICIAR Y PROBAR
+sudo systemctl restart apache2
+Probar en un navegador:
+site.com --> Debería mostrar la página de apache
+site.com:2750 --> Lo mismo
+site.com:2750/test --> Debería mostrar “Seqview server correctly configured”
+site.com/~usuario/seqview/client --> Debería mostrar el programa cliente
+	InternalServerError 500	-> Cuidado, eliminar el .htaccess de client si está
+
+7) PREPARAR EL SERVIDOR Y CLIENTE
+Si hemos usado como user en el WSGI seqview_user, tendremos que hacer allí dos carpetas (propiedad de este usuario) con nombres genomes y annotations, o bien copiar las que hay del paquete y cambiarles la propiedad si es necesario.
+genomes debe contener tracks.txt con propietario seqview_user también.
+
+
+8) Depuración
+Logs de apache en 
+
+
+
+
+

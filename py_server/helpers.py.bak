@@ -546,7 +546,7 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True, bins
             else:
                 alphabet=alphabetTotal[:len(bins)]
             bins.sort()        
-            print bins
+            print(bins)
             mseq=np.array(mseq);
             digseq=np.digitize(mseq,bins)
             for s in digseq:
@@ -559,7 +559,7 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True, bins
             bins=[]
             for i in range(numBins):
                 bins.append(factor*i)
-            print bins
+            print(bins)
     return {'dseq':dseq, 'bins':bins} 
     
 #talc1=tal["chromosome1"]

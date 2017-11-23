@@ -10,7 +10,7 @@
     <meta name="author" content="">
     <link rel="icon" href="favicon.ico">
 
-    <title>SeqView</title>
+    <title>Nucleosee</title>
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -57,7 +57,7 @@
                 <div class="panel panel-default login-panel">
                     <div class="panel-heading">
                         <!--<h3 class="panel-title">Please Sign In</h3>-->
-                        <h3 class="panel-title">Welcome to Seqview</h3>
+                        <h3 class="panel-title">Welcome to Nucleosee</h3>
                     </div>
                     <div class="panel-body">
                         <form role="form">
@@ -115,7 +115,7 @@
                 </div>
 
                 <div style="float:left;margin-left:2px;margin-right:2px;margin-top:4px">
-                    <input type="button" id="showSearchOptions" value="More..." title="Search pattern options" class="options"><br>
+                    <input type="button" id="showSearchOptions" value="Options" title="Search pattern options" class="options"><br>
                 </div>
 
 
@@ -133,7 +133,7 @@
         <!-- LOAD WIG/BW FILE -->
         <div style="float:right;margin-left: 10px;margin-right:100px;margin-top:5px;height:20px;width:50px">
             <input type="button" id="loadOptions" value="Load file" title="Load wig or bigwig file" class="options"><br>
-            <a href="help.pdf" target="_blank" class="button">Help</a>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="help.pdf" target="_blank" class="button">Help</a>
         </div>
 
 
@@ -454,7 +454,7 @@
                             <input class="form-control" type="text" value="30" id="paramWS">
                         </div>
                         <div class="col-sm-2 col-sm-offset-1">
-                            <label class="control-label" for="paramNB" title="Number of percentile bins into which the quantitative levels will be divided. E .g. 5 bins will use percentiles 0,20,40,60,80,100 to set bins a,b,c,d,e respectively">Number of bins</label>
+                            <label class="control-label" for="paramNB" title="Number of percentile bins into which the quantitative levels will be divided. E .g. 5 bins will use percentiles 0,20,40,60,80,100 to set bins a,b,c,d,e respectively, or a list of absolute values separated by commas">Number of bins</label>
                         </div>
                         <div class="col-sm-2">
                             <input class="form-control" type="text" value="5" id="paramNB">
@@ -554,9 +554,8 @@
                 //var password = $('#password').val();
 
 
-                //Server.connect(true, verifyConnection, username, password, "http://prodiasv21.fis.usal.es:2750/");
+               // Server.connect(true, verifyConnection, "", "", "http://cpg3.der.usal.es:2750/");
                 Server.connect(true, verifyConnection, "", "", "http://127.0.0.1:2750/");
-                //Server.connect(true, verifyConnection, "", "", "http://vis.usal.es:2750/seqview");
 
                 return false;
             });
