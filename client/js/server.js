@@ -73,11 +73,13 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             $.when(requestAJAX)
                 .done(function(result)
                 {
+                    console.log("connected");
                     _user=result.response;
                     callback(true);
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
+                    console.log("connection error");
                     if(_DEBUG) console.log("connect(): Connect failed...");
                     javascript_abort("Connection failed. Server might be down: "+errorThrown+" "+jqXHR.responseText);
                     callback(false);
@@ -441,8 +443,8 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
                 })
                 .fail(function(jqXHR, textStatus, errorThrown)
                 {
-                    if(_DEBUG) console.log("listData(): listing failed...");
-                    javascript_abort("listData() failed: possibly due to an error in the server, ask your administrator");
+                    if(_DEBUG) console.log("selectData(): listing failed...");
+                    javascript_abort("selectData() failed: possibly due to an error in the server, ask your administrator: "+textStatus);
                 });
         };
 
@@ -1057,7 +1059,7 @@ curl -i -H "Accept: application/json" -H "Content-Typ: application/json" -X GET 
             var requestAJAX = $.ajax(
                 {
                     url: _serverPath+"/nucProfile?user="+_user+"&password="+_password+"&track="+track
-                        +"&positions="+positions+"&size="+size+"&k="+k+"&dataName="+dataName,
+                        +"&positions="+positions+"&size="+size.toFixed(0)+"&k="+k+"&dataName="+dataName,
                     type: "GET",
                     datatype: "json"
                 });

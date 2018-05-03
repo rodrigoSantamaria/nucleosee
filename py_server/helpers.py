@@ -61,7 +61,7 @@ def processBigWig(path, track="None",  windowSize=100, numBins=5, percentile=Tru
      
     #Processing all chromosomes
     for k in (bw.chroms().keys()):
-        print k
+        print(k)
         kn=adaptChNames(k, organism)
         
         #chromosome resolution array
@@ -153,7 +153,7 @@ def processBigWig(path, track="None",  windowSize=100, numBins=5, percentile=Tru
         
     print("preparing response")
     if(track=="None"): #Vestigial for fullLength: to deprecate
-        track=seqd.keys()[0]
+        track=list(seqd.keys())[0]
         
     print("sending response")
     return {'seq':seqd,
@@ -208,8 +208,9 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         end=[]
         names=[]
         
+        #print("Long. de secuencia", len(seq))
         tline=0 #marks if there is a track line
-        for i in xrange(len(seq)):
+        for i in range(len(seq)):
             s=seq[i]
             if s[0]=='f':#new track
              start.append(i+1)
@@ -233,9 +234,9 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
         
         return ch
     else:   #TODO: requires track line in all the entries
-        print "Variable step"
+        print("Variable step")
         chsize=[]
-        for i in xrange(2,len(seq)):
+        for i in range(2,len(seq)):
             s=seq[i]
             if "variableStep" in seq[i]:
              chsize.append((int)(seq[i-2].split("\t")[0]))
@@ -253,7 +254,19 @@ def readWig(path="/Users/rodri/Documents/investigacion/IBFG/nucleosomas/Mei3h_ce
 
 
 #%%
+"""
+Processes a wig file by discretizing and setting annotations in an internal variable
+genome - genome abundances
+stdev -
+windowSize - 
+numBins - 
+maxSize    maximum length of the returning array (to avoid bandwidth overload). Default 100K
+percentile - passed to discretize (currently always passed as True), if False it uses absolute values for binning (not recommended)
+organism - complete species name to get annotations, must be one of the stored in annotations/getAnnotationFolders
+track - track of the wig to preprocess, or "None" if all of them must be processed (default "None", currently the only option)
+"""
 def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism, track="None"):
+    import sys
     import time
     import numpy as np
     import suffixSearch as ss
@@ -271,13 +284,16 @@ def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism
     dataGFF={}
     dataFASTA={}
     
-    #Check if bins containst a single number or a comma separated list
-    binlist=[int(x) for x in numBins.split("-")]
+    print("variables initialized", numBins)
+    #Check if bins contains a single number or a comma separated list
+    binlist=[int(x) for x in str(numBins).split("-")]
     if(len(binlist)==1):
-        numBins=binlist[0]
+        numBins=int(binlist[0])
         binlist=[]
     else:
         numBins=-1
+        
+    print("bins initialized", binlist)
 
     #for each chromosome
     for k in genome.keys():
@@ -304,27 +320,40 @@ def processWig(genome, stdev, windowSize, numBins, maxSize, percentile, organism
         maximum[k]=np.max(seq)
         minimum[k]=np.min(seq)
         print("Values after clipping in [",minimum[k],maximum[k],"]")
-        print('\\tstats in ',(time.clock()-t0), "s")
+        print('\tstats in ',(time.clock()-t0), "s")
     
 
     
         #2) discretize
         t0=time.clock()
-        print("Going into discretization...")
+        print("Going into discretization...",seq, windowSize, minimum[k], maximum[k], numBins, percentile, binlist)
         tmp=discretize(seq, windowSize, minimum[k], maximum[k], numBins, percentile, binlist)
         print("Discretization done", tmp.keys())
         dseq[k]=tmp["dseq"]
         bins[k]=tmp["bins"]
         print("key is ", k)
         print(set(dseq[k]))
-        print('\\tdiscretize in',(time.clock()-t0),' s')
+        print('\tdiscretize in',(time.clock()-t0),' s')
     
         t0=time.clock()
         t[k]=ss.bwt(''.join(dseq[k])+"$")
         print('\tbwt in ',(time.clock()-t0),'s')
         
         t0=time.clock()
-        res[k]=list(np.mean(rolling_window(seq, max(1,len(seq)/maxSize)),-1, dtype=float)) #maybe round?  
+        #print("calling rw", len(seq), maxSize, len(seq)/maxSize)
+        rw=rolling_window(seq, max(1,len(seq)/maxSize))
+        print("making mean of rw", len(rw))
+        print("making mean of rw", type(rw))
+        print("making mean of rw", type(rw[0]))
+        #print("making mean of rw", np.mean(rw,-1))
+        try:
+            temp=np.mean(rw,-1, dtype=float)
+            res[k]=list(temp)
+        except:
+            print("error")
+            e=sys.exc_info()[0]
+            print("np.mean error: ", e)
+            return 
         print('\tsampling in',(time.clock()-t0),'s')
         
         seqd[k]=seq
@@ -506,14 +535,18 @@ bins - if it's a list with one or more numbers, these are taken as percentiles
 
 #NOTE: maybe a good idea to optimize this method is to use numerical bins instead of letters
 def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True, bins=[]):
+    print("discretize")
     import numpy as np
     import math
     dseq=[]
-    print("discretize",len(seq), bins)
+    print("discretize",len(seq), numBins, bins)
     alphabetTotal=['a','b','c','d','e', 'f', 'g','h','i','j','k','l','m','n','o','p','q','r','s','t']
             
+    print("rolling window", windowSize)
     sseq=rolling_window(seq,windowSize)
+    print("rolling window done")
     mseq=np.mean(sseq, axis=1, keepdims=False)
+    print("Preparing bins")
     if(len(bins)>0):
         print ("digitize")
         #append extremes if not added
@@ -531,7 +564,11 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True, bins
         dseq=[alphabet[x-1] for x in dseq0]
         print("dseq done")
     else:
-        alphabet=alphabetTotal[:numBins]   
+        print("Trying with numBins")
+        numBins=int(numBins)
+        alphabet=alphabetTotal[:numBins]
+        print("Alphabet used: ", alphabet)
+        
         if(percentile==True):#PERCENTILE
             print("percentile",len(seq))
             pseq=seq[seq.ravel().nonzero()]#remove zeroes to compute percs.
@@ -546,12 +583,13 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True, bins
             else:
                 alphabet=alphabetTotal[:len(bins)]
             bins.sort()        
-            print bins
+            print(bins)
             mseq=np.array(mseq);
             digseq=np.digitize(mseq,bins)
             for s in digseq:
                 dseq.append(alphabet[min(s-1,len(alphabet)-1)])           
         else:           #ABSOLUTE
+            print("Absolut binning")
             factor=(numBins-1.0)/float(maximo-minimo)
         
             for im in mseq:
@@ -559,7 +597,7 @@ def discretize(seq, windowSize, minimo, maximo, numBins=5, percentile=True, bins
             bins=[]
             for i in range(numBins):
                 bins.append(factor*i)
-            print bins
+            print(bins)
     return {'dseq':dseq, 'bins':bins} 
     
 #talc1=tal["chromosome1"]
@@ -738,9 +776,17 @@ def rolling_window0(a, window):
 #a must be a 1D array, does not contemplate overlap so far
 def rolling_window(a, window):
     import numpy as np
-    shape = (a.shape[0]/window, window)
-    strides = (a.strides[0]*window, a.strides[0])
-    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+    print("rolling window", a, window)
+    shape = (int(a.shape[0]/window),int(window)) #int, nunca round o si se mayor que .5 peta por array, sin avisar!!!
+    print("shape", shape)
+    strides = (a.strides[0]*int(window), a.strides[0])
+    print("strides", strides)
+    ret=np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)#peta aqui
+    print("returning rwindow")
+    print("returning rwindow", type(ret))
+    print("returning rwindow", len(ret))
+    #print("returning rwindow", ret)
+    return ret
 
 #%%
 def parse(text):

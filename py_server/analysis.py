@@ -106,7 +106,7 @@ def uploaded_file(filename):
 def testTry(a=0):
     a=request.args.get("a")
     try:
-        print a
+        print(a)
         b=a
         #xb=str(a)+4
     except:
@@ -157,7 +157,8 @@ def saveSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/d
 #data must be a dic with dseq and bwt TODO: check times here
 def loadSession(path="/Users/rodri/WebstormProjects/untitled/py_server/genomes/dwtMini2.pkl"):
     import cPickle as pickle
-    f=open(path, "r")
+    #f=open(path, "r")
+    f=open(path, "rb") #python 3
     session=pickle.load(f)
     return session
 #%%
@@ -180,7 +181,8 @@ def loadData(dataName="Test", track="None", clear="false"):
     #0) Get info from the track file
     #basePath=os.path.join(app.config['UPLOAD_FOLDER'],user)
     basePath=app.config['UPLOAD_FOLDER']
-    f=open(os.path.join(basePath,"tracks.txt"))
+    #f=open(os.path.join(basePath,"tracks.txt"))
+    f=open(os.path.join(basePath,"tracks.txt"), "r") 
     for l in f.readlines():
         if(l.split("\t")[0].strip()==dataName):
             break
@@ -199,13 +201,15 @@ def loadData(dataName="Test", track="None", clear="false"):
     
     t0=time.clock()
     print("---------------- FILE: "+picklePath+" ------------------")
-    pdata=pickle.load(open(os.path.join(basePath,picklePath)))
+    #pdata=pickle.load(open(os.path.join(basePath,picklePath)))
+    pdata=pickle.load(open(os.path.join(basePath,picklePath), "rb")) #python 3
     #f=open(os.path.join(basePath,picklePath))
     #pdata=pickle.load(f)
     #f.close()
     print("KEYS", pdata.keys())
     
-    filenames=filter(lambda x:x.endswith(".wig") or x.endswith(".bw"),pdata.keys())
+    #filenames=filter(lambda x:x.endswith(".wig") or x.endswith(".bw"),pdata.keys())
+    filenames=list(filter(lambda x:x.endswith(".wig") or x.endswith(".bw"),pdata.keys())) #python 3
     if(len(filenames)>0):
         filename=filenames[0]
     else: #batch data
@@ -224,18 +228,20 @@ def loadData(dataName="Test", track="None", clear="false"):
     session[user][dataName]=copy.deepcopy(data)#trying to load several datasets at once
     print('file preprocess takes ',(time.clock()-t00),"s")
     print("USER KEYS:", session[user].keys())
+    print("DATA KEYS:", data.keys())
     
     dbp=data["batch"]["processed"]
-    
-    print(dbp["res"][track][1000:1010])
-    
-    
-    return jsonify(seq=dbp["res"][track], 
+  
+    print("DBP KEYS:", dbp.keys())
+    print("RES KEYS:", dbp["res"].keys(), track)
+
+    return jsonify(
                 fullLength=dbp["fullLength"],
                 maximum=(float)(dbp["maximum"][track]),
                 minimum=(float)(dbp["minimum"][track]), 
                 mean=(float)(dbp["mean"][track]), 
                 stdev=(float)(dbp["stdev"][track]), 
+                seq=dbp["res"][track], 
                 dseq=dbp["dseq"][track], 
                 chromosomes=sorted(dbp["maximum"].keys()),
                 bins=dbp["bins"][track],
@@ -332,16 +338,26 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
     print('----------------------- PREPROCESS...')
     
     try:
+        print("1")
         basePath=app.config['UPLOAD_FOLDER']
+        print("2")
         filenames=eval(request.args.get("filenames"))
+        print("3")
         track=request.args.get("track")
+        print("4")
         organism=request.args.get("organism")
+        print("5")
         windowSize=int(request.args.get("windowSize"))
+        print("6")
         #numBins=int(request.args.get("numBins"))
-        numBins=request.args.get("numBins")
+        numBins=request.args.get("numBins") #now we also allow ranges
+        print("7")
         maxSize=int(request.args.get("maxSize"))
+        print("8")
         interpolation=request.args.get("interpolation")
+        print("9")
         stdev=float(request.args.get("stdev"))
+        print("10")
         dataName=request.args.get("dataName").strip()
     except:
         return jsonify(error="Error in getting parameters")
@@ -381,7 +397,7 @@ def batchPreprocessLocal(filenames=[], outfiles=[], dataName="None", windowSize=
     t0=time.clock()
     data={}
     print("Files are: ",filenames)
-
+    print("Data name is;", dataName)
     #3) annotations (same for all batch files? - hard to do with pickles)
     t0=time.clock()
 #try:
@@ -418,6 +434,7 @@ def batchPreprocessLocal(filenames=[], outfiles=[], dataName="None", windowSize=
             path=os.path.join(basePath,filename)
             #path=basePath
             #1A) Preprocessed data (.pic data) exist
+            print(picklePath)
             if os.path.isfile(picklePath):
                 return {"error":"File already processed with this configuration, choose it at 'Select data' or contact with your administrator if you can't find it"}
         pickleFiles.append(pickleFile)
@@ -442,6 +459,7 @@ def batchPreprocessLocal(filenames=[], outfiles=[], dataName="None", windowSize=
                 genome=helpers.readWig(path, method=interpolation)
                 print("wig read")
                 data[filename]=helpers.processWig(genome, stdev=stdev, windowSize=windowSize, numBins=numBins, maxSize=maxSize, percentile=True, organism=organism, track=track)
+                #data[filename]=processWig(genome, stdev=stdev, windowSize=windowSize, numBins=numBins, maxSize=maxSize, percentile=True, organism=organism, track=track)
             except:
                 return {"error":"Error preprocessing Wig"}
 
@@ -462,8 +480,9 @@ def batchPreprocessLocal(filenames=[], outfiles=[], dataName="None", windowSize=
             print("saving pickle in path:", picklePath)
             print("with keys",data.keys())
             print("with keys",data[filename].keys())
-            f=open(picklePath, 'w')
+            f=open(picklePath, 'wb')
             pickle.dump(data,f)
+            #pickle.dump(data[filename],f) #testing
             f.close()
      
     print("Compiling batch")  
@@ -486,13 +505,14 @@ def batchPreprocessLocal(filenames=[], outfiles=[], dataName="None", windowSize=
                     temp[i]=data[filenames[i]]["seq"][k]
                 meanBatch[k]=np.mean(temp,axis=0) 
             data["batch"]["processed"]=helpers.processWig(meanBatch, stdev, windowSize, numBins, maxSize, True, organism, k)
-            f=open(os.path.join(basePath,dataName+".pic"), 'w')
+            f=open(os.path.join(basePath,dataName+".pic"), 'wb')
             pickle.dump(data["batch"],f)
             f.close()
             print("serialize data takes",(time.clock()-tpickle))
         else:
             print("Loading batch data")
-            f=open(os.path.join(basePath,dataName+".pic"), 'r')
+            #f=open(os.path.join(basePath,dataName+".pic"), 'r')
+            f=open(os.path.join(basePath,dataName+".pic"), 'rb') #python 3
             data["batch"]=pickle.load(f)
             
     else:
@@ -516,7 +536,10 @@ def batchPreprocessLocal(filenames=[], outfiles=[], dataName="None", windowSize=
 #filenames2=[""]
 #s2=batchPreprocessLocal(filenames=filenames2, outfiles=[], "None", 30, 3)
 #   
-    
+#filenames=["/home/rodri/data/nucleosomas/wt/h-972_Rep1_depth_wl_trimmed_PE-chonly.wig","/home/rodri/data/nucleosomas/wt/h-972_Rep2_depth_wl_trimmed_PE-chonly.wig"]
+#s1=batchPreprocessLocal(filenames, [], "None", 30, 3, organism="Schizosaccharomyces pombe", basePath="./genomes", maxSize=5000)
+#seq=s1["chromosome1"]
+##    
 
 #%%
 """
@@ -579,7 +602,8 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
     #1A) Preprocessed data (.pic data) exist
     if os.path.isfile(picklePath) and forceReload=="false":
         print("Pickle exists!!!, recharge=", forceReload)
-        f=open(picklePath)
+        #f=open(picklePath)
+        f=open(picklePath, "rb") #python 3
         data=pickle.load(f)
         print("pickle loaded!", data["maximum"].keys())
         
@@ -637,7 +661,7 @@ def preprocess(filename="dwtMini2.wig", windowSize=100, numBins=5, maxSize=10000
         print("saving pickle in path:", picklePath)
         datap=data
 
-        f=open(picklePath, 'w')
+        f=open(picklePath, 'wb')
         pickle.dump(datap,f)
         print("serialize data takes",(time.clock()-tpickle))
         #NOTE: should remove the .wig here to avoid double memory space?
@@ -697,7 +721,7 @@ def getTrack(track="None", dataName="None"):
     dataName=request.args.get("dataName").strip()
     print("returning chromosome",track," for ",dataName)
     if track=="None":
-        track=data["res"].keys()[0]
+        track=list(data["res"].keys())[0]
 
     if( ("search" in data.keys()) == False):
         data["search"]={"points":{}, "sizePattern":0}
@@ -841,7 +865,8 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
     
     
     #CASE 1) Numerical range pattern
-    if(string.find(pattern, "go:")==-1):#go terms might contain '-'
+    #if(string.find(pattern, "go:")==-1):#go terms might contain '-'
+    if(pattern.find("go:")==-1):#go terms might contain '-' (python 3)
         interval=helpers.convertRange(pattern)
         if(interval!=-1):
             print("NUMERICAL RANGE")
@@ -855,7 +880,7 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
     #t=data["batch"]["processed"]["bwt"][data["batch"]["processed"]["seq"].keys()[0]]
     
     pattern=pattern.lower().strip()
-    patternLetters=[chr(x) for x in range(ord('a'), ord('a')+len(data["batch"]["processed"]["bins"][data["batch"]["processed"]["bins"].keys()[0]])-1)]
+    patternLetters=[chr(x) for x in range(ord('a'), ord('a')+len(data["batch"]["processed"]["bins"][list(data["batch"]["processed"]["bins"].keys())[0]])-1)]
 
     patternSymbols=patternLetters
     patternSymbols.append('+')
@@ -872,7 +897,8 @@ def searchLocal(data, pattern="", d=0, geo="none", intersect="soft", softMutatio
         print(data["batch"]["processed"]["gff"])
         for k in data["batch"]["processed"]["seq"].keys():
             if(k in data["batch"]["processed"]["gff"].keys()):
-                if(string.find(pattern,"go:")==-1):
+                #if(string.find(pattern,"go:")==-1):
+                if(pattern.find("go:")==-1): # python 3
                     print("GENE in ",k)
                     oc=ann.searchGene(pattern, data["batch"]["processed"]["gff"][k], ["gene", "tRNA_gene", "ORF"])
                 else:
@@ -1029,7 +1055,7 @@ def annotations(positions={}, window=1000, types=["any"], onlyIDs="False", align
     try:
         window=eval(request.args.get("window"))
     except:
-        window=int(request.args.get("window"))
+        window=int(round(float(request.args.get("window"))))
     types=eval(request.args.get("types"))
     positions=eval(request.args.get("positions"))
     onlyIDs=str(request.args.get("onlyIDs"))
@@ -1070,7 +1096,10 @@ def annotations(positions={}, window=1000, types=["any"], onlyIDs="False", align
                         if(y["t"]=="gene" or y["t"]=="ORF"):#C albicans WO has ORFs only
                             gis.append(y["id"])
         data["annotations"]=res    
-        data["gis"]=gis                       
+        data["gis"]=gis    
+    print(type(res))
+    print(len(res))
+    print(res)                   
     return jsonify(response=res)
 #%%
 def annotationsLocal(positions, gff, window=1000, types=["any"], track="None", onlyIDs="False", align="left", intersect="soft"):
@@ -1123,7 +1152,7 @@ def nucProfile(positions=[], size=10, track="None", k=6, dataName="None"):
     import time
     t00=time.clock()
     pos=eval(request.args.get("positions"))
-    size=int(request.args.get("size"))
+    size=int(round(float(request.args.get("size"))))
     track=str(request.args.get("track"))
     k=int(request.args.get("k"))
     dataName=str(request.args.get("dataName")).strip()
@@ -1136,16 +1165,17 @@ def nucProfile(positions=[], size=10, track="None", k=6, dataName="None"):
     #basic operations (prof and c might not be very useful)
     seqs={}
     for p in pos:
+        p=round(p)
         seqs[p]=dbp["fasta"][track][p:p+size].upper()
-    c=ms.consensus(seqs.values())
-    prof=ms.profile(seqs.values())
+    c=ms.consensus(list(seqs.values()))
+    prof=ms.profile(list(seqs.values()))
 
     #gibbs sampling for motif search
     if(len(seqs)>1):
         t0=time.clock()
         for x in range(k,k+1,1): #for different k
             for i in range(1):
-                bm=ms.gibbsSampler(seqs.values(),x,1000)
+                bm=ms.gibbsSampler(list(seqs.values()),x,1000)
                 print(i,")",x, bm["score"], bm["score"]/len(seqs))
         print("Whole Gibbs took",(time.clock()-t0))    
     else:
@@ -1153,8 +1183,8 @@ def nucProfile(positions=[], size=10, track="None", k=6, dataName="None"):
     mot={}
     motloc={}
     for i in range(len(bm["motifs"])):
-               mot[seqs.keys()[i]]=bm["motifs"][i]
-               motloc[seqs.keys()[i]]=seqs.values()[i].find(bm["motifs"][i])
+               mot[list(seqs.keys())[i]]=bm["motifs"][i]
+               motloc[list(seqs.keys())[i]]=list(seqs.values())[i].find(bm["motifs"][i])
 #           
 #    #Alignment is superslow  we only do it if #seqx<50 with kalign to keep times <=1s
 #    if(len(pos)<=50):
@@ -1202,7 +1232,8 @@ def enrichmentGO(annotations={}, correction="none", alpha=0.01, discard=["IEA"])
     ego={}
     ego=ann.enrichmentFisher(gis=gis, dataGOA=dg["goa"], th=alpha, correction=correction, discard=discard)
     for k in ego.keys():
-        if(dg["go"].has_key(k) and dg["go"][k]!="undefined"):
+        #if(dg["go"].has_key(k) and dg["go"][k]!="undefined"):
+        if((k in dg["go"].keys()) and dg["go"][k]!="undefined"): #python 3
             ego[k]["go_name"]=dg["go"][k]
     data["ego"]=ego
     return jsonify(response=ego)
@@ -1210,12 +1241,15 @@ def enrichmentGO(annotations={}, correction="none", alpha=0.01, discard=["IEA"])
 #%% automatic assignment of users (no login/pass protocol)
 @app.route("/assignUser")
 def assignUser():
+    print("Assigning user....")
     import random
     import sys
     
     global user
     
-    user=str(random.randrange(0, sys.maxint))
+    #user=str(random.randrange(0, sys.maxint))  #python 2.7
+    user=str(random.randrange(0, sys.maxsize))  #python 3
+    print("User assigned:", user)
     session[user]={}
     return jsonify(response=user)
     

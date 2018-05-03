@@ -31,6 +31,7 @@ License: -GPL3.0 with authorship attribution (extension 7.b) -
 def getAnnotationFolders():
     import glob
     import os
+    print("Annotations must be located at folder 'annotations' on", os.getcwd())
     if ("annotations" in glob.glob("*")==False):
          os.makedirs("annotations")
     return [os.path.basename(x) for x in glob.glob("annotations/[!^go]*")]
@@ -68,9 +69,10 @@ def gff(filename="annotations/Schizosaccharomyces pombe/gff/schizosaccharomyces_
     sc=("cerevisiae" in filename)
     ce=("elegans" in filename)
     
-    data=np.empty(len(entries),dtype=[("chromosome", "a40"),("type", "a30"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a40"), ("name", "a40")])
+    #data=np.empty(len(entries),dtype=[("chromosome", "a40"),("type", "a30"), ("start", "i8"), ("end", "i8"), ("sense", "a1"), ("id", "a40"), ("name", "a40")])
+    data=np.empty(len(entries),dtype=[("chromosome", "U40"),("type", "U30"), ("start", "i8"), ("end", "i8"), ("sense", "U1"), ("id", "U40"), ("name", "U40")]) #python 3
                 
-    for i in xrange(len(entries)):
+    for i in range(len(entries)):
         row=entries.pop()
         
         data[i]["start"]=(int)(row["start"])
@@ -255,7 +257,7 @@ def fasta(ch="None", org="Schizosaccharomyces pombe"):
         for c in contents:
             if(re.search(".f.*a$", c)):
                 filenames.append(c)
-        print filenames
+        print(filenames)
         if(len(filenames)==1):#should be a single file
             f=open("annotations/"+org+"/fasta/"+filenames[0])
             reader=f.readlines()
@@ -329,7 +331,7 @@ def annotate(mm, dataGFF, types=["any"], winSize=1000, align="center", intersect
             ws=winSize[i]
             interval=ws*0.5
         
-        if(align=="left"):
+        if(align=="left"): 
             s1=x
             e1=x+ws
         else:
@@ -344,8 +346,8 @@ def annotate(mm, dataGFF, types=["any"], winSize=1000, align="center", intersect
         if(len(sel)>0):     
             em[x]=[]
             for s in sel:
-                em[x].append({"t":s["type"], "id":s["id"], "n":s["name"], "s":s["start"], "e":s["end"], "ss":s["sense"]})
-                #em[x].append({"type":s["type"], "id":s["id"], "name":s["name"], "start":s["start"], "end":s["end"], "sense":s["sense"]})
+                #em[x].append({"t":s["type"], "id":s["id"], "n":s["name"], "s":s["start"], "e":s["end"], "ss":s["sense"]})
+                em[x].append({"t":str(s["type"]), "id":str(s["id"]), "n":str(s["name"]), "s":int(s["start"]), "e":int(s["end"]), "ss":str(s["sense"])}) #for python3? 
     return em    
 #%%
 #import time
@@ -363,7 +365,6 @@ def annotate(mm, dataGFF, types=["any"], winSize=1000, align="center", intersect
 #%%
 def searchGene(text0, dataGFF, types=["gene"], exact=True, returnVerbose=False):
     import numpy as np
-    import string
     import re
     data=dataGFF
     result=[]
@@ -376,7 +377,8 @@ def searchGene(text0, dataGFF, types=["gene"], exact=True, returnVerbose=False):
         data=dataGFF[selected(dataGFF["type"])]
     if exact:
         for x in data:
-            if(string.find(x["id"].lower(),text)>=0 or string.find(x["name"].lower(),text)>=0):
+            #if(string.find(x["id"].lower(),text)>=0 or string.find(x["name"].lower(),text)>=0):
+            if(x["id"].lower().find(text)>=0 or x["name"].lower().find(text)>=0): #python 3
               if(returnVerbose):
                   result.append({"start":x["start"], "end":x["end"], "name":x["name"], "chromosome":x["chromosome"], "sense":x["sense"]})
               else:
@@ -398,11 +400,11 @@ def searchGene(text0, dataGFF, types=["gene"], exact=True, returnVerbose=False):
 #with the corresponding go terms and returns their locations as start-end
 def searchGO(text, dataGOA, dataGO, dataGFF):
     import numpy as np
-    import string
     result=[]
     #print("Searching GO terms for: |",text,"|")
     for k in dataGO.keys():
-      if(string.find(dataGO[k].lower(),text)>=0):
+      #if(string.find(dataGO[k].lower(),text)>=0):
+      if(dataGO[k].lower().find(text)>=0): #python 3
           result.append(k)
     result=set(result)
     res2=[]
@@ -436,7 +438,7 @@ def exportFASTA(search, fasta,windowSize):
         else:
             sizes=int(search["sizePattern"])
         print("Getting seqs for ",positions," in track",track)
-        for i in xrange(len(positions)):
+        for i in range(len(positions)):
             start=int(positions[i])
             if(s):
                 end=start+sizes*windowSize

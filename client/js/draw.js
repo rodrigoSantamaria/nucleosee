@@ -378,6 +378,18 @@ function drawSearch(allPoints0)
 
     // Draw occurrences label (only on first lane) --------------------
     var startX = 210;
+
+    // In the case of Firefox, we require a bit more offset
+    var ua= navigator.userAgent, tem,
+    M= ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
+    if(/trident/i.test(M[1])){
+        tem=  /\brv[ :]+(\d+)/g.exec(ua) || [];
+        return 'IE '+(tem[1] || '');
+    }
+    if(M[1]=== 'Firefox'){
+        startX=startX+70;
+    }
+
     dl1[0].cv.svg.append("g")
         .attr("class", dl1[0].cv.classSVG + " export-label")
         .append("text")
@@ -693,7 +705,9 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
             var dl2i=dl2[i];
             var dd=dl2i.cv.svg.selectAll("."+dl2i.cv.classSVG+".line")[0][0]["__data__"];
 
-            var line_x0 = d3.event.x - dl2i.cv.margin.left;
+            //var line_x0 = d3.event.x - dl2i.cv.margin.left;
+            var line_x0 = d3.event.pageX - dl2i.cv.margin.left;
+
             var yScale = d3.scale.linear()
                 .domain([globalSeqs[i].min, globalSeqs[i].max])
                 .range([dl2i.cv.dim.height, 0]);
@@ -706,6 +720,7 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
                     pointXY = d[i];
                     break;
                 }*/
+
             for (var i in dd)        //This loops over the proper data line
              if (dd[i].pos == line_x0) {
                  line_y0 = yScale(dd[i].value);

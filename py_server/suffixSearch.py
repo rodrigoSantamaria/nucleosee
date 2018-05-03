@@ -36,13 +36,14 @@ def bwt(text, numCols=1000):
     t=time.clock()
     numCols=min(numCols,len(text))
     #Build cyclic rotations
-    cr=numpy.empty([len(text)],dtype=[("pos", "i4"),("text", "a"+(str)(numCols)), ("initial", "a1"), ("final", "a1")]) #we now must change to numpy.array!
-    for i in xrange(len(text)-numCols):
+    cr=numpy.empty([len(text)],dtype=[("pos", "i4"),("text", "U"+(str)(numCols)), ("initial", "U1"), ("final", "U1")]) #we now must change to numpy.array!
+    #cr=numpy.empty([len(text)],dtype=[("pos", "i4"),("text", a), ("initial", a1), ("final", a1)]) #we now must change to numpy.array!
+    for i in range(len(text)-numCols):
          p0=i-1
          if(i-1<0):
              p0=len(text)-i-1
          cr[i]=(i, text[i:i+numCols],text[i],text[p0])
-    for i in xrange(numCols):
+    for i in range(numCols):
          cr[i+len(text)-numCols]=(i+len(text)-numCols, text[len(text)-numCols+i : len(text)]+ text[0:i], text[len(text)-numCols+i], text[len(text)-numCols+i-1])
     print('time in building M:',(time.clock()-t))
     #t=time.clock()
@@ -70,8 +71,8 @@ def bwt(text, numCols=1000):
 #text="panamabananas$"
 #pattern="ana"
 #t=bwt(text, len(pattern))
-#t=bwt("".join(dtp["dseq"]), 100)
-
+##t=bwt("".join(dtp["dseq"]), 100)
+#res=bwMatchingV7("pa", t["bwt"], t["firstOccurrence"], t["suffixArray"], t["checkpoints"], k=1000)
 
 #%% ------------ CHECKPOINTS
 #Returns a dict with the checkpoints for each symbol in text. 
@@ -84,7 +85,7 @@ def checkpoints(text, k=1000):
         checks[s]=[]
         counts[s]=0
         checks[s].append(0)
-    for i in xrange(len(text)):
+    for i in range(len(text)):
         counts[text[i]]+=1    
         if((i+1) % k ==0):
             for s in symbols:
@@ -99,7 +100,7 @@ def checkpoints(text, k=1000):
 #        checks[s]=[]
 #        counts[s]=0 
 #        checks[s].append(0)
-#    for i in xrange(0,len(text),k):
+#    for i in range(0,len(text),k):
 #        if(i+k<=len(text)):
 #            tt=text[i:i+k]
 #            for s in symbols:
@@ -123,12 +124,13 @@ def checkpoints(text, k=1000):
 def count(symbol, pos, text, checkpoints, k=1000):
     if(pos==len(text)-1):
         pos-=1
-    for i in xrange(0,len(text),k):
+    for i in range(0,len(text),k):
         if(pos-i<0):
             break
-    pos0=max(0,i-1)/k
+    pos0=int(max(0,i-1)/k)
+    print(symbol, pos0, i, k)
     count=checkpoints[symbol][pos0]
-    for i in xrange(pos0*k, pos):
+    for i in range(pos0*k, pos):
         if(text[i]==symbol):
             count+=1
     return count
@@ -156,6 +158,7 @@ def bwMatchingV7(pattern, cf, fo, sa, checkpoints, k=1000):
             try:
                 fos=fo[symbol]
             except:#in the rare case that the symbol is not in the whole sequence
+                print("rare case; ", symbol)
                 return []
             top=fos + count(symbol, top, cf, checkpoints, k)
             bottom=fos + count(symbol, bottom+1, cf, checkpoints, k) - 1
@@ -163,10 +166,13 @@ def bwMatchingV7(pattern, cf, fo, sa, checkpoints, k=1000):
             r=sa[top:bottom+1]
             return r
     return []
-
-
-
-#res=bwMatchingV7("ccccc", t["bwt"], t["firstOccurrence"], t["suffixArray"], t["checkpoints"], k=100000)
+#%%
+#
+#import pickle
+#f=open("/home/rodri/workspace/nucleosee/py_server/genomes/h972.pic", "rb")
+#data=pickle.load(f, encoding="bytes")
+#t=data["processed"]["bwt"]["chromosome1"]
+#res=bwMatchingV7(b"c", t["bwt"], t["firstOccurrence"], t["suffixArray"], t["checkpoints"], k=1000)
 
 #%% --------- SUFFIX ARRAY SEARCH (version 8.0) -------------------
 #Searches for a pattern in a text with up to d mutations (d<3 on large seqs or performance issues)
@@ -188,7 +194,7 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
     t00=time.clock()
     step=(int)(round((float)(len(pattern))/(d+1)))
     matches=[]
-    for i in xrange(0, len(pattern), step):
+    for i in range(0, len(pattern), step):
         #1) seed definition
         seed=pattern[i:i+step]
         #2) seed detection
@@ -199,7 +205,8 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
         #print "\tfound in {}".format(result)
         #3) seed extension
         #a) matrix reconstruction
-        cr=numpy.empty(len(result),dtype=[("pos", "i4"),("text", "a"+(str)(len(pattern))), ("mismatches", "i4")])
+        #cr=numpy.empty(len(result),dtype=[("pos", "i4"),("text", "a"+(str)(len(pattern))), ("mismatches", "i4")])
+        cr=numpy.empty(len(result),dtype=[("pos", "i4"),("text", "U"+(str)(len(pattern))), ("mismatches", "i4")]) #Python 3
         cont=0
         for r in result:
              if(r-i>=0):
@@ -213,10 +220,10 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
         t0=time.clock()
         #print "CYCLIC ROTATIONS: {}".format(cr)
         #b) approximate searh
-        for m in xrange(len(pattern)):
+        for m in range(len(pattern)):
             #print "candidates left: {}".format(len(cr))
             symbol=pattern[m]
-            for j in xrange(len(cr)):
+            for j in range(len(cr)):
                 t=cr[j]
                 if(t["text"][m]!=symbol): #con a*5+abcba(2) falla aqui, se sale de t["text"]=ccaaaa con m=6
                     t["mismatches"]+=1
@@ -226,7 +233,7 @@ def bwMatchingV8(text, pattern, cf, fo, sa, checkpoints, k=1000, d=0):
         matches.append(parray)
         print("approx search takes",(time.clock()-t0),"s")
     ret=set()
-    for i in xrange(len(matches)):
+    for i in range(len(matches)):
         ret=ret.union(matches[i])
     ret=list(ret)
     ret.sort()

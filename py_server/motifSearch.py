@@ -7,7 +7,7 @@ SEARCH METHOD FOR GENOME BROWSER
 #%% Perfil de los motivos (frecuencias o probabiliades)
 def profile(motifs):
     freqs={'A':[], 'C':[], 'G':[],'T':[],'N':[]}
-    for j in xrange(len(motifs[0])): #para cada columna
+    for j in range(len(motifs[0])): #para cada columna
         count={'A':0, 'C':0, 'T':0, 'G':0, 'N':0}
         for m in motifs:    #para cada motivo
             count[m[j]]+=1
@@ -22,51 +22,59 @@ def profile(motifs):
 #This version makes key control
 def consensus0(seqs):
     import operator
+    import functools
     match=[]
-    for letter in xrange(len(seqs[0])):
-        freq=dict(A=0,G=0,T=0,C=0)
+    for letter in range(len(seqs[0])):
+        freq={'A':0,'G':0,'T':0,'C':0,'N':0}
         for s in seqs:
             if(s[letter] in freq.keys()):
                 freq[s[letter]]+=1
             else:
                 freq[s[letter]]=1
-        match.append(max(freq.iteritems(), key=operator.itemgetter(1))[0])
+        #match.append(max(freq.iteritems(), key=operator.itemgetter(1))[0])
+        match.append(max(freq.items(), key=operator.itemgetter(1))[0])
     return reduce(lambda a,b: '{0}{1}'.format(a,b), match)  #HIC SUNT DRACONES: más info sobre las funciones lambda: http://www.secnetix.de/olli/Python/lambda_functions.hawk
 
 #This version requires that non-nucleotides are turned to N (2x speed)
 def consensus(seqs):
     import operator
+    import functools
     match=[]
-    for j in xrange(len(seqs[0])):
-        freq=dict(A=0,G=0,T=0,C=0,N=0)
+    for j in range(len(seqs[0])):
+        freq={'A':0,'G':0,'T':0,'C':0,'N':0}
         for s in seqs:
             freq[s[j]]+=1
-        match.append(max(freq.iteritems(), key=operator.itemgetter(1))[0])
-    return reduce(lambda a,b: '{0}{1}'.format(a,b), match)  #HIC SUNT DRACONES: más info sobre las funciones lambda: http://www.secnetix.de/olli/Python/lambda_functions.hawk
+        #match.append(max(freq.iteritems(), key=operator.itemgetter(1))[0])
+        match.append(max(freq.items(), key=operator.itemgetter(1))[0]) #python 3
+    return functools.reduce(lambda a,b: '{0}{1}'.format(a,b), match)  #HIC SUNT DRACONES: más info sobre las funciones lambda: http://www.secnetix.de/olli/Python/lambda_functions.hawk
 
 #%% Puntuación del grupo de motivos, a parte las probabilidades
-def score0(motifs):
+def score(motifs):
     s=0
     con=consensus(motifs)
     for m in motifs:
-        for j in xrange(len(m)):
+        for j in range(len(m)):
             if(con[j]!=m[j]):
                 s+=1
-    return s
     
-#a bit faster version integrating consensus     -> not really
-def score(motifs):
+    return {'score':s, 'consensus':con}
+
+#%%
+#a bit faster version integrating consensus     -> not really, not workin in python 3
+def score1(motifs):
     import numpy as np
     import operator
     s=0
     consensus=[]
-    motifs2=np.matrix([list(x) for x in motifs])
-    for j in xrange(motifs2.shape[1]):
-        freq=dict(A=0,G=0,T=0,C=0,N=0)
-        col=motifs2[:,j].tostring()
+    motifs2=np.matrix([list(x) for x in motifs], dtype="U")
+    for j in range(motifs2.shape[1]):
+        freq={'A':0,'G':0,'T':0,'C':0,'N':0}
+        col=motifs2[:,j].tostring() #typing errs in python 3
         for k in freq.keys():
+            print(col, k, freq[k])
             freq[k]=col.count(k)
-        conj=max(freq.iteritems(), key=operator.itemgetter(1))[0]#the most frequent letter
+        #conj=max(freq.iteritems(), key=operator.itemgetter(1))[0]#the most frequent letter
+        conj=max(freq.items(), key=operator.itemgetter(1))[0]#the most frequent letter
         consensus.append(conj)
         s+=len(motifs)-freq[conj]
     return {'score':s, 'consensus':consensus}
@@ -76,11 +84,12 @@ def scoreInc(motifs, profiles):
     import operator
     s=0
     consensus=[]
-    for j in xrange(len(motifs[0])):
-        freq=dict(A=0,G=0,T=0,C=0,N=0)
+    for j in range(len(motifs[0])):
+        freq={'A':0,'G':0,'T':0,'C':0,'N':0}
         for k in freq.keys():
             freq[k]=profiles[k][j]
-        conj=max(freq.iteritems(), key=operator.itemgetter(1))[0]#the most frequent letter
+        #conj=max(freq.iteritems(), key=operator.itemgetter(1))[0]#the most frequent letter
+        conj=max(freq.items(), key=operator.itemgetter(1))[0]#the most frequent letter
         consensus.append(conj)
         s+=len(motifs)-freq[conj]
     return {'score':s, 'consensus':consensus}   
@@ -89,13 +98,13 @@ def scoreInc(motifs, profiles):
 import numpy as np
 def pr(m,p):
     prod=p[m[0]][0]
-    for i in xrange(1, len(m)):
+    for i in range(1, len(m)):
         prod*=p[m[i]][i]
     return prod
 
 def pr1(m,p): #with np.prod (slower)
     prod=np.empty(len(m))
-    for i in xrange(len(m)):
+    for i in range(len(m)):
         prod[i]=p[m[i]][i]
     return np.prod(prod)
 
@@ -109,7 +118,7 @@ def pr2(m,p): #with np.prod and np.choose (requires transformations, slower) p m
 def profileMostProbableKmer0(text, k, perfil):
     bestPr=-1
     bestSeq=""
-    for i in xrange(len(text)-k+1): #para cada posible k-mer en text
+    for i in range(len(text)-k+1): #para cada posible k-mer en text
         kmer=text[i:(i+k)]
         newPr=pr(kmer, perfil)
         if(newPr>bestPr):
@@ -125,7 +134,7 @@ def profileMostProbableKmer(text, k, perfil):
     bestSeq=kmer
     bestPr=pr(kmer,perfil)
         
-    for i in xrange(k+1, len(text)):
+    for i in range(k+1, len(text)):
         kmer=kmer[1:]+text[i]
         newPr=pr(kmer, perfil)
         if(newPr>bestPr):
@@ -144,7 +153,7 @@ def profileMostProbableKmer2(text, k, perfil):
     
     import time
     t0=time.time()
-    for i in xrange(len(text2)-k+1): #para cada posible k-mer en text
+    for i in range(len(text2)-k+1): #para cada posible k-mer en text
         kmer=text2[i:(i+k)]
         newPr=pr2(kmer, perfil2)
         if(newPr>bestPr):
@@ -180,7 +189,7 @@ def profileMostProbableKmer2(text, k, perfil):
 def profileLaplace0(motifs):
     freqs={'A':[], 'C':[], 'G':[],'T':[], 'N':[]}
     den=(float)(len(motifs)*2)
-    for j in xrange(len(motifs[0])): #para cada columna
+    for j in range(len(motifs[0])): #para cada columna
         count={'A':1, 'C':1, 'T':1, 'G':1, 'N':1}
         for m in motifs:    #para cada motivo
             count[m[j]]+=1
@@ -193,7 +202,7 @@ def profileLaplace(motifs):
     freqs={'A':[], 'C':[], 'G':[],'T':[], 'N':[]}
     ocs={'A':[], 'C':[], 'G':[],'T':[], 'N':[]}
     den=(float)(len(motifs)*2)
-    for j in xrange(len(motifs[0])): #para cada columna
+    for j in range(len(motifs[0])): #para cada columna
         count={'A':1, 'C':1, 'T':1, 'G':1, 'N':1}
         for m in motifs:    #para cada motivo
             count[m[j]]+=1
@@ -211,7 +220,7 @@ def profileLaplaceInc(old_ocs, old_m, m, num_motifs):
     den=(float)(num_motifs*2)
     
     ocs=old_ocs
-    for j in xrange(len(m)):
+    for j in range(len(m)):
         ocs[m[j]][j]+=1
         ocs[old_m[j]][j]-=1
         for k in ocs.keys():
@@ -247,14 +256,14 @@ def gibbsSampler0(dna, k, N):
     import random
     random.seed()
     motivos=[]
-    for i in xrange(t):
+    for i in range(t):
         ri=random.randint(0,len(dna[i])-k) 
         motivos.append(dna[i][ri:ri+k])
     bestMotifs= [x[:k] for x in dna]
     sb=score(bestMotifs)
     t0=time.time()
     #1) iteration
-    for j in xrange(N):
+    for j in range(N):
         i=random.randint(0,t-1)
         del motivos[i]
         
@@ -281,7 +290,7 @@ def gibbsSampler(dna, k, N):
     import random
     random.seed()
     motivos=[]
-    for i in xrange(t):
+    for i in range(t):
         ri=random.randint(0,len(dna[i])-k) 
         motivos.append(dna[i][ri:ri+k])
     bestMotifs= [x[:k] for x in dna]
@@ -302,7 +311,7 @@ def gibbsSampler(dna, k, N):
         sb=s            
     
     #1) iterations
-    for j in xrange(1,N):
+    for j in range(1,N):
         i=random.randint(0,t-1)
 
         oldmot=motivos[i]#NEW
@@ -370,7 +379,7 @@ def gibbsSampler(dna, k, N):
 def countKmers(seq,n,k):
     kmers={}    
     kfinals={}  
-    for i in xrange(len(seq)-k+1):
+    for i in range(len(seq)-k+1):
         kmer=seq[i:(i+k)]
         if(kmer in kmers.keys()):	
             kmers[kmer]+=1
@@ -389,7 +398,7 @@ def countKmers(seq,n,k):
 #Retorna un diccionario con la posición como clave y el patrón como valor
 def findPattern(pattern,seq):
     pos={}
-    for i in xrange(0, len(seq)-len(pattern)+1):
+    for i in range(0, len(seq)-len(pattern)+1):
         s=seq[i:(i+len(pattern))]
         if(s==pattern):
             pos[i]=pattern
@@ -402,10 +411,10 @@ def findPattern(pattern,seq):
 #Retorna un diccionario con la posición como clave y el patrón como valor
 def findPattern(pattern,seq, d=3):
     pos={}
-    for i in xrange(0, len(seq)-len(pattern)+1):
+    for i in range(0, len(seq)-len(pattern)+1):
         s=seq[i:(i+len(pattern))]
         nmismatch=0
-        for j in xrange(len(s)):
+        for j in range(len(s)):
             if(s[j]!=pattern[j]):
                 nmismatch=nmismatch+1
                 if(nmismatch>d):
@@ -427,7 +436,7 @@ def findConsensus(pattern,seq, d=3):
 # en seq, bien en su forma normal o con hasta d mutaciones
 def countKmersMM(seq,d=3,k=9):
      kmers={}   
-     for i in xrange(len(seq)-k+1):
+     for i in range(len(seq)-k+1):
         kmer=seq[i:(i+k)]
         pos=findPattern(kmer,seq,d)
         kmers[kmer]=len(pos)
@@ -439,7 +448,7 @@ def countKmersMM(seq,d=3,k=9):
 #en más ocasiones (en su forma normal o con hasa d mutaciones)
 def mostFrequentKmers(seq,d=3,k=9):
      kmers={}   
-     for i in xrange(len(seq)-k+1):
+     for i in range(len(seq)-k+1):
         kmer=seq[i:(i+k)]
         pos=findPattern(kmer,seq,d)
         kmers[kmer]=len(pos)
@@ -462,7 +471,7 @@ def mostFrequentKmers(seq,d=3,k=9):
 #http://stackoverflow.com/questions/11679855/introducing-mutations-in-a-dna-string-in-python
 def mutations(word, num_mismatches, letters="ACGT"):
     import itertools
-    for locs in itertools.combinations(xrange(len(word)), num_mismatches):
+    for locs in itertools.combinations(range(len(word)), num_mismatches):
         this_word = [[char] for char in word]
         for loc in locs:
             orig_char = word[loc]
@@ -476,7 +485,7 @@ def mutations(word, num_mismatches, letters="ACGT"):
 #posibles con num_mismathes SNPs *o menos*
 def mutationsEqualOrLess(word, num_mismatches, letters="ACGT"):
    matches=set()
-   for dd in xrange(num_mismatches,-1,-1): 
+   for dd in range(num_mismatches,-1,-1): 
        matches.update(list(mutations(word, dd, letters)))
    return matches
 
@@ -487,7 +496,7 @@ def mutationsEqualOrLess(word, num_mismatches, letters="ACGT"):
 #en hasta 2 SNPs
 def allMutations(seq, k=9, d=2):
     kmers=set()
-    for i in xrange(len(seq)-k+1):
+    for i in range(len(seq)-k+1):
         kmer=seq[i:i+k]
         kmers.update(mutationsEqualOrLess(kmer, d))
     return kmers
@@ -552,7 +561,7 @@ def frequentWordMMRC(seq,k=9,d=3):
 #%%
 def consensusProfile(consensus, profile):
     cp=[]
-    for i in xrange(len(consensus)):
+    for i in range(len(consensus)):
         cp.append(profile[consensus[i]][i])
     return cp
 
@@ -561,7 +570,7 @@ def entropy(motifs):
     import math
     s=0
     p=profile(motifs)
-    for i in xrange(len(p['A'])):
+    for i in range(len(p['A'])):
         acc=0
         for k in p.keys():
             if(p[k][i]>0):
@@ -575,10 +584,10 @@ def d(motifs, pattern):
     dtotal=0
     for motif in motifs:
         d=len(pattern)
-        for i in xrange(len(motif)-len(pattern)+1):
+        for i in range(len(motif)-len(pattern)+1):
             dnew=len(pattern)
             chunck=motif[i:i+len(pattern)]
-            for j in xrange(len(pattern)):
+            for j in range(len(pattern)):
                 if(chunck[j]==pattern[j]):
                     dnew-=1
             if(dnew<d):
@@ -593,10 +602,10 @@ def d(motifs, pattern):
 def greedyMotifSearch(dna, k):
     t=len(dna)
     bestMotifs= [x[:k] for x in dna]
-    for i in xrange(len(dna[0])-k+1):
+    for i in range(len(dna[0])-k+1):
         mot=[]
         mot.append(dna[0][i:i+k])
-        for j in xrange(1,t):
+        for j in range(1,t):
             prof=profileLaplace(mot)
             mot.append(profileMostProbableKmer(dna[j], k, prof)) #perfil más probable en la iésima cadena de Dna
         if(score(mot)<score(bestMotifs)):
@@ -617,7 +626,7 @@ def randomizedMotifSearch(dna, k):
     import random
     random.seed()
     motivos=[]
-    for i in xrange(len(dna)):
+    for i in range(len(dna)):
         ri=random.randint(0,len(dna[i])-k) 
         motivos.append(dna[i][ri:ri+k])
     mejores=motivos
@@ -637,7 +646,7 @@ def profileLaplace1(motifs):
     l=len(motifs[0])
     freqs={'A':np.ones(l), 'C':np.ones(l), 'G':np.ones(l),'T':np.ones(l),'N':np.ones(l)}
     den=(float)(len(motifs)*2)
-    for i in xrange(len(motifs)): #para cada fila
+    for i in range(len(motifs)): #para cada fila
         #for k in freqs.keys():
         for k in ['A','C','G','T']:
             freqs[k][[m.start() for m in re.finditer(k, motifs[i])]]+=1
@@ -652,7 +661,7 @@ def profileLaplace2(motifs): #not good
     mot=np.matrix([list(x) for x in motifs],dtype="str")
     freqs={'A':[], 'C':[], 'G':[],'T':[]}
     den=(float)(len(motifs)*2)
-    for j in xrange(mot[0].size): #para cada columna
+    for j in range(mot[0].size): #para cada columna
         for k in freqs.keys():
             freqs[k].append(("ATTCCG".count(k)+1)/den)
             #freqs[k].append((mot[:,j].tostring().count(k)+1)/den)
@@ -664,14 +673,14 @@ def greedyMotifSearchV0(dna, k):
     t=len(dna)
     bestMotifs= [x[:k] for x in dna]
     #bestProbs=[score(x) for x in bestMotifs]
-    for i in xrange(len(dna[0])-k+1):
+    for i in range(len(dna[0])-k+1):
         mot=[]
         mot.append(dna[0][i:i+k])
-        for j in xrange(1,t):
+        for j in range(1,t):
             prof=profile(mot)
             mot.append(profileMostProbableKmer(dna[j], k, prof)) #perfil más probable en la iésima cadena de Dna
         if(score(mot)<score(bestMotifs)):
-            print score(mot)
+            print(score(mot))
             bestMotifs=mot
     return bestMotifs
     
@@ -682,7 +691,7 @@ def greedyMotifSearchV0(dna, k):
 #def consensus(seqs):
 #    import operator
 #    match=[]
-#    for letter in xrange(len(seqs[0])):
+#    for letter in range(len(seqs[0])):
 #        freq={"A":0,"G":0,"T":0,"C":0, "-":0}
 #        for s in seqs:
 #            if(s[letter] in freq.keys()):
