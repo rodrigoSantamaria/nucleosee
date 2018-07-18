@@ -15,16 +15,19 @@ You basically need to perform 3 steps:
 ### 1) Install Docker
 Visit https://docs.docker.com/install/ to install Docker on your machine.
 ### 2) Setup host folders
+This step is optional, as long as you provide two folders with the proper structure for volumes (-v) in the next step, it's fine. More info about it in the help pdf above (section Setting up a server).
+
+Anyways, we recommend to do it at least the first time you're setting up Nucleosee.
+
 Download the annotations folder at http://vis.usal.es/rodrigo/nucleosee/annotations.zip
 
 Unzip it at your preferred location (`ann_path`). You can check its folder structure and add 
 your own organism annotations.
 
-Optionally, you can download some preprocessed examples at http://vis.usal.es/rodrigo/nucleosee/genomes.zip
+Download some preprocessed examples at http://vis.usal.es/rodrigo/nucleosee/genomes.zip
 
 Unzip it at your preferred location (`gen_path`)
 
-This step is optional, as long as you provide two folders with the proper structure for volumes (-v) in the next step, it's fine. More info about it in the help pdf above (section Setting up a server)
 
 ### 3) Run Docker container
 ```
