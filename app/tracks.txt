@@ -1,0 +1,7 @@
+None	genomes/dwtMini2c3ws30nb2imeanorgSaccharomyces_cerevisiae.pic	30	2	Saccharomyces cerevisiae
+None	xxx.pic	30	2	Saccharomyces cerevisiae
+None	xxx.pic	30	3	Saccharomyces cerevisiae
+yeast	/home/rodri/data/nucleosee/performance/GSM585199_FC14703_YE_MNase_Lane_1_eland_resultc3ws30nb3imeanorgSaccharomyces_cerevisiae.pic	30	3	Saccharomyces cerevisiae
+worm	/home/rodri/data/nucleosee/performance/GSM2417781_N2_Pr_plus_normc3ws30nb3imeanorgCaenorhabditis_elegans.pic	30	3	Caenorhabditis elegans
+fly	/home/rodri/data/nucleosee/performance/GSM883798_Dmel36_Combined_+c3ws30nb3imeanorgDrosophila_melanogaster.pic	30	3	Drosophila melanogaster
+yeast	/home/rodri/data/nucleosee/performance/GSM585199_FC14703_YE_MNase_Lane_1_eland_resultc3ws30nb3imeanorgSaccharomyces_cerevisiae.pic	30	3	Saccharomyces cerevisiae

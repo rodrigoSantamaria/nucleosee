@@ -1,0 +1,43 @@
+TODO: GIT SYNC
+Synchronize my new local environment to the github repo
+
+TODO: Docker install
+Almost solved. A couple of issues with Nginx and the frontend (maybe the static folder?) --> gives issues on other places like the IDE
+
+SOLVED: MIGRACIÓN A PY3
+Recurrent issues
+	Binary text types in np.empty data structures -> SOL: use UX instead of AX as data types.
+	Data reading: files must be opened as binary if stored via pickle
+	xrange non existing
+	string.find does not exist, replace by 
+	has_keys() non existing in dirs
+	
+
+TODO: PICKLES INDIVIDUALES
+h972.pic (a)	223.7
+reps 	83.6 157.8 --> La segunda ocupa el doble, debe estar metiendo de las dos??
+	Es en el pickle.dump de batchPreprocessLocal (línea 484). Lo malo es que tal y como está hecho, o guardamos todo o perdemos la clave "go". No sé hasta qué punto los .pic de las réplicas son necesarios, teniendo el .pic global.
+	TODO: intentar leer el pic global sin más. Ahorraríamos un 50% de memoria en disco
+
+CHROME
+* NOT SOLVED: AssignUser makes strange things at the beginning, sometimes it does not return or takes time to return --> the method verifyConnection is defined inside the load() event, where it is used as callback, and therefore it was not defined on time, I put it outside directly above the load() treatment.
+assignUser was called twice, i solve that too.
+Still it is not connecting: it eventually connects (after minutes), but not immediatly as in Firefox!
+
+FIREFOX
+* SOLVED:Lane 2 selection is not responsive: event.x is not fired in Firefox, only in Chrome. event.pageX works on both
+* Search options box has some overlap on texts and buttons. I solved it by changes to md grid (12 columns) and relocating some elements.
+	
+
+PART-SOLVED: MATCHES LABELS
+On the left for firefox, must be just below the chromosomes. Works ok for Chrome. It seems to come form a different implementation of features of SVG2, still yet to finish on both. Partially solved by detecting the browser and adding 70px in the case of Firefox
+
+IMPROVE: LANE3
+Switch lane3 to nucleotide/kmer frequency graph?
+
+
+INTERFAZ
+Poner en rojo todas las ocurrencias en el lane 2, no solo la seleccionada
+
+
+

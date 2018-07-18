@@ -1,6 +1,6 @@
 #!/bin/bash
 
 
-# Start service of Python
-cd py_server/
-python ./analysis.py
+# Start service on debug mode with Flask
+cd app/
+python ./main.py

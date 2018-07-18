@@ -1,0 +1,28 @@
+#modalSelectOptions{
+    top:1%;
+    right:75%;
+    outline: none;
+}
+
+
+@media screen and (min-width: 768px) {
+
+    #modalSelectOptions .modal-dialog  {width:300px;}
+}
+
+a.button{
+    font-size: 10px;
+    color: black;
+    }
+
+.options2{
+    font-size: 10px;
+    background: white;
+    border-style: solid;
+    border-color: white;
+}
+
+.listClass{
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-style: unset;
+}

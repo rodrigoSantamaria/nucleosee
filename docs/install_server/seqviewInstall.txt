@@ -8,6 +8,8 @@ pip install numpy
 pip install fisher --> DA ERROR: uknown Python.h, luego no sé como ahora me da otro error porque se mezcla con py3!
 				-> ha quedado algo cascado con pip y me instala los paquetes de la 3.5 en la 2.7, o 					algo así, lo soluciono instalando con easy_install
 
+conda install -c bioconda pybigwig -> Si lo intento con pip da errores de bibliotecas de gcc faltantes, con anaconda lo resuelve sin tener que hacer más lío (en obelus). En cpg3 me da error tanto pip como easy_install en zlib.h
+
 3) USUARIO SEQVIEW_USER
 Para evitar problemas queremos ejecutar sobre este usuario
 sudo useradd seqview_user
@@ -38,7 +40,7 @@ sudo a2ensite seqview
 4.2) WSGI
 Meter esto en /var/wwww/seqview
 import sys
-sys.path.insert(0, "/home/rodri/public_html/seqview/py_server")
+sys.path.insert(0, "/home/seqview_user/py_server")
 from analysis import app as application
 
 5) INSTALAR PROYECTO
@@ -69,4 +71,127 @@ Logs de apache en
 
 
 
+DOCKER
+Definición:
+Estoy intentando ver si es sencillo pasar la configuración a docker para evitar tanto jaleo y facilitar la instalación a terceros.
+Hacemos una carpeta con dos archivos, Dockerfile y .txt, y luego con los fuentes que queramos.
+Definiendo el contenedor con Dockerfile
+Definiendo el requirements.txt
+	Parece que va a haber problemas para numpy y fisher? El segundo dice que no encuentra el primero
+
+Ejecución:
+docker run -p 4000:80 friendlyhello (-d si quiero que sea en segundo plano)
+
+docker container ls 	para ver lo que está corriendo (sobre todo si ejecutado con -d)
+
+docker container stop 	con el ID que nos haya dado para pararlo
+
+
+Diseminación:
+Hacerse cuenta en docker.cloud y subirla allí.
+O puedes crearte una imagen y subirla a donde quieras: https://stackoverflow.com/questions/23935141/how-to-copy-docker-images-from-one-host-to-another-without-via-repository#23938978
+
+
+Para construir el contenedor: 
+sudo docker build -t nucleosee . --> TODO: cambiar . por la URL de github (https://github.com/rodrigoSantamaria/nucleosee) y probar que funciona, o bien funcionar con una imagen que subamos nosotros.
+
+
+Para borrar contenedores eimágenes: durante las pruebas se crean muchos
+sudo docker rm $(sudo docker ps -aq)
+sudo docker rmi $(sudo docker image ls -aq)
+
+
+Preparando el archivo Dockerfile
+Estamos barajando dos opciones:
+1) Descargar python y tomcat y modificar los archivos necesarios del usuario para que rule
+2) Descargar ya una imagen de debian y tirar con toda ella (más pesado pero quizás más estándar?)
+
+Me gusta más en principio la solución 1 pero no estoy seguro de si funcionará bien o se cargará algo que use el usuario en su equipo, en principio no. 
+
+
+NUCLEOSEE INSTALL
+Nucleosee can be tested at http://cpg3.der.usal.es/nucleosee
+If you want to install your own server, you can use Docker:
+1) Download the annotations folder at http://vis.usal.es/rodrigo/nucleosee/annotations.zip
+Unzip it at your preferred location (ann_path). You can check its folder structure and add your own organism annotations.
+
+Optionally, you can download some preprocessed examples at http://vis.usal.es/rodrigo/nucleosee/genomes.zip
+Unzip it at your preferred location (gen_path)
+
+2) Type: 
+docker run -it --rm -p 80:80 -v ann_path:/app/annotations -v gen_path:/app/genomes -e SERVERNAME=hostname efialto/nucleosee
+Where gen_path is the folder where preprocessed data will be stored, ann_path is the folder where you saved your annotation files (see above) and hostname is your server's hostname.
+
+For example:
+docker run -it --rm -p 80:80 -v ~/workspace/annotations:/app/annotations -v ~/workspace/data/processed:/app/genomes -e SERVERNAME=signus.usap.es efialto/nucleosee
+
+3) In any web browser, go to URL http://hostname/static where Nucleosee frontend will load. Try preprocessing wig data with the "Load file" button at the top-right
+For loading preprocessed data use "Select data" at the top left.
+
+
+In my case
+docker run -it --rm -p 80:80 -v ~/workspace/nucleosee/app/annotations:/app/annotations -v ~/workspace/nucleosee/app/genomes:/app/genomes -e SERVERNAME=obelus.usal.es efialto/nucleosee
+
+#Relevant commands
+docker image ls -a		#to list all images
+docker rmi $docker images -q) 	#to remove all images
+docker build -t nucleosee .	#to build the image
+docker system prune		#to free unused memory
+ls
+
+#To me: for deploying
+docker images #to check what is my image id
+docker tag d00b7d4b6035 efialto/nucleosee:latest
+docker push efialto/nucleosee:latest
+
+
+
+----> Pasando el host al container:
+Necesito el host en el container en el momento de hacer el run para que el frontend conozca la URL del backend.
+Con docker run --env NAME=VALUE2 puedo modificarlo en ejecución.
+Sólo hace falta tratarlo en el ENTRYPOINT (o quizás en el prestart.sh que habilita tiangolo). Esto es lo que hago añadiendo al entrypoint.sh la línea:
+sed -i 's/127.0.0.1:2750/'$SERVERNAME'/' /app/static/index.html
+Lo malo es que en el Dockerfile luego tengo que asegurarme que coja el mío:
+COPY ./entrypoint.sh /entrypoint.sh
+TODO: probar a hacerlo en el prestart.sh que para eso está.
+ 
+----> Buffering de respuestas:
+Nginx automáticamente responde en el caso de archivos muy grandes, aunque no los haya terminado de tratar.
+Esto da problemas a la hora de cargar datos, pues cuando vas a realizar una búsqueda te da un keyError como que los datos aún no los tiene cargados.
+Lo solucionamos de nuevo tocando el entrypoint.sh para añadir una modificación al nginx.conf, añadiendo la siguiente línea en location @app
+	proxy_max_temp_file_size 0;    
+Parece que no ha quedado solucionado con esto...
+
+El tema es que cuando intentamos guardar un data[dataName] le supone mucha tela y lo mete en un archivo temporal, con lo que la variable global data deja de tener información. Parece que esto (al menos en un primer momento, cuando hacemos search) lo evitamos usando 
+	uwsgi_buffers 16 500m;
+
+NO!: SOLUCION: el problema es que Nginx es multiproceso, no multihilo, así que me estaba creando nuevos procesos que NO conocían las instancias globales de los otros. O bien cambiamos la arquitectura para ligar sesiones a procesos (workers) o, de momento, lo que hacemos es tener sólo un proceso (worker) pero permitimos hilos. Esto se ha hecho añadiendo al wsgi.ini:
+
+processes = 1
+cheaper = 0
+enable-threads = true
+
+----> Peticiones muy largas:
+Nginx tiene un límite para las requests que nos pasamos al meter anotaciones, etc. Hay que cambiarlo en el nginx.conf, para ello modifico
+de nuevo entrypoint.sh añadiendo:
+ client_body_buffer_size 128k;
+    client_header_buffer_size 8k;
+    client_max_body_size 8m;
+    large_client_header_buffers 2 8k;
+    uwsgi_buffers           2 16k;
+    uwsgi_buffer_size	16k;
+    uwsgi_busy_buffers_size 16k;
+
+Ni unas ni otras lo consiguen, el tema es que me dice:
+invalid request block size: 6178 (max 4096)...skip
+
+Da igual si en en general, en location / o en location @app
+
+Parece que lo soluciono si toco el uwsgi.ini que tiene que estar en /app, lo modificio para añadirle buffer-size = 32768
+Y por tanto tocar también el Dockerfile:
+COPY ./uwsgi.ini /app/uwsgi.ini
+
+Con esto el error no lo da, pero no hace el enriquecimiento y termina con un error, que parece que vuelve a ser un KeyError como el que daba por hacer el buffering de respuestas! es en el momento de hacer /annotations
+
+Ver arriba, el problema es el multiproceso!!
 
