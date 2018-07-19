@@ -10,7 +10,8 @@ Try loading samples 972h and Dhta1 and perform some analyses as explained in thi
 For further help please check http://cpg3.der.usal.es/nucleosee/help.pdf
 
 ## Install
-If you want to install your own Nucleosee server, it is available as an Nginx Docker container at efialto/nucleosee in the Docker repository.
+If you want to install your own Nucleosee server, it is available as an Nginx Docker container at efialto/nucleosee in the Docker repository. This is a stable version ready to run, which may not correspond to the latest code in the GitHub repository, if you want to build a fully updated container you have the components -Dockerfile, etc.- in this repository.
+
 You basically need to perform 3 steps:
 ### 1) Install Docker
 Visit https://docs.docker.com/install/ to install Docker on your machine.
@@ -31,9 +32,9 @@ Unzip it at your preferred location (`gen_path`)
 
 ### 3) Run Docker container
 ```
-docker run -it --rm -p 80:80 -v ann_path:/app/annotations -v gen_path:/app/genomes -e SERVERNAME=hostname efialto/nucleosee
+docker run -it --rm -p 80:80 -v ann_path:/app/annotations -v gen_path:/app/genomes -e SERVERNAME=server_name efialto/nucleosee
 ```
-`gen_path` and `ann_path` relate to the folders created in step 2. `hostname` must be the name of the machine were you're setting up the server (e.g. `signus.opus.uk`)
+`gen_path` and `ann_path` relate to the folders created in step 2. `server_name` must be the name of the machine were you're setting up the server (e.g. `signus.opus.uk`)
 
 ## Contact
 If you have any doubts about the code or the install, you can write to rodri AT usal DOT es
