@@ -10,11 +10,11 @@ Try loading samples 972h and Dhta1 and perform some analyses as explained in thi
 For further help please check http://cpg3.der.usal.es/nucleosee/help.pdf
 
 ## Install
-If you want to install your own Nucleosee server, it is available as an Nginx Docker container at efialto/nucleosee in the Docker repository. This is a stable version ready to run, which may not correspond to the latest code in the GitHub repository, if you want to build a fully updated container you have the components -Dockerfile, etc.- in this repository.
+If you want to install your own Nucleosee server, it is available as an Nginx Docker container at efialto/nucleosee in the Docker repository. This is a stable version ready to run, which may not correspond to the latest code in the GitHub repository, if you want to build a fully updated container you have the components -Dockerfile, etc.- in the repository.
 
 You basically need to perform 3 steps:
 ### 1) Install Docker
-Visit https://docs.docker.com/install/ to install Docker on your machine.
+Visit https://docs.docker.com/install/ to install Docker on your machine, if you haven't it already installed.
 ### 2) Setup host folders
 This step is optional, as long as you provide two folders with the proper structure for volumes (-v) in the next step, it's fine. More info about it in the help pdf above (section Setting up a server).
 
