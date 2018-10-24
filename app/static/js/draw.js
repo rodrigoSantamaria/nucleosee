@@ -702,7 +702,7 @@ function dataLine_2(seq, numNucleotides, point, sizePattern, dataName)
         d3.selectAll(".dl2.hover.vline").remove();
         d3.selectAll(".dl2.hover.label").remove();
 
-        for(i in dl2) {
+         for(i in dl2) {
             var dl2i=dl2[i];
             var dd=dl2i.cv.svg.selectAll("."+dl2i.cv.classSVG+".line")[0][0]["__data__"];
 

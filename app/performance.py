@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+.# -*- coding: utf-8 -*-
 """
 Time performance tests
 
@@ -81,6 +81,41 @@ data=ana.batchCompile(pdata, fnames, fnames[0],"")
 print("DATA LOADED")
 
 #%% ------------------- D EFFECT ----------------
+ifile="/home/rodri/workspace/nucleosee/app/genomes/h-972_Rep1_depth_wl_trimmed_PE-chonlyc3.0ws30nb3imeanorgSchizosaccharomyces_pombe.pic"
+pattern=""
+psize=5
+geo="none"
+letters=["a","b","c"]
+d=0
+print("Opening",ifile,"for pattern", pattern,"(",d,") restricted to",geo)
+times=[]
+timesSD=[]
+for d in range(4):
+    print("D is", d)
+    tt=[]
+    for i in range(20):
+        pattern=""
+        for j in range(psize):
+            pattern=pattern+letters[random.randint(0,2)]
+        print(pattern)
+
+        t0=time.clock()
+        ret=ana.searchLocal(data=data, pattern=pattern, d=d, geo=geo, intersect="soft", softMutations="false")
+        tt.append(time.clock()-t0)
+    times.append(np.mean(tt))
+    timesSD.append(np.std(tt))
+
+print("SEARCH FINISHED")
+
+
+#%% ------------------- DISCRETIZATION EFFECT ---------------- TODO
+#Take several differently preprocessed datasets and compare times. I'd go for 2-5 I think.
+wigfile="/home/rodri/workspace/nucleosee/app/genomes/h-972_Rep1_depth_wl_trimmed_PE-chonly.wig"
+for d in range(2,5):
+    ana.batchPreprocessLocal([wigfile], outfiles=["h972_d"+d], 
+                             dataName="h972_d"+d, windowSize=30,
+                             numBins=d, organism="Schizosaccharomyces pombe")
+#%%
 ifile="/home/rodri/workspace/nucleosee/app/genomes/h-972_Rep1_depth_wl_trimmed_PE-chonlyc3.0ws30nb3imeanorgSchizosaccharomyces_pombe.pic"
 pattern=""
 psize=5

@@ -1,31 +1,32 @@
 # -*- coding: utf-8 -*-
-"""
-Web service wrapper for BWT sequence searches
 
-@author: Rodrigo Santamaría (rodri@usal.es). Universidad de Salamanca
-            http://vis.usal.es/rodrigo
-
-License: -GPL3.0 with authorship attribution (extension 7.b) -
-
-    
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  
-    
-    If not, see <https://www.gnu.org/licenses/gpl.txt>; applying 7.b extension:
-    Requiring preservation of specified reasonable legal notices or
-    author attributions in that material or in the Appropriate Legal
-    Notices displayed by works containing it;   
-"""
+#"""
+#Web service wrapper for BWT sequence searches
+#
+#@author: Rodrigo Santamaría (rodri@usal.es). Universidad de Salamanca
+#            http://vis.usal.es/rodrigo
+#
+#License: -GPL3.0 with authorship attribution (extension 7.b) -
+#
+#    
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  
+#    
+#    If not, see <https://www.gnu.org/licenses/gpl.txt>; applying 7.b extension:
+#    Requiring preservation of specified reasonable legal notices or
+#    author attributions in that material or in the Appropriate Legal
+#    Notices displayed by works containing it;   
+#"""
 # --------------------- LIBRARIES -----------------
 from flask import Flask, jsonify, request
 from flask import redirect, url_for, send_file #for uploading files and redirections
@@ -381,6 +382,11 @@ def batchPreprocess(filenames=[], dataName="None", windowSize=100, numBins=5, ma
                 bins=data["batch"]["processed"]["bins"][track])
 
 #%%
+    """
+    filenames - list of wig files to preprocess
+    outfile - path to the file where the data will be stored (deprecated, only 1 .pic file will be stored?)
+    
+    """
 def batchPreprocessLocal(filenames=[], outfiles=[], dataName="None", windowSize=100, numBins=5, maxSize=100000, stdev=3, track="None", organism="Saccharomyces cerevisiae", interpolation="mean", basePath="."):
     import time
     import re
@@ -1015,7 +1021,10 @@ def getDSeq(start=0, end=0, track="None", dataName="None"):
     #print("DSEQ ES", part)    
     return jsonify(response=list(part))
 
-#%%
+#%% Exports all search results data sequences to FASTA format
+#It searches for specific search results in dataName if provided, but
+#if it is not provided or there are no search results for the dataset,
+#it returns the results of the first dataset with results..
 @app.route("/exportFASTA")
 def exportFASTA(dataName="None"):
     global data
@@ -1028,7 +1037,9 @@ def exportFASTA(dataName="None"):
         dbp=data[dataName]["batch"]["processed"]
     if("search" in data.keys()==False):
         return jsonify(response="Error: no search performed")
-
+    if (dataName in data["search"].keys()) == False and len(list(data["search"].keys()))>0:
+        dataName=list(data["search"].keys())[0]
+        
     return jsonify(response=ann.exportFASTA(data["search"][dataName],dbp["fasta"],dbp["windowSize"]))
 
 #%%
