@@ -39,4 +39,7 @@ docker run -it --rm -p 80:80 -v ann_path:/app/annotations -v gen_path:/app/genom
 ## Contact
 If you have any doubts about the code or the install, you can write to rodri AT usal DOT es
 
+## Citation
+Please cite Nucleosee if you find it useful in your research!
+  Santamaría, R., Therón, R., Durán, L., García, A., González, S., Sánchez, M., & Antequera, F. (**2019**). Genome-wide search of nucleosome patterns using visual analytics. *Bioinformatics*, 35(13), 2185-2192
 
